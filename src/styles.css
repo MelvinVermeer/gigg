@@ -1,0 +1,44 @@
+:root {
+  --stage: #ffd400;
+  --ink: #111111;
+  color-scheme: light dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #ffffff;
+  color: var(--ink);
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: var(--ink);
+    color: #f2f2f2;
+  }
+}
+
+.site-header,
+main {
+  width: min(42rem, calc(100% - 2rem));
+  margin: 0 auto;
+}
+
+/* Clear space ≥ the width of the "i" in the wordmark. */
+.site-header {
+  padding: 1rem 0;
+}
+
+.site-header img {
+  display: block;
+  height: 32px;
+  width: auto;
+}
+
+main {
+  margin-block: 2rem 4rem;
+}
