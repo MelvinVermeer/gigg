@@ -9,6 +9,9 @@ export { schema }
 export const isLocal = !process.env.DATABASE_URL
 
 async function connect(): Promise<Db> {
+  // Never fall back to demo mode on a real deployment (read-only filesystem, demo accounts).
+  if (isLocal && process.env.VERCEL)
+    throw new Error('DATABASE_URL is not set. Add a Postgres database to the Vercel project and run the migrations (README: Self-host on Vercel).')
   if (!isLocal) {
     const { drizzle } = await import('drizzle-orm/node-postgres')
     return drizzle(process.env.DATABASE_URL!, { schema }) as unknown as Db
