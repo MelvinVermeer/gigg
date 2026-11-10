@@ -32,6 +32,6 @@ CI runs all three on every PR and every push to `main`.
 
 1. Fork, import in Vercel.
 2. Add a Postgres database (e.g. Neon from the Vercel marketplace); it sets `DATABASE_URL`.
-3. Set the other variables from `.env.example`.
+3. Set the other variables from `.env.example` (email: a free resend.com account with your domain verified, then `RESEND_API_KEY`).
 4. Run `pnpm db:migrate` against the database, then deploy.
 5. Sign in with an email from `ADMIN_EMAILS`.
