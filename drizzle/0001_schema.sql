@@ -50,6 +50,30 @@ CREATE TABLE "contacts" (
 	"archived_at" timestamp with time zone
 );
 --> statement-breakpoint
+CREATE TABLE "event_contacts" (
+	"band_id" uuid NOT NULL,
+	"event_id" uuid NOT NULL,
+	"contact_id" uuid NOT NULL,
+	"role" text,
+	CONSTRAINT "event_contacts_event_id_contact_id_pk" PRIMARY KEY("event_id","contact_id")
+);
+--> statement-breakpoint
+CREATE TABLE "events" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"band_id" uuid NOT NULL,
+	"slug" text NOT NULL,
+	"title" text NOT NULL,
+	"date" date NOT NULL,
+	"venue_id" uuid,
+	"booking_status" "booking_status" DEFAULT 'lead' NOT NULL,
+	"payment_status" "payment_status" DEFAULT 'open' NOT NULL,
+	"tags" text[] DEFAULT '{}' NOT NULL,
+	"notes" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"archived_at" timestamp with time zone,
+	CONSTRAINT "events_band_id_slug_unique" UNIQUE("band_id","slug")
+);
+--> statement-breakpoint
 CREATE TABLE "feedback" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -63,7 +87,7 @@ CREATE TABLE "files" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"band_id" uuid NOT NULL,
 	"song_id" uuid,
-	"gig_id" uuid,
+	"event_id" uuid,
 	"name" text NOT NULL,
 	"blob_path" text NOT NULL,
 	"content_type" text NOT NULL,
@@ -73,31 +97,7 @@ CREATE TABLE "files" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"archived_at" timestamp with time zone,
 	CONSTRAINT "files_share_token_unique" UNIQUE("share_token"),
-	CONSTRAINT "files_one_owner" CHECK ("files"."song_id" is null or "files"."gig_id" is null)
-);
---> statement-breakpoint
-CREATE TABLE "gig_contacts" (
-	"band_id" uuid NOT NULL,
-	"gig_id" uuid NOT NULL,
-	"contact_id" uuid NOT NULL,
-	"role" text,
-	CONSTRAINT "gig_contacts_gig_id_contact_id_pk" PRIMARY KEY("gig_id","contact_id")
-);
---> statement-breakpoint
-CREATE TABLE "gigs" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"band_id" uuid NOT NULL,
-	"slug" text NOT NULL,
-	"name" text NOT NULL,
-	"date" date NOT NULL,
-	"venue_id" uuid,
-	"booking_status" "booking_status" DEFAULT 'lead' NOT NULL,
-	"payment_status" "payment_status" DEFAULT 'open' NOT NULL,
-	"tags" text[] DEFAULT '{}' NOT NULL,
-	"notes" text,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"archived_at" timestamp with time zone,
-	CONSTRAINT "gigs_band_id_slug_unique" UNIQUE("band_id","slug")
+	CONSTRAINT "files_one_owner" CHECK ("files"."song_id" is null or "files"."event_id" is null)
 );
 --> statement-breakpoint
 CREATE TABLE "memberships" (
@@ -120,11 +120,11 @@ CREATE TABLE "set_items" (
 CREATE TABLE "setlists" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"band_id" uuid NOT NULL,
-	"gig_id" uuid,
+	"event_id" uuid,
 	"name" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"archived_at" timestamp with time zone,
-	CONSTRAINT "setlists_gig_id_unique" UNIQUE("gig_id")
+	CONSTRAINT "setlists_event_id_unique" UNIQUE("event_id")
 );
 --> statement-breakpoint
 CREATE TABLE "sets" (
@@ -239,24 +239,24 @@ ALTER TABLE "block_songs" ADD CONSTRAINT "block_songs_block_id_blocks_id_fk" FOR
 ALTER TABLE "block_songs" ADD CONSTRAINT "block_songs_song_id_songs_id_fk" FOREIGN KEY ("song_id") REFERENCES "public"."songs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "blocks" ADD CONSTRAINT "blocks_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "contacts" ADD CONSTRAINT "contacts_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "event_contacts" ADD CONSTRAINT "event_contacts_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "event_contacts" ADD CONSTRAINT "event_contacts_event_id_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "event_contacts" ADD CONSTRAINT "event_contacts_contact_id_contacts_id_fk" FOREIGN KEY ("contact_id") REFERENCES "public"."contacts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "events" ADD CONSTRAINT "events_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "events" ADD CONSTRAINT "events_venue_id_venues_id_fk" FOREIGN KEY ("venue_id") REFERENCES "public"."venues"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "feedback" ADD CONSTRAINT "feedback_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "feedback" ADD CONSTRAINT "feedback_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "files" ADD CONSTRAINT "files_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "files" ADD CONSTRAINT "files_song_id_songs_id_fk" FOREIGN KEY ("song_id") REFERENCES "public"."songs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "files" ADD CONSTRAINT "files_gig_id_gigs_id_fk" FOREIGN KEY ("gig_id") REFERENCES "public"."gigs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "files" ADD CONSTRAINT "files_event_id_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "files" ADD CONSTRAINT "files_uploaded_by_users_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "gig_contacts" ADD CONSTRAINT "gig_contacts_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "gig_contacts" ADD CONSTRAINT "gig_contacts_gig_id_gigs_id_fk" FOREIGN KEY ("gig_id") REFERENCES "public"."gigs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "gig_contacts" ADD CONSTRAINT "gig_contacts_contact_id_contacts_id_fk" FOREIGN KEY ("contact_id") REFERENCES "public"."contacts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "gigs" ADD CONSTRAINT "gigs_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "gigs" ADD CONSTRAINT "gigs_venue_id_venues_id_fk" FOREIGN KEY ("venue_id") REFERENCES "public"."venues"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "memberships" ADD CONSTRAINT "memberships_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "memberships" ADD CONSTRAINT "memberships_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "set_items" ADD CONSTRAINT "set_items_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "set_items" ADD CONSTRAINT "set_items_set_id_sets_id_fk" FOREIGN KEY ("set_id") REFERENCES "public"."sets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "set_items" ADD CONSTRAINT "set_items_song_id_songs_id_fk" FOREIGN KEY ("song_id") REFERENCES "public"."songs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "setlists" ADD CONSTRAINT "setlists_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "setlists" ADD CONSTRAINT "setlists_gig_id_gigs_id_fk" FOREIGN KEY ("gig_id") REFERENCES "public"."gigs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "setlists" ADD CONSTRAINT "setlists_event_id_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sets" ADD CONSTRAINT "sets_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sets" ADD CONSTRAINT "sets_setlist_id_setlists_id_fk" FOREIGN KEY ("setlist_id") REFERENCES "public"."setlists"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "slug_redirects" ADD CONSTRAINT "slug_redirects_band_id_bands_id_fk" FOREIGN KEY ("band_id") REFERENCES "public"."bands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -267,8 +267,8 @@ ALTER TABLE "passkeys" ADD CONSTRAINT "passkeys_user_id_users_id_fk" FOREIGN KEY
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "changes_band_idx" ON "changes" USING btree ("band_id","created_at");--> statement-breakpoint
 CREATE INDEX "contacts_name_trgm" ON "contacts" USING gin ("name" gin_trgm_ops);--> statement-breakpoint
+CREATE INDEX "events_title_trgm" ON "events" USING gin ("title" gin_trgm_ops);--> statement-breakpoint
 CREATE INDEX "files_name_trgm" ON "files" USING gin ("name" gin_trgm_ops);--> statement-breakpoint
-CREATE INDEX "gigs_name_trgm" ON "gigs" USING gin ("name" gin_trgm_ops);--> statement-breakpoint
 CREATE INDEX "songs_title_trgm" ON "songs" USING gin ("title" gin_trgm_ops);--> statement-breakpoint
 CREATE INDEX "venues_name_trgm" ON "venues" USING gin ("name" gin_trgm_ops);--> statement-breakpoint
 CREATE INDEX "accounts_userId_idx" ON "accounts" USING btree ("user_id");--> statement-breakpoint

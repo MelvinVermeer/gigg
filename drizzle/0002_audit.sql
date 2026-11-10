@@ -25,7 +25,7 @@ declare t text;
 begin
   foreach t in array array[
     'users', 'bands', 'memberships', 'slug_redirects', 'songs', 'venues', 'contacts',
-    'gigs', 'gig_contacts', 'setlists', 'sets', 'set_items', 'blocks', 'block_songs',
+    'events', 'event_contacts', 'setlists', 'sets', 'set_items', 'blocks', 'block_songs',
     'files', 'feedback'
   ] loop
     execute format('create trigger audit after insert or update or delete on %I for each row execute function audit()', t);

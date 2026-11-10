@@ -1,6 +1,6 @@
 # Gigg
 
-An open source tool that helps bands plan gigs, setlists and technical riders.
+An open source tool that helps bands plan events, setlists and technical riders.
 
 Installable PWA. Everything must be readable on a mobile phone, also offline.
 
@@ -37,11 +37,16 @@ gigg.band/one-after-909/songs/a-day-in-a-life
 
 Old slugs redirect after a rename.
 
-## Gigs (events)
+## Events
 
-- Name, date (one date; times and other details go in the free-form notes), files
+The term is **events** (URL `/<band>/events/<slug>`), not events.
+
+- Title, date (one date; times and other details go in the free-form notes), files
+- Slug: slugified title; if taken, the date in front (`2026-12-05-agnietenhof`), only then `-2`.
 - Linked **venue** (own record, reusable)
 - Linked **contact(s)** (own record, reusable)
+- Venue and contacts are **search boxes** in the event form. A new name creates the venue/contact right there, without leaving the form. Picking a venue suggests the contacts used last time at that venue.
+- Band start page = upcoming events. Past events are behind a button.
 - Two independent statuses:
 
 | Field   | Values                                                 |
@@ -51,7 +56,7 @@ Old slugs redirect after a rename.
 
   Paid upfront = `confirmed` + `paid`. Paid afterwards = `played` + `invoiced`. Filters like "played but not paid" just work.
 - Free tags for anything else.
-- Add to calendar / iCal feed with all gigs.
+- Add to calendar / iCal feed with all events.
 
 ## Songs (repertoire)
 
@@ -68,9 +73,9 @@ Setlist
     └── Song
 ```
 
-- **Blocks are reusable templates**: define "Acoustic bit" or "Encore" once. Adding a block to a set *copies* its songs into the setlist, with no live reference, so later edits to the block never change existing setlists (including played gigs).
+- **Blocks are reusable templates**: define "Acoustic bit" or "Encore" once. Adding a block to a set *copies* its songs into the setlist, with no live reference, so later edits to the block never change existing setlists (including played events).
 
-- Linked to a gig (one setlist per gig)
+- Linked to a event (one setlist per event)
 - Clonable
 - Total duration per set / setlist
 - **Show mode** (single person): big type, swipe between songs, screen stays on, per-song notes visible, works offline.
@@ -78,12 +83,12 @@ Setlist
 
 ## Files
 
-Common PDFs, recordings, lyrics, song notes, riders. Attachable to songs, gigs, band.
+Common PDFs, recordings, lyrics, song notes, riders. Attachable to songs, events, band.
 **Public share links** per file: token-based, revocable.
 
 ## Search
 
-Fast, fuzzy, typed: songs / gigs / contacts / venues / files. Postgres `pg_trgm`, no separate search service.
+Fast, fuzzy, typed: songs / events / contacts / venues / files. Postgres `pg_trgm`, no separate search service.
 
 ## Offline
 
@@ -135,7 +140,7 @@ TDD not required, but code must be easily testable: logic in plain functions / s
 
 **Playwright end-to-end (critical user journeys only)**, against a production build with PGlite + seed:
 - Passkey login (virtual authenticator), email-link login (test-mode outbox)
-- Song → setlist with block → gig
+- Song → setlist with block → event
 - Show mode offline (`context.setOffline`)
 - Stage-floor PDF: page count = number of sets
 - Public file link works, then is revoked
@@ -163,7 +168,7 @@ How to self-host on Vercel, step by step.
 
 1. Auth (passkey + email link), admin creates bands and adds members/readers
 2. Songs with fixed fields + files
-3. Gigs with venues, contacts, booking + payment status
+3. Events with venues, contacts, booking + payment status
 4. Setlists (sets, blocks, songs), clone, show mode
 5. Stage-floor PDF export (one page per set)
 6. Search
@@ -172,10 +177,10 @@ How to self-host on Vercel, step by step.
 
 ## Backlog
 
-- **Excel export (first up after MVP)**, then Numbers / CSV (setlist, repertoire, gig overview)
+- **Excel export (first up after MVP)**, then Numbers / CSV (setlist, repertoire, event overview)
 - Band invites by members
-- Member availability per gig
-- Other PDFs (band/sound engineer setlist with key/BPM, gig sheet)
+- Member availability per event
+- Other PDFs (band/sound engineer setlist with key/BPM, event sheet)
 - Custom song fields per band
 - Lead singer per song
 - Per-song notes in a setlist ("longer intro tonight")
@@ -183,4 +188,4 @@ How to self-host on Vercel, step by step.
 - Generated tech rider / stage plot / input list
 - Notifications (push / email)
 - In-app user manual, auto-updated using skills
-- Money: fees per gig, totals per year
+- Money: fees per event, totals per year

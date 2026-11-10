@@ -15,9 +15,13 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as BandIndexRouteImport } from './routes/$band.index'
+import { Route as BandEventsIndexRouteImport } from './routes/$band.events.index'
+import { Route as BandEventsNewRouteImport } from './routes/$band.events.new'
 import { Route as BandSongsIndexRouteImport } from './routes/$band.songs.index'
 import { Route as BandSongsNewRouteImport } from './routes/$band.songs.new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as BandEventsEventIndexRouteImport } from './routes/$band.events.$event.index'
+import { Route as BandEventsEventEditRouteImport } from './routes/$band.events.$event.edit'
 import { Route as BandSongsSongIndexRouteImport } from './routes/$band.songs.$song.index'
 import { Route as BandSongsSongEditRouteImport } from './routes/$band.songs.$song.edit'
 
@@ -51,6 +55,16 @@ const BandIndexRoute = BandIndexRouteImport.update({
   path: '/',
   getParentRoute: () => BandRoute,
 } as any)
+const BandEventsIndexRoute = BandEventsIndexRouteImport.update({
+  id: '/events/',
+  path: '/events/',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandEventsNewRoute = BandEventsNewRouteImport.update({
+  id: '/events/new',
+  path: '/events/new',
+  getParentRoute: () => BandRoute,
+} as any)
 const BandSongsIndexRoute = BandSongsIndexRouteImport.update({
   id: '/songs/',
   path: '/songs/',
@@ -65,6 +79,16 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const BandEventsEventIndexRoute = BandEventsEventIndexRouteImport.update({
+  id: '/events/$event/',
+  path: '/events/$event/',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandEventsEventEditRoute = BandEventsEventEditRouteImport.update({
+  id: '/events/$event/edit',
+  path: '/events/$event/edit',
+  getParentRoute: () => BandRoute,
 } as any)
 const BandSongsSongIndexRoute = BandSongsSongIndexRouteImport.update({
   id: '/songs/$song/',
@@ -84,10 +108,14 @@ export interface FileRoutesByFullPath {
   '/me': typeof MeRoute
   '/settings': typeof SettingsRoute
   '/$band/': typeof BandIndexRoute
+  '/$band/events/new': typeof BandEventsNewRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/$band/events/': typeof BandEventsIndexRoute
   '/$band/songs/': typeof BandSongsIndexRoute
+  '/$band/events/$event/edit': typeof BandEventsEventEditRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
+  '/$band/events/$event/': typeof BandEventsEventIndexRoute
   '/$band/songs/$song/': typeof BandSongsSongIndexRoute
 }
 export interface FileRoutesByTo {
@@ -96,10 +124,14 @@ export interface FileRoutesByTo {
   '/me': typeof MeRoute
   '/settings': typeof SettingsRoute
   '/$band': typeof BandIndexRoute
+  '/$band/events/new': typeof BandEventsNewRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/$band/events': typeof BandEventsIndexRoute
   '/$band/songs': typeof BandSongsIndexRoute
+  '/$band/events/$event/edit': typeof BandEventsEventEditRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
+  '/$band/events/$event': typeof BandEventsEventIndexRoute
   '/$band/songs/$song': typeof BandSongsSongIndexRoute
 }
 export interface FileRoutesById {
@@ -110,10 +142,14 @@ export interface FileRoutesById {
   '/me': typeof MeRoute
   '/settings': typeof SettingsRoute
   '/$band/': typeof BandIndexRoute
+  '/$band/events/new': typeof BandEventsNewRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/$band/events/': typeof BandEventsIndexRoute
   '/$band/songs/': typeof BandSongsIndexRoute
+  '/$band/events/$event/edit': typeof BandEventsEventEditRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
+  '/$band/events/$event/': typeof BandEventsEventIndexRoute
   '/$band/songs/$song/': typeof BandSongsSongIndexRoute
 }
 export interface FileRouteTypes {
@@ -125,10 +161,14 @@ export interface FileRouteTypes {
     | '/me'
     | '/settings'
     | '/$band/'
+    | '/$band/events/new'
     | '/$band/songs/new'
     | '/api/auth/$'
+    | '/$band/events/'
     | '/$band/songs/'
+    | '/$band/events/$event/edit'
     | '/$band/songs/$song/edit'
+    | '/$band/events/$event/'
     | '/$band/songs/$song/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -137,10 +177,14 @@ export interface FileRouteTypes {
     | '/me'
     | '/settings'
     | '/$band'
+    | '/$band/events/new'
     | '/$band/songs/new'
     | '/api/auth/$'
+    | '/$band/events'
     | '/$band/songs'
+    | '/$band/events/$event/edit'
     | '/$band/songs/$song/edit'
+    | '/$band/events/$event'
     | '/$band/songs/$song'
   id:
     | '__root__'
@@ -150,10 +194,14 @@ export interface FileRouteTypes {
     | '/me'
     | '/settings'
     | '/$band/'
+    | '/$band/events/new'
     | '/$band/songs/new'
     | '/api/auth/$'
+    | '/$band/events/'
     | '/$band/songs/'
+    | '/$band/events/$event/edit'
     | '/$band/songs/$song/edit'
+    | '/$band/events/$event/'
     | '/$band/songs/$song/'
   fileRoutesById: FileRoutesById
 }
@@ -210,6 +258,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BandIndexRouteImport
       parentRoute: typeof BandRoute
     }
+    '/$band/events/': {
+      id: '/$band/events/'
+      path: '/events'
+      fullPath: '/$band/events/'
+      preLoaderRoute: typeof BandEventsIndexRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/events/new': {
+      id: '/$band/events/new'
+      path: '/events/new'
+      fullPath: '/$band/events/new'
+      preLoaderRoute: typeof BandEventsNewRouteImport
+      parentRoute: typeof BandRoute
+    }
     '/$band/songs/': {
       id: '/$band/songs/'
       path: '/songs'
@@ -231,6 +293,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$band/events/$event/': {
+      id: '/$band/events/$event/'
+      path: '/events/$event'
+      fullPath: '/$band/events/$event/'
+      preLoaderRoute: typeof BandEventsEventIndexRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/events/$event/edit': {
+      id: '/$band/events/$event/edit'
+      path: '/events/$event/edit'
+      fullPath: '/$band/events/$event/edit'
+      preLoaderRoute: typeof BandEventsEventEditRouteImport
+      parentRoute: typeof BandRoute
+    }
     '/$band/songs/$song/': {
       id: '/$band/songs/$song/'
       path: '/songs/$song'
@@ -250,17 +326,25 @@ declare module '@tanstack/react-router' {
 
 interface BandRouteChildren {
   BandIndexRoute: typeof BandIndexRoute
+  BandEventsNewRoute: typeof BandEventsNewRoute
   BandSongsNewRoute: typeof BandSongsNewRoute
+  BandEventsIndexRoute: typeof BandEventsIndexRoute
   BandSongsIndexRoute: typeof BandSongsIndexRoute
+  BandEventsEventEditRoute: typeof BandEventsEventEditRoute
   BandSongsSongEditRoute: typeof BandSongsSongEditRoute
+  BandEventsEventIndexRoute: typeof BandEventsEventIndexRoute
   BandSongsSongIndexRoute: typeof BandSongsSongIndexRoute
 }
 
 const BandRouteChildren: BandRouteChildren = {
   BandIndexRoute: BandIndexRoute,
+  BandEventsNewRoute: BandEventsNewRoute,
   BandSongsNewRoute: BandSongsNewRoute,
+  BandEventsIndexRoute: BandEventsIndexRoute,
   BandSongsIndexRoute: BandSongsIndexRoute,
+  BandEventsEventEditRoute: BandEventsEventEditRoute,
   BandSongsSongEditRoute: BandSongsSongEditRoute,
+  BandEventsEventIndexRoute: BandEventsEventIndexRoute,
   BandSongsSongIndexRoute: BandSongsSongIndexRoute,
 }
 

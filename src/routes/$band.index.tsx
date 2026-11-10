@@ -1,8 +1,8 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
-// The band home becomes an overview (upcoming gigs) later; for now it's the repertoire.
+// The band's start page: upcoming events.
 export const Route = createFileRoute('/$band/')({
   beforeLoad: ({ params }) => {
-    throw redirect({ to: '/$band/songs', params })
+    throw redirect({ to: '/$band/events', params })
   },
 })

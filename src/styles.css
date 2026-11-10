@@ -102,3 +102,62 @@ table.songs tfoot td {
 .notes {
   white-space: pre-wrap;
 }
+
+/* Events */
+ul.events {
+  list-style: none;
+  padding: 0;
+}
+
+ul.events li {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr;
+  gap: 0 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+}
+
+ul.events .venue,
+ul.events .status {
+  grid-column: 2;
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+
+fieldset {
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  padding: 0.75rem;
+}
+
+ul.picked {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+ul.picked li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 0.5rem;
+  align-items: center;
+}
+
+ul.picked li .row {
+  grid-column: 1 / -1;
+}
+
+.suggestion {
+  margin: 0;
+}
+
+.indent {
+  padding-left: 1rem;
+}
+
+select {
+  font: inherit;
+  padding: 0.4rem;
+  width: 100%;
+}

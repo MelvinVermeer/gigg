@@ -9,7 +9,10 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: { baseURL: `http://localhost:${port}`, trace: 'retain-on-failure' },
-  projects: [{ name: 'chromium', use: devices['Desktop Chrome'] }],
+  projects: [
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    { name: 'chromium', use: devices['Desktop Chrome'], dependencies: ['setup'] },
+  ],
   webServer: {
     command: 'rm -rf .pglite-e2e .outbox.jsonl && pnpm build && node .output/server/index.mjs',
     url: `http://localhost:${port}`,

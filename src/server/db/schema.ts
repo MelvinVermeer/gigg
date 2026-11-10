@@ -55,7 +55,7 @@ export const slugRedirects = pgTable(
   {
     id: id(),
     bandId: uuid('band_id').references(() => bands.id), // null for band slugs
-    type: text('type').notNull(), // 'band' | 'song' | 'gig' | ...
+    type: text('type').notNull(), // 'band' | 'song' | 'event' | ...
     oldSlug: text('old_slug').notNull(),
     entityId: uuid('entity_id').notNull(),
   },
@@ -116,18 +116,18 @@ export const contacts = pgTable(
   (t) => [trgm('contacts_name_trgm', t.name)],
 )
 
-// Gigs --------------------------------------------------------------------
+// Events ------------------------------------------------------------------
 
 export const bookingStatus = pgEnum('booking_status', ['lead', 'option', 'confirmed', 'played', 'cancelled'])
 export const paymentStatus = pgEnum('payment_status', ['open', 'invoiced', 'paid'])
 
-export const gigs = pgTable(
-  'gigs',
+export const events = pgTable(
+  'events',
   {
     id: id(),
     bandId: bandId(),
     slug: text('slug').notNull(),
-    name: text('name').notNull(),
+    title: text('title').notNull(),
     date: date('date').notNull(),
     venueId: uuid('venue_id').references(() => venues.id),
     bookingStatus: bookingStatus('booking_status').notNull().default('lead'),
@@ -137,18 +137,18 @@ export const gigs = pgTable(
     createdAt: createdAt(),
     archivedAt: archivedAt(),
   },
-  (t) => [unique().on(t.bandId, t.slug), trgm('gigs_name_trgm', t.name)],
+  (t) => [unique().on(t.bandId, t.slug), trgm('events_title_trgm', t.title)],
 )
 
-export const gigContacts = pgTable(
-  'gig_contacts',
+export const eventContacts = pgTable(
+  'event_contacts',
   {
     bandId: bandId(),
-    gigId: uuid('gig_id').notNull().references(() => gigs.id),
+    eventId: uuid('event_id').notNull().references(() => events.id),
     contactId: uuid('contact_id').notNull().references(() => contacts.id),
     role: text('role'), // 'promoter', 'sound', ...
   },
-  (t) => [primaryKey({ columns: [t.gigId, t.contactId] })],
+  (t) => [primaryKey({ columns: [t.eventId, t.contactId] })],
 )
 
 // Setlists ----------------------------------------------------------------
@@ -156,7 +156,7 @@ export const gigContacts = pgTable(
 export const setlists = pgTable('setlists', {
   id: id(),
   bandId: bandId(),
-  gigId: uuid('gig_id').unique().references(() => gigs.id), // one setlist per gig
+  eventId: uuid('event_id').unique().references(() => events.id), // one setlist per event
   name: text('name').notNull(),
   createdAt: createdAt(),
   archivedAt: archivedAt(),
@@ -210,7 +210,7 @@ export const files = pgTable(
     id: id(),
     bandId: bandId(),
     songId: uuid('song_id').references(() => songs.id), // both null = band-level file
-    gigId: uuid('gig_id').references(() => gigs.id),
+    eventId: uuid('event_id').references(() => events.id),
     name: text('name').notNull(),
     blobPath: text('blob_path').notNull(),
     contentType: text('content_type').notNull(),
@@ -221,7 +221,7 @@ export const files = pgTable(
     archivedAt: archivedAt(),
   },
   (t) => [
-    check('files_one_owner', sql`${t.songId} is null or ${t.gigId} is null`),
+    check('files_one_owner', sql`${t.songId} is null or ${t.eventId} is null`),
     trgm('files_name_trgm', t.name),
   ],
 )

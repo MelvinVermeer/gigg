@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
-import { changes, memberships } from './db/schema'
+import { bands, changes, contacts, memberships, venues } from './db/schema'
 import { bandOps, Forbidden, NotFound, slugify } from './ops'
 import type { BandOpName } from './ops'
 import { testDb } from './test-db'
@@ -22,6 +22,7 @@ describe('authorisation', () => {
   it('lets readers read', async () => {
     const t = await testDb()
     await expect(bandOps.listSongs(t.db, t.reader, t.band, {})).resolves.toHaveLength(3)
+    await expect(bandOps.listEvents(t.db, t.reader, t.band, {})).resolves.toHaveLength(1)
     await expect(bandOps.getSong(t.db, t.reader, t.band, { slug: 'closer' })).resolves.toMatchObject({ moved: false })
   })
 
@@ -95,6 +96,104 @@ describe('songs', () => {
     const t = await testDb()
     await expect(bandOps.getSong(t.db, t.member, t.band, { slug: 'nope' })).rejects.toBeInstanceOf(NotFound)
     await expect(bandOps.archiveSong(t.db, t.member, t.band, { slug: 'nope' })).rejects.toBeInstanceOf(NotFound)
+  })
+})
+
+const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10)
+
+describe('events', () => {
+  it('slugs: title, then date-title, then date-title-2', async () => {
+    const t = await testDb()
+    const date = day(10)
+    const a = await bandOps.createEvent(t.db, t.member, t.band, { title: 'Summer Party', date })
+    const b = await bandOps.createEvent(t.db, t.member, t.band, { title: 'Summer Party', date })
+    const c = await bandOps.createEvent(t.db, t.member, t.band, { title: 'Brand New Gig', date })
+    expect([a.slug, b.slug, c.slug]).toEqual([`${date}-summer-party`, `${date}-summer-party-2`, 'brand-new-gig'])
+  })
+
+  it('lists upcoming soonest first, past and archived separately', async () => {
+    const t = await testDb()
+    await bandOps.createEvent(t.db, t.member, t.band, { title: 'Tomorrow', date: day(1) })
+    await bandOps.createEvent(t.db, t.member, t.band, { title: 'Today', date: day(0) })
+    const upcoming = await bandOps.listEvents(t.db, t.member, t.band, {})
+    expect(upcoming.map((e) => e.title)).toEqual(['Today', 'Tomorrow', 'Summer Party'])
+    expect((await bandOps.listEvents(t.db, t.member, t.band, { when: 'past' })).map((e) => e.title)).toEqual([
+      'Spring Show',
+    ])
+    await bandOps.archiveEvent(t.db, t.member, t.band, { slug: 'today' })
+    expect((await bandOps.listEvents(t.db, t.member, t.band, { when: 'archived' })).map((e) => e.title)).toEqual([
+      'Today',
+    ])
+  })
+
+  it('creates a new venue and contacts inline and links them', async () => {
+    const t = await testDb()
+    const event = await bandOps.createEvent(t.db, t.member, t.band, {
+      title: 'Club Night',
+      date: day(5),
+      venue: { name: 'Club X', address: 'Side Street 2' },
+      contacts: [{ name: 'Sam Sound', phone: '0612' }, { name: 'Pat Promoter Two' }],
+    })
+    const res = await bandOps.getEvent(t.db, t.reader, t.band, { slug: event.slug })
+    if (res.moved) throw new Error('unexpected redirect')
+    expect(res.venue).toMatchObject({ name: 'Club X', slug: 'club-x', address: 'Side Street 2' })
+    expect(res.contacts.map((c) => c.name)).toEqual(['Pat Promoter Two', 'Sam Sound'])
+  })
+
+  it('refuses venues and contacts of another band', async () => {
+    const t = await testDb()
+    const [other] = await t.db.insert(bands).values({ slug: 'other-band', name: 'Other' }).returning()
+    const [venue] = await t.db.insert(venues).values({ bandId: other.id, slug: 'theirs', name: 'Theirs' }).returning()
+    const [contact] = await t.db.insert(contacts).values({ bandId: other.id, name: 'Their contact' }).returning()
+    await expect(
+      bandOps.createEvent(t.db, t.member, t.band, { title: 'X', date: day(1), venue: { id: venue.id } }),
+    ).rejects.toBeInstanceOf(NotFound)
+    await expect(
+      bandOps.createEvent(t.db, t.member, t.band, { title: 'X', date: day(1), contacts: [{ id: contact.id }] }),
+    ).rejects.toBeInstanceOf(NotFound)
+  })
+
+  it('suggests the contacts used last time at a venue', async () => {
+    const t = await testDb()
+    const data = await bandOps.eventFormData(t.db, t.member, t.band, {})
+    const hall = data.venues.find((v) => v.name === 'The Local Hall')!
+    const pat = data.contacts.find((c) => c.name === 'Pat Promoter')!
+    expect(data.lastContactsByVenue[hall.id]).toEqual([pat.id])
+
+    // A later event at the same venue with someone else becomes the new suggestion.
+    const sam = await bandOps.createEvent(t.db, t.member, t.band, {
+      title: 'Autumn',
+      date: day(60),
+      venue: { id: hall.id },
+      contacts: [{ name: 'Sam' }],
+    })
+    const after = await bandOps.eventFormData(t.db, t.member, t.band, {})
+    const samId = after.contacts.find((c) => c.name === 'Sam')!.id
+    expect(after.lastContactsByVenue[hall.id]).toEqual([samId])
+    expect(sam.venueId).toBe(hall.id)
+  })
+
+  it('replaces contacts on update and redirects the old slug after a rename', async () => {
+    const t = await testDb()
+    const updated = await bandOps.updateEvent(t.db, t.member, t.band, {
+      slug: 'summer-party',
+      fields: { title: 'Summer Festival', date: day(30), contacts: [] },
+    })
+    expect(updated.slug).toBe('summer-festival')
+    await expect(bandOps.getEvent(t.db, t.reader, t.band, { slug: 'summer-party' })).resolves.toEqual({
+      moved: true,
+      slug: 'summer-festival',
+    })
+    const res = await bandOps.getEvent(t.db, t.reader, t.band, { slug: 'summer-festival' })
+    expect(!res.moved && res.contacts).toEqual([])
+  })
+
+  it('rejects an invalid date or status', async () => {
+    const t = await testDb()
+    await expect(bandOps.createEvent(t.db, t.member, t.band, { title: 'X', date: '2026-13-40' })).rejects.toThrow()
+    await expect(
+      bandOps.createEvent(t.db, t.member, t.band, { title: 'X', date: day(1), bookingStatus: 'maybe' }),
+    ).rejects.toThrow()
   })
 })
 

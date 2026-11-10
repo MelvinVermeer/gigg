@@ -22,7 +22,7 @@ test('sign in with an email link, add a passkey, sign back in with it', async ({
   })
 
   await signIn(page, 'member@example.com')
-  await expect(page).toHaveURL(/\/demo-band\/songs$/)
+  await expect(page).toHaveURL(/\/demo-band\/events$/)
 
   await page.getByRole('link', { name: 'Settings' }).click()
   await page.getByRole('button', { name: 'Add a passkey' }).click()
@@ -32,5 +32,5 @@ test('sign in with an email link, add a passkey, sign back in with it', async ({
 
   await page.goto('/login')
   await page.getByRole('button', { name: 'Sign in with a passkey' }).click()
-  await expect(page).toHaveURL(/\/demo-band\/songs$/)
+  await expect(page).toHaveURL(/\/demo-band\/events$/)
 })

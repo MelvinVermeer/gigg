@@ -20,3 +20,7 @@ export async function signIn(page: Page, email: string) {
   await expect(page.getByRole('status')).toContainText('Check your email')
   await page.goto(await lastLinkFor(email))
 }
+
+/** Saved sessions from auth.setup.ts. */
+export const asMember = { storageState: 'e2e/.auth/member.json' }
+export const asReader = { storageState: 'e2e/.auth/reader.json' }
