@@ -59,20 +59,18 @@ test.describe('member', () => {
     await page.getByRole('link', { name: `← Setlist Show ${ts}` }).click()
     await expect(page.locator('.fields')).toContainText('3 songs · 12:50')
 
-    // Show mode: one song per screen, next song announced across sets.
+    // Show mode: one set per screen, next set by button or key.
     await page.getByRole('link', { name: '3 songs · 12:50' }).click()
     await page.getByRole('link', { name: 'Show mode' }).click()
-    const song = (title: string) => page.getByRole('article', { name: title })
-    await expect(song('Slow One')).toBeInViewport()
-    await expect(song('Slow One')).toContainText('Set 1 · 1/2')
-    await expect(song('Slow One')).toContainText('Am · 72 BPM')
-    await expect(song('Slow One')).toContainText('Next: Opening Song')
-    await page.getByRole('button', { name: 'Next song' }).click()
-    await expect(song('Opening Song')).toBeInViewport()
-    await expect(song('Opening Song')).toContainText('Next: Set 2 · Closer')
-    await page.keyboard.press('ArrowRight')
-    await expect(song('Closer')).toBeInViewport()
-    await expect(song('Closer')).toContainText('End of setlist')
+    const set = (name: string) => page.getByRole('article', { name })
+    await expect(set('Set 1')).toBeInViewport()
+    await expect(set('Set 1').locator('li')).toHaveText(['Slow One Am', 'Opening Song E'])
+    await expect(set('Set 1')).toContainText('Next: Set 2')
+    await page.getByRole('button', { name: 'Next set' }).click()
+    await expect(set('Set 2')).toBeInViewport()
+    await expect(set('Set 2')).toContainText('End of setlist')
+    await page.keyboard.press('ArrowLeft')
+    await expect(set('Set 1')).toBeInViewport()
     await page.getByRole('link', { name: 'Close show mode' }).click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Setlist')
 
@@ -92,6 +90,47 @@ test.describe('member', () => {
     await page.getByRole('button', { name: 'Copy that setlist' }).click()
     await expect(songsIn(page, 0)).toHaveText(['Slow One', 'Opening Song'])
     await expect(songsIn(page, 1)).toHaveText(['Closer'])
+  })
+})
+
+test.describe('standalone setlists and undo', () => {
+  test.use(asMember)
+
+  test('builds a setlist outside an event and starts a new event from it', async ({ page }) => {
+    const ts = Date.now()
+    await page.goto('/demo-band')
+    await page.getByRole('link', { name: 'Setlists' }).click()
+    await page.getByLabel('New setlist name').fill(`Festival ${ts}`)
+    await page.getByRole('button', { name: 'Create setlist' }).click()
+    await page.getByRole('button', { name: 'Start an empty setlist' }).click()
+    await addSong(page, 'Set 1', 'Neon Harbour')
+    await addSong(page, 'Set 1', 'Closer')
+    await expect(page.getByRole('status')).toHaveText('Saved')
+
+    await page.goto('/demo-band/events/new')
+    await page.getByLabel('Title').fill(`From template ${ts}`)
+    await page.getByLabel('Date').fill(inDays(50))
+    await page.getByLabel(/^Setlist/).selectOption({ label: `Festival ${ts}` })
+    await page.getByRole('button', { name: 'Add event' }).click()
+    await page.getByRole('link', { name: /2 songs/ }).click()
+    await expect(songsIn(page, 0)).toHaveText(['Neon Harbour', 'Closer'])
+  })
+
+  test('undoes a change from the history page', async ({ page }) => {
+    const title = `Undo me ${Date.now()}`
+    await page.goto('/demo-band/songs/new')
+    await page.getByLabel('Title').fill(title)
+    await page.getByRole('button', { name: /Add song/ }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
+    await page.getByRole('button', { name: 'Archive' }).click()
+    await expect(page.getByText('This song is archived.')).toBeVisible()
+
+    await page.getByRole('link', { name: 'History' }).click()
+    const entry = page.locator('ul.history li').first()
+    await expect(entry).toContainText(`Archived song “${title}”`)
+    await expect(entry).toContainText('Dev Member')
+    await entry.getByRole('button', { name: 'Undo' }).click()
+    await expect(page.locator('ul.history li').first()).toContainText(`Restored song “${title}”`)
   })
 })
 

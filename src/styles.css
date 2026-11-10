@@ -414,36 +414,50 @@ ul.results li {
   outline: none;
 }
 
-.show-song {
+.show-set {
   flex: 0 0 100%;
   scroll-snap-align: start;
   scroll-snap-stop: always;
   overflow-y: auto;
-  padding: 1rem 1.5rem 2rem;
+  padding: 0 1.25rem 1.5rem;
 }
 
-.show-song h1 {
-  font-size: clamp(2.5rem, 12vw, 6rem);
-  line-height: 1.05;
-  margin: 0.25rem 0 0.75rem;
-  overflow-wrap: anywhere;
-}
-
-.show-pos,
-.show-next {
+.show-set h1 {
   font-size: 1.25rem;
+  margin: 0 0 0.5rem;
+}
+
+.show-set h1 small {
+  font-weight: 400;
   opacity: 0.6;
 }
 
-.show-facts {
-  font-size: clamp(1.5rem, 6vw, 2.5rem);
-  font-weight: 600;
-  margin: 0 0 1rem;
+/* Sized so --n songs fill the screen height; capped so short sets don't get absurd. */
+.show-set ol {
+  margin: 0;
+  padding-left: 1.4em;
+  font-weight: 700;
+  line-height: 1.15;
+  font-size: clamp(1.25rem, min(calc((100dvh - 9rem) / (var(--n) * 1.2)), 9vw), 4rem);
 }
 
-.show-notes {
-  font-size: clamp(1.25rem, 5vw, 2rem);
+.show-set li small {
+  font-size: 0.5em;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.show-note {
+  display: block;
+  font-size: max(0.4em, 0.9rem);
+  font-weight: 400;
+  opacity: 0.75;
   white-space: pre-wrap;
+}
+
+.show-next {
+  font-size: 1.1rem;
+  opacity: 0.6;
 }
 
 .show-empty {
@@ -512,4 +526,26 @@ ul.results li {
   text-align: center;
   background: var(--stage);
   color: var(--ink);
+}
+
+/* History */
+ul.history {
+  list-style: none;
+  padding: 0;
+}
+
+ul.history li {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+
+ul.history small {
+  opacity: 0.7;
+}
+
+.title-input {
+  font: inherit;
+  padding: 0 0.25rem;
 }

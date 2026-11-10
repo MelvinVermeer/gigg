@@ -17,6 +17,7 @@ function NewEvent() {
       <EventForm
         data={data}
         submitLabel="Add event"
+        pickSetlist
         onSubmit={async (fields) => {
           const event = await bandOp('createEvent', band, fields)
           await navigate({ to: '/$band/events/$event', params: { band, event: event.slug } })

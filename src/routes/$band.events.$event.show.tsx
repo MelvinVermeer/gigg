@@ -29,8 +29,8 @@ function useWakeLock() {
 const keys: Record<string, number> = { ArrowRight: 1, PageDown: 1, ' ': 1, ArrowLeft: -1, PageUp: -1 }
 
 /**
- * One song per screen. Swiping is native horizontal scroll with snapping; the ‹ › buttons and
- * arrow / page keys (Bluetooth page-turner pedals send those) scroll one screen.
+ * One set per screen, songs in big type sized to fit. Swiping is native horizontal scroll with
+ * snapping; the ‹ › buttons and arrow / page keys (Bluetooth page-turner pedals) go to the next set.
  */
 function Show() {
   const { event, sets } = Route.useLoaderData()
@@ -48,7 +48,6 @@ function Show() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const songs = sets.flatMap((set) => set.songs.map((song, i) => ({ ...song, set: set.name, n: i + 1, of: set.songs.length })))
   // Instant, not smooth: a second press mid-animation would get lost to snapping.
   const step = (by: number) => track.current?.scrollBy({ left: by * track.current.clientWidth })
 
@@ -59,35 +58,38 @@ function Show() {
           ✕
         </Link>
         <span>{event.title}</span>
-        <button type="button" aria-label="Previous song" onClick={() => step(-1)}>
-          ‹
-        </button>
-        <button type="button" aria-label="Next song" onClick={() => step(1)}>
-          ›
-        </button>
+        {sets.length > 1 && (
+          <>
+            <button type="button" aria-label="Previous set" onClick={() => step(-1)}>
+              ‹
+            </button>
+            <button type="button" aria-label="Next set" onClick={() => step(1)}>
+              ›
+            </button>
+          </>
+        )}
       </div>
-      {songs.length === 0 ? (
-        <p className="show-empty">No songs in this setlist yet.</p>
+      {sets.length === 0 ? (
+        <p className="show-empty">No setlist yet.</p>
       ) : (
-        <div className="show-track" ref={track} aria-label="Songs">
-          {songs.map((song, i) => {
-            const next = songs[i + 1]
-            return (
-              <article key={i} className="show-song" aria-label={song.title}>
-                <p className="show-pos">
-                  {song.set} · {song.n}/{song.of}
-                </p>
-                <h1>{song.title}</h1>
-                <p className="show-facts">
-                  {[song.key, song.bpm && `${song.bpm} BPM`, song.tuning].filter(Boolean).join(' · ')}
-                </p>
-                {song.notes && <p className="show-notes">{song.notes}</p>}
-                <p className="show-next">
-                  {next ? <>Next: {next.set !== song.set && `${next.set} · `}{next.title}</> : 'End of setlist'}
-                </p>
-              </article>
-            )
-          })}
+        <div className="show-track" ref={track} aria-label="Sets">
+          {sets.map((set, i) => (
+            <article key={i} className="show-set" aria-label={set.name} style={{ '--n': Math.max(set.songs.length, 6) } as React.CSSProperties}>
+              <h1>
+                {set.name} <small>{i + 1}/{sets.length}</small>
+              </h1>
+              <ol>
+                {set.songs.map((song, j) => (
+                  <li key={j}>
+                    {song.title}
+                    {song.key && <small> {song.key}</small>}
+                    {song.notes && <span className="show-note">{song.notes}</span>}
+                  </li>
+                ))}
+              </ol>
+              <p className="show-next">{sets[i + 1] ? `Next: ${sets[i + 1].name} ›` : 'End of setlist'}</p>
+            </article>
+          ))}
         </div>
       )}
     </div>

@@ -14,9 +14,9 @@ async function connect(): Promise<Db> {
     return drizzle(process.env.DATABASE_URL!, { schema }) as unknown as Db
   }
   const { openPglite } = await import('./pglite')
-  const { seed } = await import('./seed')
+  const { seedDemo } = await import('./seed')
   const { db } = await openPglite(process.env.PGLITE_DIR ?? '.pglite')
-  await seed(db as unknown as Db)
+  await seedDemo(db as unknown as Db)
   return db as unknown as Db
 }
 

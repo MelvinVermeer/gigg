@@ -76,12 +76,17 @@ Setlist
 - **Blocks are reusable templates**: define "Acoustic bit" or "Encore" once. Adding a block to a set *copies* its songs into the setlist, with no live reference, so later edits to the block never change existing setlists (including played events).
 
 - Linked to an event (one setlist per event), at `/<band>/events/<event>/setlist`
-- Builder: every change saves immediately; songs move with ↑ ↓ (no drag and drop, works on phones); new setlist starts empty or as a copy of another event's
+- **Standalone setlists** (no event: "Standard 2 sets", "Short club set") at `/<band>/setlists`. A new event can start from a copy of one (picked in the event form); copies, never live links, like blocks.
+- Builder: every change saves immediately; songs move with ↑ ↓ (no drag and drop, works on phones); new setlist starts empty or as a copy of another setlist (standalone or an event's)
 - Blocks are managed at `/<band>/blocks` (linked from Songs and the builder)
 - Clonable
 - Total duration per set / setlist
-- **Show mode** (single person): big type, swipe between songs, screen stays on, per-song notes visible, works offline.
+- **Show mode** (single person): one whole set per screen in big type, swipe to the next set, screen stays on, per-song notes visible, works offline.
 - **Stage-floor PDF export**: the key export. One page per set. Blocks are not shown as headings, only their songs.
+
+## History & undo
+
+`/<band>/history`: every save in plain language ("Archived song “Closer”", "Changed setlist “Wedding”"), who and when, newest first. Members can undo any save: its rows are put back as they were, as long as nothing changed them since (otherwise: undo the later change first). An undo is a save too, so it can be undone.
 
 ## Files
 
@@ -187,6 +192,7 @@ How to self-host on Vercel, step by step.
 ## Backlog
 
 - **Excel export (first up after MVP)**, then Numbers / CSV (setlist, repertoire, event overview)
+- **Download everything upcoming**: one tap to save all upcoming events, setlists and their songs (and later files) to the device, for offline use without visiting each page
 - Band invites by members
 - Member availability per event
 - Other PDFs (band/sound engineer setlist with key/BPM, event sheet)

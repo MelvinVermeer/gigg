@@ -15,9 +15,12 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as BandIndexRouteImport } from './routes/$band.index'
 import { Route as BandBlocksRouteImport } from './routes/$band.blocks'
+import { Route as BandHistoryRouteImport } from './routes/$band.history'
 import { Route as BandSearchRouteImport } from './routes/$band.search'
 import { Route as BandEventsIndexRouteImport } from './routes/$band.events.index'
 import { Route as BandEventsNewRouteImport } from './routes/$band.events.new'
+import { Route as BandSetlistsIndexRouteImport } from './routes/$band.setlists.index'
+import { Route as BandSetlistsSetlistRouteImport } from './routes/$band.setlists.$setlist'
 import { Route as BandSettingsIndexRouteImport } from './routes/$band.settings.index'
 import { Route as BandSettingsContactsRouteImport } from './routes/$band.settings.contacts'
 import { Route as BandSettingsVenuesRouteImport } from './routes/$band.settings.venues'
@@ -62,6 +65,11 @@ const BandBlocksRoute = BandBlocksRouteImport.update({
   path: '/blocks',
   getParentRoute: () => BandRoute,
 } as any)
+const BandHistoryRoute = BandHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => BandRoute,
+} as any)
 const BandSearchRoute = BandSearchRouteImport.update({
   id: '/search',
   path: '/search',
@@ -75,6 +83,16 @@ const BandEventsIndexRoute = BandEventsIndexRouteImport.update({
 const BandEventsNewRoute = BandEventsNewRouteImport.update({
   id: '/events/new',
   path: '/events/new',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandSetlistsIndexRoute = BandSetlistsIndexRouteImport.update({
+  id: '/setlists/',
+  path: '/setlists/',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandSetlistsSetlistRoute = BandSetlistsSetlistRouteImport.update({
+  id: '/setlists/$setlist',
+  path: '/setlists/$setlist',
   getParentRoute: () => BandRoute,
 } as any)
 const BandSettingsIndexRoute = BandSettingsIndexRouteImport.update({
@@ -149,14 +167,17 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
+  '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
+  '/$band/setlists/$setlist': typeof BandSetlistsSetlistRoute
   '/$band/settings/contacts': typeof BandSettingsContactsRoute
   '/$band/settings/venues': typeof BandSettingsVenuesRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/$band/events/': typeof BandEventsIndexRoute
+  '/$band/setlists/': typeof BandSetlistsIndexRoute
   '/$band/settings/': typeof BandSettingsIndexRoute
   '/$band/songs/': typeof BandSongsIndexRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
@@ -172,14 +193,17 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
+  '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
   '/$band': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
+  '/$band/setlists/$setlist': typeof BandSetlistsSetlistRoute
   '/$band/settings/contacts': typeof BandSettingsContactsRoute
   '/$band/settings/venues': typeof BandSettingsVenuesRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/$band/events': typeof BandEventsIndexRoute
+  '/$band/setlists': typeof BandSetlistsIndexRoute
   '/$band/settings': typeof BandSettingsIndexRoute
   '/$band/songs': typeof BandSongsIndexRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
@@ -197,14 +221,17 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
+  '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
+  '/$band/setlists/$setlist': typeof BandSetlistsSetlistRoute
   '/$band/settings/contacts': typeof BandSettingsContactsRoute
   '/$band/settings/venues': typeof BandSettingsVenuesRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/$band/events/': typeof BandEventsIndexRoute
+  '/$band/setlists/': typeof BandSetlistsIndexRoute
   '/$band/settings/': typeof BandSettingsIndexRoute
   '/$band/songs/': typeof BandSongsIndexRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
@@ -223,14 +250,17 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/$band/blocks'
+    | '/$band/history'
     | '/$band/search'
     | '/$band/'
     | '/$band/events/new'
+    | '/$band/setlists/$setlist'
     | '/$band/settings/contacts'
     | '/$band/settings/venues'
     | '/$band/songs/new'
     | '/api/auth/$'
     | '/$band/events/'
+    | '/$band/setlists/'
     | '/$band/settings/'
     | '/$band/songs/'
     | '/$band/events/$event/edit'
@@ -246,14 +276,17 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/$band/blocks'
+    | '/$band/history'
     | '/$band/search'
     | '/$band'
     | '/$band/events/new'
+    | '/$band/setlists/$setlist'
     | '/$band/settings/contacts'
     | '/$band/settings/venues'
     | '/$band/songs/new'
     | '/api/auth/$'
     | '/$band/events'
+    | '/$band/setlists'
     | '/$band/settings'
     | '/$band/songs'
     | '/$band/events/$event/edit'
@@ -270,14 +303,17 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/$band/blocks'
+    | '/$band/history'
     | '/$band/search'
     | '/$band/'
     | '/$band/events/new'
+    | '/$band/setlists/$setlist'
     | '/$band/settings/contacts'
     | '/$band/settings/venues'
     | '/$band/songs/new'
     | '/api/auth/$'
     | '/$band/events/'
+    | '/$band/setlists/'
     | '/$band/settings/'
     | '/$band/songs/'
     | '/$band/events/$event/edit'
@@ -341,6 +377,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BandBlocksRouteImport
       parentRoute: typeof BandRoute
     }
+    '/$band/history': {
+      id: '/$band/history'
+      path: '/history'
+      fullPath: '/$band/history'
+      preLoaderRoute: typeof BandHistoryRouteImport
+      parentRoute: typeof BandRoute
+    }
     '/$band/search': {
       id: '/$band/search'
       path: '/search'
@@ -360,6 +403,20 @@ declare module '@tanstack/react-router' {
       path: '/events/new'
       fullPath: '/$band/events/new'
       preLoaderRoute: typeof BandEventsNewRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/setlists/': {
+      id: '/$band/setlists/'
+      path: '/setlists'
+      fullPath: '/$band/setlists/'
+      preLoaderRoute: typeof BandSetlistsIndexRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/setlists/$setlist': {
+      id: '/$band/setlists/$setlist'
+      path: '/setlists/$setlist'
+      fullPath: '/$band/setlists/$setlist'
+      preLoaderRoute: typeof BandSetlistsSetlistRouteImport
       parentRoute: typeof BandRoute
     }
     '/$band/settings/': {
@@ -458,13 +515,16 @@ declare module '@tanstack/react-router' {
 
 interface BandRouteChildren {
   BandBlocksRoute: typeof BandBlocksRoute
+  BandHistoryRoute: typeof BandHistoryRoute
   BandSearchRoute: typeof BandSearchRoute
   BandIndexRoute: typeof BandIndexRoute
   BandEventsNewRoute: typeof BandEventsNewRoute
+  BandSetlistsSetlistRoute: typeof BandSetlistsSetlistRoute
   BandSettingsContactsRoute: typeof BandSettingsContactsRoute
   BandSettingsVenuesRoute: typeof BandSettingsVenuesRoute
   BandSongsNewRoute: typeof BandSongsNewRoute
   BandEventsIndexRoute: typeof BandEventsIndexRoute
+  BandSetlistsIndexRoute: typeof BandSetlistsIndexRoute
   BandSettingsIndexRoute: typeof BandSettingsIndexRoute
   BandSongsIndexRoute: typeof BandSongsIndexRoute
   BandEventsEventEditRoute: typeof BandEventsEventEditRoute
@@ -478,13 +538,16 @@ interface BandRouteChildren {
 
 const BandRouteChildren: BandRouteChildren = {
   BandBlocksRoute: BandBlocksRoute,
+  BandHistoryRoute: BandHistoryRoute,
   BandSearchRoute: BandSearchRoute,
   BandIndexRoute: BandIndexRoute,
   BandEventsNewRoute: BandEventsNewRoute,
+  BandSetlistsSetlistRoute: BandSetlistsSetlistRoute,
   BandSettingsContactsRoute: BandSettingsContactsRoute,
   BandSettingsVenuesRoute: BandSettingsVenuesRoute,
   BandSongsNewRoute: BandSongsNewRoute,
   BandEventsIndexRoute: BandEventsIndexRoute,
+  BandSetlistsIndexRoute: BandSetlistsIndexRoute,
   BandSettingsIndexRoute: BandSettingsIndexRoute,
   BandSongsIndexRoute: BandSongsIndexRoute,
   BandEventsEventEditRoute: BandEventsEventEditRoute,

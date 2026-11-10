@@ -9,6 +9,7 @@ export type EventFormData = {
   venues: Venue[]
   contacts: Contact[]
   lastContactsByVenue: Record<string, string[]>
+  setlists: { id: string; name: string }[]
 }
 
 type Initial = Partial<Omit<EventFields, 'venue' | 'contacts'>> & {
@@ -20,7 +21,9 @@ type Props = {
   data: EventFormData
   initial?: Initial
   submitLabel: string
-  onSubmit: (fields: EventFields) => Promise<void>
+  /** New events only: offer to start the setlist from a standalone one. */
+  pickSetlist?: boolean
+  onSubmit: (fields: EventFields & { setlistFrom?: string | null }) => Promise<void>
 }
 
 /** A picked contact: existing (id) or new (typed name plus optional details). */
@@ -32,7 +35,7 @@ const cap = (s: string) => s[0].toUpperCase() + s.slice(1)
 
 let nextKey = 0
 
-export function EventForm({ data, initial = {}, submitLabel, onSubmit }: Props) {
+export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false, onSubmit }: Props) {
   const ids = useId()
   const venues = useMemo(() => withLabels(data.venues, (v) => v.name, (v) => v.address), [data.venues])
   const contacts = useMemo(() => withLabels(data.contacts, (c) => c.name, (c) => c.email ?? c.phone), [data.contacts])
@@ -83,6 +86,7 @@ export function EventForm({ data, initial = {}, submitLabel, onSubmit }: Props) 
           .split(',')
           .map((t) => t.trim())
           .filter(Boolean),
+        setlistFrom: (f.get('setlistFrom') as string | null) || null,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Saving failed')
@@ -221,6 +225,19 @@ export function EventForm({ data, initial = {}, submitLabel, onSubmit }: Props) 
         Tags <small>(comma separated)</small>
         <input name="tags" defaultValue={(initial.tags ?? []).join(', ')} />
       </label>
+      {pickSetlist && data.setlists.length > 0 && (
+        <label>
+          Setlist <small>(starts as a copy, change it freely)</small>
+          <select name="setlistFrom" defaultValue="">
+            <option value="">Empty</option>
+            {data.setlists.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {error && <p role="alert">{error}</p>}
       <p>
         <button type="submit" disabled={busy}>

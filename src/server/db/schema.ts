@@ -250,7 +250,9 @@ export const changes = pgTable(
     action: text('action').notNull(), // 'insert' | 'update' | 'delete'
     before: jsonb('before'),
     after: jsonb('after'),
+    // Groups the rows one save wrote, so history shows and undoes them together.
+    txId: bigint('tx_id', { mode: 'number' }).notNull().default(sql`txid_current()`),
     createdAt: createdAt(),
   },
-  (t) => [index('changes_band_idx').on(t.bandId, t.createdAt)],
+  (t) => [index('changes_band_idx').on(t.bandId, t.createdAt), index('changes_tx_idx').on(t.txId)],
 )
