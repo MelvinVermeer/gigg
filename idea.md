@@ -102,11 +102,13 @@ Stored in the app. Optional push to GitHub Issues via backend API (users don't n
 
 Create bands. Stats: bands, users, DB size. Feedback overview.
 
-## User settings
+## Settings
 
-- Light / dark mode
-- Add a band
-- Band settings (members, invites)
+One page per band: `/<band>/settings`, reached from the user menu (avatar with the first letter of the email: email, bands, settings, log out).
+
+- **You:** email, add a passkey, theme (System / Light / Dark; per device, in a cookie)
+- **The band** (members): venues and contacts. Rarely change, so they're edited here, not in the main navigation. Archived ones leave the event form's search boxes but stay on old events.
+- Later: members and invites
 
 ## Stack
 

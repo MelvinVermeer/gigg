@@ -13,10 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BandRouteImport } from './routes/$band'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MeRouteImport } from './routes/me'
-import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as BandIndexRouteImport } from './routes/$band.index'
 import { Route as BandEventsIndexRouteImport } from './routes/$band.events.index'
 import { Route as BandEventsNewRouteImport } from './routes/$band.events.new'
+import { Route as BandSettingsIndexRouteImport } from './routes/$band.settings.index'
+import { Route as BandSettingsContactsRouteImport } from './routes/$band.settings.contacts'
+import { Route as BandSettingsVenuesRouteImport } from './routes/$band.settings.venues'
 import { Route as BandSongsIndexRouteImport } from './routes/$band.songs.index'
 import { Route as BandSongsNewRouteImport } from './routes/$band.songs.new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -45,11 +47,6 @@ const MeRoute = MeRouteImport.update({
   path: '/me',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const BandIndexRoute = BandIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -63,6 +60,21 @@ const BandEventsIndexRoute = BandEventsIndexRouteImport.update({
 const BandEventsNewRoute = BandEventsNewRouteImport.update({
   id: '/events/new',
   path: '/events/new',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandSettingsIndexRoute = BandSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandSettingsContactsRoute = BandSettingsContactsRouteImport.update({
+  id: '/settings/contacts',
+  path: '/settings/contacts',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandSettingsVenuesRoute = BandSettingsVenuesRouteImport.update({
+  id: '/settings/venues',
+  path: '/settings/venues',
   getParentRoute: () => BandRoute,
 } as any)
 const BandSongsIndexRoute = BandSongsIndexRouteImport.update({
@@ -106,12 +118,14 @@ export interface FileRoutesByFullPath {
   '/$band': typeof BandRouteWithChildren
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
-  '/settings': typeof SettingsRoute
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
+  '/$band/settings/contacts': typeof BandSettingsContactsRoute
+  '/$band/settings/venues': typeof BandSettingsVenuesRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/$band/events/': typeof BandEventsIndexRoute
+  '/$band/settings/': typeof BandSettingsIndexRoute
   '/$band/songs/': typeof BandSongsIndexRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
@@ -122,12 +136,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
-  '/settings': typeof SettingsRoute
   '/$band': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
+  '/$band/settings/contacts': typeof BandSettingsContactsRoute
+  '/$band/settings/venues': typeof BandSettingsVenuesRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/$band/events': typeof BandEventsIndexRoute
+  '/$band/settings': typeof BandSettingsIndexRoute
   '/$band/songs': typeof BandSongsIndexRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
@@ -140,12 +156,14 @@ export interface FileRoutesById {
   '/$band': typeof BandRouteWithChildren
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
-  '/settings': typeof SettingsRoute
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
+  '/$band/settings/contacts': typeof BandSettingsContactsRoute
+  '/$band/settings/venues': typeof BandSettingsVenuesRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/$band/events/': typeof BandEventsIndexRoute
+  '/$band/settings/': typeof BandSettingsIndexRoute
   '/$band/songs/': typeof BandSongsIndexRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
@@ -159,12 +177,14 @@ export interface FileRouteTypes {
     | '/$band'
     | '/login'
     | '/me'
-    | '/settings'
     | '/$band/'
     | '/$band/events/new'
+    | '/$band/settings/contacts'
+    | '/$band/settings/venues'
     | '/$band/songs/new'
     | '/api/auth/$'
     | '/$band/events/'
+    | '/$band/settings/'
     | '/$band/songs/'
     | '/$band/events/$event/edit'
     | '/$band/songs/$song/edit'
@@ -175,12 +195,14 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/me'
-    | '/settings'
     | '/$band'
     | '/$band/events/new'
+    | '/$band/settings/contacts'
+    | '/$band/settings/venues'
     | '/$band/songs/new'
     | '/api/auth/$'
     | '/$band/events'
+    | '/$band/settings'
     | '/$band/songs'
     | '/$band/events/$event/edit'
     | '/$band/songs/$song/edit'
@@ -192,12 +214,14 @@ export interface FileRouteTypes {
     | '/$band'
     | '/login'
     | '/me'
-    | '/settings'
     | '/$band/'
     | '/$band/events/new'
+    | '/$band/settings/contacts'
+    | '/$band/settings/venues'
     | '/$band/songs/new'
     | '/api/auth/$'
     | '/$band/events/'
+    | '/$band/settings/'
     | '/$band/songs/'
     | '/$band/events/$event/edit'
     | '/$band/songs/$song/edit'
@@ -210,7 +234,6 @@ export interface RootRouteChildren {
   BandRoute: typeof BandRouteWithChildren
   LoginRoute: typeof LoginRoute
   MeRoute: typeof MeRoute
-  SettingsRoute: typeof SettingsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -244,13 +267,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/$band/': {
       id: '/$band/'
       path: '/'
@@ -270,6 +286,27 @@ declare module '@tanstack/react-router' {
       path: '/events/new'
       fullPath: '/$band/events/new'
       preLoaderRoute: typeof BandEventsNewRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/settings/': {
+      id: '/$band/settings/'
+      path: '/settings'
+      fullPath: '/$band/settings/'
+      preLoaderRoute: typeof BandSettingsIndexRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/settings/contacts': {
+      id: '/$band/settings/contacts'
+      path: '/settings/contacts'
+      fullPath: '/$band/settings/contacts'
+      preLoaderRoute: typeof BandSettingsContactsRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/settings/venues': {
+      id: '/$band/settings/venues'
+      path: '/settings/venues'
+      fullPath: '/$band/settings/venues'
+      preLoaderRoute: typeof BandSettingsVenuesRouteImport
       parentRoute: typeof BandRoute
     }
     '/$band/songs/': {
@@ -327,8 +364,11 @@ declare module '@tanstack/react-router' {
 interface BandRouteChildren {
   BandIndexRoute: typeof BandIndexRoute
   BandEventsNewRoute: typeof BandEventsNewRoute
+  BandSettingsContactsRoute: typeof BandSettingsContactsRoute
+  BandSettingsVenuesRoute: typeof BandSettingsVenuesRoute
   BandSongsNewRoute: typeof BandSongsNewRoute
   BandEventsIndexRoute: typeof BandEventsIndexRoute
+  BandSettingsIndexRoute: typeof BandSettingsIndexRoute
   BandSongsIndexRoute: typeof BandSongsIndexRoute
   BandEventsEventEditRoute: typeof BandEventsEventEditRoute
   BandSongsSongEditRoute: typeof BandSongsSongEditRoute
@@ -339,8 +379,11 @@ interface BandRouteChildren {
 const BandRouteChildren: BandRouteChildren = {
   BandIndexRoute: BandIndexRoute,
   BandEventsNewRoute: BandEventsNewRoute,
+  BandSettingsContactsRoute: BandSettingsContactsRoute,
+  BandSettingsVenuesRoute: BandSettingsVenuesRoute,
   BandSongsNewRoute: BandSongsNewRoute,
   BandEventsIndexRoute: BandEventsIndexRoute,
+  BandSettingsIndexRoute: BandSettingsIndexRoute,
   BandSongsIndexRoute: BandSongsIndexRoute,
   BandEventsEventEditRoute: BandEventsEventEditRoute,
   BandSongsSongEditRoute: BandSongsSongEditRoute,
@@ -355,7 +398,6 @@ const rootRouteChildren: RootRouteChildren = {
   BandRoute: BandRouteWithChildren,
   LoginRoute: LoginRoute,
   MeRoute: MeRoute,
-  SettingsRoute: SettingsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

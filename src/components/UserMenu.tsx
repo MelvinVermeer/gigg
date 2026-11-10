@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useParams } from '@tanstack/react-router'
 import { useRef } from 'react'
 import { authClient } from '#/lib/auth-client'
 
@@ -8,6 +8,8 @@ type Props = { email: string; bands: { slug: string; name: string }[] }
 export function UserMenu({ email, bands }: Props) {
   const menu = useRef<HTMLDivElement>(null)
   const close = () => menu.current?.hidePopover()
+  // Settings live per band: the band you're in, otherwise your first band.
+  const settingsBand = useParams({ strict: false }).band ?? bands[0]?.slug
 
   async function logOut() {
     close()
@@ -29,9 +31,11 @@ export function UserMenu({ email, bands }: Props) {
               {b.name}
             </Link>
           ))}
-          <Link to="/settings" onClick={close}>
-            Settings
-          </Link>
+          {settingsBand && (
+            <Link to="/$band/settings" params={{ band: settingsBand }} onClick={close}>
+              Settings
+            </Link>
+          )}
           <button type="button" onClick={logOut}>
             Log out
           </button>

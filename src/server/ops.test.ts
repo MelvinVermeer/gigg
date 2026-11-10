@@ -197,6 +197,61 @@ describe('events', () => {
   })
 })
 
+describe('venues & contacts', () => {
+  it('lists active first with usage counts', async () => {
+    const t = await testDb()
+    const venueList = await bandOps.listVenues(t.db, t.reader, t.band, {})
+    const contactList = await bandOps.listContacts(t.db, t.reader, t.band, {})
+    expect(venueList).toMatchObject([{ name: 'The Local Hall', events: 2, archivedAt: null }])
+    expect(contactList).toMatchObject([{ name: 'Pat Promoter', events: 2 }])
+  })
+
+  it('updates show up on events; empty text becomes null', async () => {
+    const t = await testDb()
+    const [hall] = await bandOps.listVenues(t.db, t.member, t.band, {})
+    const [pat] = await bandOps.listContacts(t.db, t.member, t.band, {})
+    await bandOps.updateVenue(t.db, t.member, t.band, { id: hall.id, fields: { name: 'The Big Hall', address: 'New Road 9' } })
+    await bandOps.updateContact(t.db, t.member, t.band, { id: pat.id, fields: { name: 'Pat P.', email: '' } })
+    const res = await bandOps.getEvent(t.db, t.reader, t.band, { slug: 'summer-party' })
+    if (res.moved) throw new Error('unexpected redirect')
+    expect(res.venue).toMatchObject({ name: 'The Big Hall', address: 'New Road 9' })
+    expect(res.contacts).toEqual([expect.objectContaining({ name: 'Pat P.', email: null })])
+  })
+
+  it('archived ones leave the event form but stay on events, until restored', async () => {
+    const t = await testDb()
+    const [hall] = await bandOps.listVenues(t.db, t.member, t.band, {})
+    const [pat] = await bandOps.listContacts(t.db, t.member, t.band, {})
+    await bandOps.archiveVenue(t.db, t.member, t.band, { id: hall.id })
+    await bandOps.archiveContact(t.db, t.member, t.band, { id: pat.id })
+
+    const form = await bandOps.eventFormData(t.db, t.member, t.band, {})
+    expect([form.venues, form.contacts]).toEqual([[], []])
+    const res = await bandOps.getEvent(t.db, t.reader, t.band, { slug: 'summer-party' })
+    expect(!res.moved && [res.venue?.name, res.contacts.map((c) => c.name)]).toEqual(['The Local Hall', ['Pat Promoter']])
+
+    await bandOps.restoreVenue(t.db, t.member, t.band, { id: hall.id })
+    await bandOps.restoreContact(t.db, t.member, t.band, { id: pat.id })
+    const after = await bandOps.eventFormData(t.db, t.member, t.band, {})
+    expect([after.venues.length, after.contacts.length]).toEqual([1, 1])
+  })
+
+  it("refuses to touch another band's venues and contacts", async () => {
+    const t = await testDb()
+    const [other] = await t.db.insert(bands).values({ slug: 'other-band', name: 'Other' }).returning()
+    const [venue] = await t.db.insert(venues).values({ bandId: other.id, slug: 'theirs', name: 'Theirs' }).returning()
+    const [contact] = await t.db.insert(contacts).values({ bandId: other.id, name: 'Their contact' }).returning()
+    await expect(
+      bandOps.updateVenue(t.db, t.member, t.band, { id: venue.id, fields: { name: 'Mine now' } }),
+    ).rejects.toBeInstanceOf(NotFound)
+    await expect(bandOps.archiveVenue(t.db, t.member, t.band, { id: venue.id })).rejects.toBeInstanceOf(NotFound)
+    await expect(
+      bandOps.updateContact(t.db, t.member, t.band, { id: contact.id, fields: { name: 'Mine now' } }),
+    ).rejects.toBeInstanceOf(NotFound)
+    await expect(bandOps.restoreContact(t.db, t.member, t.band, { id: contact.id })).rejects.toBeInstanceOf(NotFound)
+  })
+})
+
 describe('audit trail', () => {
   it('logs a write with the acting user and band', async () => {
     const t = await testDb()

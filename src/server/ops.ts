@@ -376,7 +376,7 @@ const eventOps = {
           eq(events.bandId, bandId),
           isNotNull(events.venueId),
           isNull(events.archivedAt),
-          sql`exists (select 1 from ${eventContacts} where ${eventContacts.eventId} = ${events.id})`,
+          sql`exists (select 1 from event_contacts where event_contacts.event_id = events.id)`,
         ),
       )
       .orderBy(events.venueId, desc(events.date), desc(events.createdAt))
@@ -440,6 +440,95 @@ const eventOps = {
   }),
 }
 
+// Venues & contacts (edited from band settings) ------------------------------
+
+const byId = z.object({ id: z.uuid() })
+
+const venueFields = z.object({
+  name: z.string().trim().min(1).max(200),
+  address: optText(500),
+  notes: optText(10_000),
+})
+
+const contactFields = z.object({
+  name: z.string().trim().min(1).max(200),
+  organisation: optText(200),
+  email: optText(200),
+  phone: optText(50),
+  notes: optText(10_000),
+})
+
+export type VenueFields = z.input<typeof venueFields>
+export type ContactFields = z.input<typeof contactFields>
+
+/** Update/archive/restore only rows of this band; another band's id is NotFound. */
+async function updateOwn(tx: Tx, table: typeof venues | typeof contacts, bandId: string, id: string, set: object) {
+  const rows = await tx
+    .update(table as typeof venues)
+    .set(set)
+    .where(and(eq(table.id, id), eq(table.bandId, bandId)))
+    .returning({ id: table.id })
+  if (!rows.length) throw new NotFound()
+}
+
+const venueContactOps = {
+  /** All venues, active first, with how many events use each. */
+  listVenues: bandOp('reader', z.object({}), ({ tx, bandId }) =>
+    tx
+      .select({
+        id: venues.id,
+        name: venues.name,
+        address: venues.address,
+        notes: venues.notes,
+        archivedAt: venues.archivedAt,
+        // Table-qualified on purpose: Drizzle renders columns unqualified inside sql``, which would
+        // compare events.venue_id with events.id.
+        events: sql<number>`(select count(*)::int from events where events.venue_id = venues.id)`,
+      })
+      .from(venues)
+      .where(eq(venues.bandId, bandId))
+      .orderBy(sql`${venues.archivedAt} is not null`, asc(venues.name)),
+  ),
+
+  updateVenue: bandOp('member', byId.extend({ fields: venueFields }), ({ tx, bandId }, { id, fields }) =>
+    updateOwn(tx, venues, bandId, id, fields),
+  ),
+  archiveVenue: bandOp('member', byId, ({ tx, bandId }, { id }) =>
+    updateOwn(tx, venues, bandId, id, { archivedAt: new Date() }),
+  ),
+  restoreVenue: bandOp('member', byId, ({ tx, bandId }, { id }) =>
+    updateOwn(tx, venues, bandId, id, { archivedAt: null }),
+  ),
+
+  /** All contacts, active first, with how many events they're linked to. */
+  listContacts: bandOp('reader', z.object({}), ({ tx, bandId }) =>
+    tx
+      .select({
+        id: contacts.id,
+        name: contacts.name,
+        organisation: contacts.organisation,
+        email: contacts.email,
+        phone: contacts.phone,
+        notes: contacts.notes,
+        archivedAt: contacts.archivedAt,
+        events: sql<number>`(select count(*)::int from event_contacts where event_contacts.contact_id = contacts.id)`,
+      })
+      .from(contacts)
+      .where(eq(contacts.bandId, bandId))
+      .orderBy(sql`${contacts.archivedAt} is not null`, asc(contacts.name)),
+  ),
+
+  updateContact: bandOp('member', byId.extend({ fields: contactFields }), ({ tx, bandId }, { id, fields }) =>
+    updateOwn(tx, contacts, bandId, id, fields),
+  ),
+  archiveContact: bandOp('member', byId, ({ tx, bandId }, { id }) =>
+    updateOwn(tx, contacts, bandId, id, { archivedAt: new Date() }),
+  ),
+  restoreContact: bandOp('member', byId, ({ tx, bandId }, { id }) =>
+    updateOwn(tx, contacts, bandId, id, { archivedAt: null }),
+  ),
+}
+
 // All band operations ------------------------------------------------------
 
 /** Every band-scoped operation. The authorisation tests run all of them, so add new ones here. */
@@ -453,6 +542,7 @@ export const bandOps = {
   }),
   ...songOps,
   ...eventOps,
+  ...venueContactOps,
 }
 
 export type BandOps = typeof bandOps

@@ -3,6 +3,7 @@ import { HeadContent, Link, Outlet, Scripts, createRootRoute } from '@tanstack/r
 import lockup from '../assets/gigg-lockup.svg'
 import lockupInk from '../assets/gigg-lockup-ink.svg'
 import { UserMenu } from '#/components/UserMenu'
+import { themeScript } from '#/lib/theme'
 import { getMe } from '#/server/fns'
 import appCss from '../styles.css?url'
 
@@ -31,8 +32,10 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    // data-theme is set by themeScript before hydration, hence suppressHydrationWarning.
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <HeadContent />
       </head>
       <body>
@@ -49,11 +52,9 @@ function RootLayout() {
     <>
       <header className="site-header">
         <Link to="/" aria-label="Gigg home">
-          {/* Yellow wordmark on dark, ink wordmark on light (handover rule). */}
-          <picture>
-            <source srcSet={lockup} media="(prefers-color-scheme: dark)" />
-            <img src={lockupInk} alt="Gigg" height={32} width={97} />
-          </picture>
+          {/* CSS shows the one matching the theme (handover: no yellow wordmark on light). */}
+          <img className="logo-on-light" src={lockupInk} alt="Gigg" height={32} width={97} />
+          <img className="logo-on-dark" src={lockup} alt="Gigg" height={32} width={97} />
         </Link>
         {me ? <UserMenu email={me.email} bands={me.bands} /> : <Link to="/login">Sign in</Link>}
       </header>

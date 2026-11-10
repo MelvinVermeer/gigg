@@ -27,7 +27,9 @@ test.describe('user menu', () => {
 
     await avatar.click()
     await menu.getByRole('link', { name: 'Settings' }).click()
+    await expect(page).toHaveURL(/\/demo-band\/settings$/)
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Settings')
+    await expect(page.getByText('Signed in as reader@example.com')).toBeVisible()
   })
 })
 
