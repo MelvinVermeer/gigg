@@ -449,3 +449,59 @@ ul.results li {
 .show-empty {
   padding: 1.5rem;
 }
+
+/* Stage-floor print: one A4 page per set, big titles. On screen a page-like preview. */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+.stage-page {
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.stage-page header {
+  font-size: 4mm;
+  opacity: 0.7;
+}
+
+.stage-page ol {
+  margin: 4mm 0 0;
+  padding-left: 1.6em;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.stage-page small {
+  font-size: 0.45em;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+@media print {
+  :root {
+    --bg: #fff;
+    --fg: #000;
+  }
+  .site-header,
+  .band-nav,
+  .no-print {
+    display: none;
+  }
+  main {
+    width: auto;
+    margin: 0;
+  }
+  .stage-page {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    break-after: page;
+  }
+  .stage-page:last-child {
+    break-after: auto;
+  }
+}

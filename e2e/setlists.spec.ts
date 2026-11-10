@@ -75,6 +75,13 @@ test.describe('member', () => {
     await expect(song('Closer')).toContainText('End of setlist')
     await page.getByRole('link', { name: 'Close show mode' }).click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Setlist')
+
+    // Stage-floor PDF: one page per set.
+    await page.getByRole('link', { name: 'Stage-floor PDF' }).click()
+    await expect(page.locator('.stage-page').first()).toContainText('Slow One')
+    const pdf = (await page.pdf({ preferCSSPageSize: true })).toString('latin1')
+    expect(pdf.match(/\/Type\s*\/Page\b(?!s)/g)).toHaveLength(2)
+    await page.getByRole('link', { name: '← Setlist' }).click()
     await page.getByRole('link', { name: `← Setlist Show ${ts}` }).click()
 
     // Copy to another event.

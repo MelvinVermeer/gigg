@@ -63,6 +63,10 @@ function Setlist() {
             <Link to="/$band/events/$event/show" params={{ band: band.slug, event: data.event.slug }}>
               Show mode
             </Link>
+            {' · '}
+            <Link to="/$band/events/$event/print" params={{ band: band.slug, event: data.event.slug }}>
+              Stage-floor PDF
+            </Link>
           </>
         )}
       </p>
