@@ -57,6 +57,14 @@ function Setlist() {
           ← {data.event.title}
         </Link>{' '}
         · {formatDate(data.event.date)}
+        {sets.length > 0 && (
+          <>
+            {' · '}
+            <Link to="/$band/events/$event/show" params={{ band: band.slug, event: data.event.slug }}>
+              Show mode
+            </Link>
+          </>
+        )}
       </p>
       <h1>Setlist</h1>
       <p className="setlist-meta">

@@ -584,7 +584,8 @@ async function readSets(tx: Tx, eventId: string) {
     .orderBy(asc(sets.position))
   if (!setRows.length) return []
   const items = await tx
-    .select({ setId: setItems.setId, ...songSummary })
+    // Notes/BPM/tuning too: show mode reads the same setlist.
+    .select({ setId: setItems.setId, ...songSummary, bpm: songs.bpm, tuning: songs.tuning, notes: songs.notes })
     .from(setItems)
     .innerJoin(songs, eq(songs.id, setItems.songId))
     .where(

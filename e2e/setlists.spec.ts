@@ -59,6 +59,24 @@ test.describe('member', () => {
     await page.getByRole('link', { name: `← Setlist Show ${ts}` }).click()
     await expect(page.locator('.fields')).toContainText('3 songs · 12:50')
 
+    // Show mode: one song per screen, next song announced across sets.
+    await page.getByRole('link', { name: '3 songs · 12:50' }).click()
+    await page.getByRole('link', { name: 'Show mode' }).click()
+    const song = (title: string) => page.getByRole('article', { name: title })
+    await expect(song('Slow One')).toBeInViewport()
+    await expect(song('Slow One')).toContainText('Set 1 · 1/2')
+    await expect(song('Slow One')).toContainText('Am · 72 BPM')
+    await expect(song('Slow One')).toContainText('Next: Opening Song')
+    await page.getByRole('button', { name: 'Next song' }).click()
+    await expect(song('Opening Song')).toBeInViewport()
+    await expect(song('Opening Song')).toContainText('Next: Set 2 · Closer')
+    await page.keyboard.press('ArrowRight')
+    await expect(song('Closer')).toBeInViewport()
+    await expect(song('Closer')).toContainText('End of setlist')
+    await page.getByRole('link', { name: 'Close show mode' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Setlist')
+    await page.getByRole('link', { name: `← Setlist Show ${ts}` }).click()
+
     // Copy to another event.
     await newEvent(page, `Copy Show ${ts}`)
     await page.getByRole('link', { name: 'Build setlist' }).click()
