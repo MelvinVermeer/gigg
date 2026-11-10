@@ -75,9 +75,9 @@ function Show() {
         <div className="show-track" ref={track} aria-label="Sets">
           {sets.map((set, i) => (
             <article key={i} className="show-set" aria-label={set.name} style={{ '--n': Math.max(set.songs.length, 6) } as React.CSSProperties}>
-              <h1>
+              <h2>
                 {set.name} <small>{i + 1}/{sets.length}</small>
-              </h1>
+              </h2>
               <ol>
                 {set.songs.map((song, j) => (
                   <li key={j}>

@@ -422,12 +422,12 @@ ul.results li {
   padding: 0 1.25rem 1.5rem;
 }
 
-.show-set h1 {
+.show-set h2 {
   font-size: 1.25rem;
   margin: 0 0 0.5rem;
 }
 
-.show-set h1 small {
+.show-set h2 small {
   font-weight: 400;
   opacity: 0.6;
 }
