@@ -1,13 +1,19 @@
 // Band data operations as plain functions: (db, userId, bandSlug, input) → result.
 // Server functions (fns.ts) are thin wrappers around these, so everything here is testable without HTTP.
-import { and, asc, eq, isNull, sql } from 'drizzle-orm'
+import { and, asc, eq, isNotNull, isNull, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import type { Db } from './db'
-import { bands, memberships, songs } from './db/schema'
+import { bands, memberships, slugRedirects, songs } from './db/schema'
 
 export class Forbidden extends Error {
   constructor() {
     super('Forbidden')
+  }
+}
+
+export class NotFound extends Error {
+  constructor() {
+    super('Not found')
   }
 }
 
@@ -22,9 +28,9 @@ type Ctx = { tx: Tx; bandId: string; userId: string; role: Role }
 function bandOp<S extends z.ZodType, O>(
   minRole: Role,
   input: S,
-  run: (ctx: Ctx, input: z.infer<S>) => Promise<O>,
+  run: (ctx: Ctx, input: z.output<S>) => Promise<O>,
 ) {
-  return (db: Db, userId: string, bandSlug: string, rawInput: unknown): Promise<O> =>
+  const op = (db: Db, userId: string, bandSlug: string, rawInput: unknown): Promise<O> =>
     db.transaction(async (tx) => {
       const [m] = await tx
         .select({ bandId: bands.id, role: memberships.role })
@@ -42,6 +48,7 @@ function bandOp<S extends z.ZodType, O>(
       await tx.execute(sql`select set_config('app.user_id', ${userId}, true)`)
       return run({ tx, bandId: m.bandId, userId, role: m.role }, input.parse(rawInput))
     })
+  return Object.assign(op, { minRole, input })
 }
 
 export function slugify(text: string) {
@@ -54,7 +61,60 @@ export function slugify(text: string) {
   return slug || 'untitled'
 }
 
-/** Every band-scoped operation. The outsider test runs all of them, so add new ones here. */
+/** Slugs that collide with fixed routes under /<band>/songs/. */
+const reservedSongSlugs = ['new']
+
+/** First free song slug for `title`: base, base-2, base-3, ... (archived songs keep theirs). */
+async function freeSongSlug(tx: Tx, bandId: string, title: string, exceptId?: string) {
+  const base = slugify(title)
+  for (let i = 1; ; i++) {
+    const slug = i === 1 ? base : `${base}-${i}`
+    if (reservedSongSlugs.includes(slug)) continue
+    const [taken] = await tx
+      .select({ id: songs.id })
+      .from(songs)
+      .where(and(eq(songs.bandId, bandId), eq(songs.slug, slug), exceptId ? ne(songs.id, exceptId) : undefined))
+    if (!taken) return slug
+  }
+}
+
+/** Optional text field: trimmed, "" becomes null. */
+const optText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullish()
+    .transform((v) => v || null)
+
+const songFields = z.object({
+  title: z.string().trim().min(1).max(200),
+  durationSec: z.number().int().min(0).max(5999).nullish().transform((v) => v ?? null),
+  key: optText(12),
+  bpm: z.number().int().min(20).max(400).nullish().transform((v) => v ?? null),
+  tuning: optText(200),
+  notes: optText(10_000),
+  tags: z
+    .array(z.string().trim().min(1).max(40))
+    .max(30)
+    .default([])
+    .transform((tags) => [...new Set(tags)]),
+})
+
+export type SongFields = z.input<typeof songFields>
+
+const bySlug = z.object({ slug: z.string() })
+
+async function songIdBySlug(tx: Tx, bandId: string, slug: string) {
+  const [song] = await tx
+    .select({ id: songs.id })
+    .from(songs)
+    .where(and(eq(songs.bandId, bandId), eq(songs.slug, slug)))
+  if (!song) throw new NotFound()
+  return song.id
+}
+
+/** Every band-scoped operation. The authorisation tests run all of them, so add new ones here. */
 export const bandOps = {
   getBand: bandOp('reader', z.object({}), async ({ tx, bandId, role }) => {
     const [band] = await tx
@@ -64,30 +124,81 @@ export const bandOps = {
     return { ...band, role }
   }),
 
-  listSongs: bandOp('reader', z.object({}), ({ tx, bandId }) =>
+  listSongs: bandOp('reader', z.object({ archived: z.boolean().default(false) }), ({ tx, bandId }, { archived }) =>
     tx
-      .select({ slug: songs.slug, title: songs.title, durationSec: songs.durationSec, key: songs.key })
+      .select({
+        slug: songs.slug,
+        title: songs.title,
+        durationSec: songs.durationSec,
+        key: songs.key,
+        bpm: songs.bpm,
+        tags: songs.tags,
+      })
       .from(songs)
-      .where(and(eq(songs.bandId, bandId), isNull(songs.archivedAt)))
+      .where(and(eq(songs.bandId, bandId), archived ? isNotNull(songs.archivedAt) : isNull(songs.archivedAt)))
       .orderBy(asc(songs.title)),
   ),
 
-  createSong: bandOp(
-    'member',
-    z.object({ title: z.string().trim().min(1).max(200) }),
-    async ({ tx, bandId }, { title }) => {
-      const slug = slugify(title)
-      // ponytail: check-then-insert; the unique constraint still guards a race. Add suffixes (-2) when duplicate titles become real.
-      const [taken] = await tx
-        .select({ id: songs.id })
-        .from(songs)
-        .where(and(eq(songs.bandId, bandId), eq(songs.slug, slug)))
-      if (taken) throw new Error(`A song with slug "${slug}" already exists`)
-      const [song] = await tx.insert(songs).values({ bandId, slug, title }).returning()
-      return song
-    },
-  ),
+  /** A song by slug. An old slug (song was renamed) returns `{ moved: true, slug }` instead. */
+  getSong: bandOp('reader', bySlug, async ({ tx, bandId }, { slug }) => {
+    const [song] = await tx
+      .select()
+      .from(songs)
+      .where(and(eq(songs.bandId, bandId), eq(songs.slug, slug)))
+    if (song) return { moved: false as const, song }
+    const [moved] = await tx
+      .select({ slug: songs.slug })
+      .from(slugRedirects)
+      .innerJoin(songs, eq(songs.id, slugRedirects.entityId))
+      .where(and(eq(slugRedirects.bandId, bandId), eq(slugRedirects.type, 'song'), eq(slugRedirects.oldSlug, slug)))
+    if (moved) return { moved: true as const, slug: moved.slug }
+    throw new NotFound()
+  }),
+
+  createSong: bandOp('member', songFields, async ({ tx, bandId }, fields) => {
+    const slug = await freeSongSlug(tx, bandId, fields.title)
+    const [song] = await tx.insert(songs).values({ bandId, slug, ...fields }).returning()
+    return song
+  }),
+
+  /** Update a song. A new title gets a new slug; the old one keeps working as a redirect. */
+  updateSong: bandOp('member', bySlug.extend({ fields: songFields }), async ({ tx, bandId }, { slug, fields }) => {
+    const id = await songIdBySlug(tx, bandId, slug)
+    const newSlug = slugify(fields.title) === slugify(slug) ? slug : await freeSongSlug(tx, bandId, fields.title, id)
+    if (newSlug !== slug) {
+      await tx
+        .insert(slugRedirects)
+        .values({ bandId, type: 'song', oldSlug: slug, entityId: id })
+        .onConflictDoUpdate({
+          target: [slugRedirects.bandId, slugRedirects.type, slugRedirects.oldSlug],
+          set: { entityId: id },
+        })
+    }
+    const [song] = await tx
+      .update(songs)
+      .set({ ...fields, slug: newSlug })
+      .where(eq(songs.id, id))
+      .returning()
+    return song
+  }),
+
+  archiveSong: bandOp('member', bySlug, async ({ tx, bandId }, { slug }) => {
+    await tx
+      .update(songs)
+      .set({ archivedAt: new Date() })
+      .where(eq(songs.id, await songIdBySlug(tx, bandId, slug)))
+  }),
+
+  restoreSong: bandOp('member', bySlug, async ({ tx, bandId }, { slug }) => {
+    await tx
+      .update(songs)
+      .set({ archivedAt: null })
+      .where(eq(songs.id, await songIdBySlug(tx, bandId, slug)))
+  }),
 }
+
+export type BandOps = typeof bandOps
+export type BandOpName = keyof BandOps
 
 /** Bands the user belongs to (not band-scoped, so not in bandOps). */
 export function myBands(db: Db, userId: string) {

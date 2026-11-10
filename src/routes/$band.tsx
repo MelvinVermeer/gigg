@@ -1,33 +1,20 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
-import { getBandPage } from '#/server/fns'
+import { Link, Outlet, createFileRoute } from '@tanstack/react-router'
+import { bandOp } from '#/server/fns'
 
 export const Route = createFileRoute('/$band')({
-  loader: ({ params }) => getBandPage({ data: { band: params.band } }),
-  component: BandPage,
+  loader: ({ params }) => bandOp('getBand', params.band, {}),
+  component: BandLayout,
 })
 
-const minutes = (sec: number | null) => (sec == null ? '' : `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`)
-
-function BandPage() {
-  const { band, songs } = Route.useLoaderData()
+function BandLayout() {
+  const band = Route.useLoaderData()
   return (
     <main>
-      <h1>{band.name}</h1>
-      <h2>Songs</h2>
-      {songs.length ? (
-        <ul>
-          {songs.map((s) => (
-            <li key={s.slug}>
-              {s.title} {s.key && <small>({s.key})</small>} <small>{minutes(s.durationSec)}</small>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>No songs yet.</p>
-      )}
-      <p>
+      <p className="band-nav">
+        <strong>{band.name}</strong> · <Link to="/$band/songs" params={{ band: band.slug }}>Songs</Link> ·{' '}
         <Link to="/settings">Settings</Link>
       </p>
+      <Outlet />
     </main>
   )
 }

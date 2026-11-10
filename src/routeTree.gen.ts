@@ -14,7 +14,12 @@ import { Route as BandRouteImport } from './routes/$band'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as BandIndexRouteImport } from './routes/$band.index'
+import { Route as BandSongsIndexRouteImport } from './routes/$band.songs.index'
+import { Route as BandSongsNewRouteImport } from './routes/$band.songs.new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as BandSongsSongIndexRouteImport } from './routes/$band.songs.$song.index'
+import { Route as BandSongsSongEditRouteImport } from './routes/$band.songs.$song.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -41,49 +46,120 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BandIndexRoute = BandIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandSongsIndexRoute = BandSongsIndexRouteImport.update({
+  id: '/songs/',
+  path: '/songs/',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandSongsNewRoute = BandSongsNewRouteImport.update({
+  id: '/songs/new',
+  path: '/songs/new',
+  getParentRoute: () => BandRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BandSongsSongIndexRoute = BandSongsSongIndexRouteImport.update({
+  id: '/songs/$song/',
+  path: '/songs/$song/',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandSongsSongEditRoute = BandSongsSongEditRouteImport.update({
+  id: '/songs/$song/edit',
+  path: '/songs/$song/edit',
+  getParentRoute: () => BandRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/$band': typeof BandRoute
+  '/$band': typeof BandRouteWithChildren
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/settings': typeof SettingsRoute
+  '/$band/': typeof BandIndexRoute
+  '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/$band/songs/': typeof BandSongsIndexRoute
+  '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
+  '/$band/songs/$song/': typeof BandSongsSongIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/$band': typeof BandRoute
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/settings': typeof SettingsRoute
+  '/$band': typeof BandIndexRoute
+  '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/$band/songs': typeof BandSongsIndexRoute
+  '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
+  '/$band/songs/$song': typeof BandSongsSongIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/$band': typeof BandRoute
+  '/$band': typeof BandRouteWithChildren
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/settings': typeof SettingsRoute
+  '/$band/': typeof BandIndexRoute
+  '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/$band/songs/': typeof BandSongsIndexRoute
+  '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
+  '/$band/songs/$song/': typeof BandSongsSongIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$band' | '/login' | '/me' | '/settings' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/$band'
+    | '/login'
+    | '/me'
+    | '/settings'
+    | '/$band/'
+    | '/$band/songs/new'
+    | '/api/auth/$'
+    | '/$band/songs/'
+    | '/$band/songs/$song/edit'
+    | '/$band/songs/$song/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$band' | '/login' | '/me' | '/settings' | '/api/auth/$'
+  to:
+    | '/'
+    | '/login'
+    | '/me'
+    | '/settings'
+    | '/$band'
+    | '/$band/songs/new'
+    | '/api/auth/$'
+    | '/$band/songs'
+    | '/$band/songs/$song/edit'
+    | '/$band/songs/$song'
   id:
-    '__root__' | '/' | '/$band' | '/login' | '/me' | '/settings' | '/api/auth/$'
+    | '__root__'
+    | '/'
+    | '/$band'
+    | '/login'
+    | '/me'
+    | '/settings'
+    | '/$band/'
+    | '/$band/songs/new'
+    | '/api/auth/$'
+    | '/$band/songs/'
+    | '/$band/songs/$song/edit'
+    | '/$band/songs/$song/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  BandRoute: typeof BandRoute
+  BandRoute: typeof BandRouteWithChildren
   LoginRoute: typeof LoginRoute
   MeRoute: typeof MeRoute
   SettingsRoute: typeof SettingsRoute
@@ -127,6 +203,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$band/': {
+      id: '/$band/'
+      path: '/'
+      fullPath: '/$band/'
+      preLoaderRoute: typeof BandIndexRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/songs/': {
+      id: '/$band/songs/'
+      path: '/songs'
+      fullPath: '/$band/songs/'
+      preLoaderRoute: typeof BandSongsIndexRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/songs/new': {
+      id: '/$band/songs/new'
+      path: '/songs/new'
+      fullPath: '/$band/songs/new'
+      preLoaderRoute: typeof BandSongsNewRouteImport
+      parentRoute: typeof BandRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -134,12 +231,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$band/songs/$song/': {
+      id: '/$band/songs/$song/'
+      path: '/songs/$song'
+      fullPath: '/$band/songs/$song/'
+      preLoaderRoute: typeof BandSongsSongIndexRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/songs/$song/edit': {
+      id: '/$band/songs/$song/edit'
+      path: '/songs/$song/edit'
+      fullPath: '/$band/songs/$song/edit'
+      preLoaderRoute: typeof BandSongsSongEditRouteImport
+      parentRoute: typeof BandRoute
+    }
   }
 }
 
+interface BandRouteChildren {
+  BandIndexRoute: typeof BandIndexRoute
+  BandSongsNewRoute: typeof BandSongsNewRoute
+  BandSongsIndexRoute: typeof BandSongsIndexRoute
+  BandSongsSongEditRoute: typeof BandSongsSongEditRoute
+  BandSongsSongIndexRoute: typeof BandSongsSongIndexRoute
+}
+
+const BandRouteChildren: BandRouteChildren = {
+  BandIndexRoute: BandIndexRoute,
+  BandSongsNewRoute: BandSongsNewRoute,
+  BandSongsIndexRoute: BandSongsIndexRoute,
+  BandSongsSongEditRoute: BandSongsSongEditRoute,
+  BandSongsSongIndexRoute: BandSongsSongIndexRoute,
+}
+
+const BandRouteWithChildren = BandRoute._addFileChildren(BandRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  BandRoute: BandRoute,
+  BandRoute: BandRouteWithChildren,
   LoginRoute: LoginRoute,
   MeRoute: MeRoute,
   SettingsRoute: SettingsRoute,

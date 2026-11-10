@@ -26,6 +26,8 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET ?? (isLocal ? 'local-dev-secret-not-for-production-use' : undefined),
   database: drizzleAdapter(db, { provider: 'pg', schema, usePlural: true }),
   advanced: { database: { generateId: 'uuid' } },
+  // Local mode is dev/test only; E2E tests sign in many times in a row.
+  rateLimit: { enabled: !isLocal },
   databaseHooks: {
     user: {
       create: { before: async (user) => (isAdminEmail(user.email) ? undefined : false) },
