@@ -28,7 +28,6 @@ function MyBands() {
       ) : (
         <p>You're not in a band yet.</p>
       )}
-      <Link to="/settings">Settings</Link>
     </main>
   )
 }

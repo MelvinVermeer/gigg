@@ -12,8 +12,7 @@ function BandLayout() {
     <main>
       <p className="band-nav">
         <strong>{band.name}</strong> · <Link to="/$band/events" params={{ band: band.slug }}>Events</Link> ·{' '}
-        <Link to="/$band/songs" params={{ band: band.slug }}>Songs</Link> ·{' '}
-        <Link to="/settings">Settings</Link>
+        <Link to="/$band/songs" params={{ band: band.slug }}>Songs</Link>
       </p>
       <Outlet />
     </main>

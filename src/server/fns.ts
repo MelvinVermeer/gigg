@@ -15,6 +15,13 @@ const authed = createMiddleware({ type: 'function' }).server(async ({ next }) =>
   return next({ context: { userId: session.user.id } })
 })
 
+/** The signed-in user for the header, or null. Public pages call this too, so no redirect. */
+export const getMe = createServerFn({ method: 'GET' }).handler(async () => {
+  const session = await auth.api.getSession({ headers: getRequestHeaders() })
+  if (!session) return null
+  return { email: session.user.email, bands: await myBands(db, session.user.id) }
+})
+
 export const getMyBands = createServerFn({ method: 'GET' })
   .middleware([authed])
   .handler(({ context }) => myBands(db, context.userId))

@@ -1,0 +1,38 @@
+import { expect, test } from '@playwright/test'
+import { asReader } from './helpers'
+
+// Logging out is covered in login.spec.ts: it would end the shared session these tests use.
+test.describe('user menu', () => {
+  test.use(asReader)
+
+  test('shows the email, the band and settings', async ({ page }) => {
+    await page.goto('/')
+    const avatar = page.getByRole('button', { name: 'Account menu for reader@example.com' })
+    await expect(avatar).toHaveText('R')
+    await expect(page.getByRole('link', { name: 'Sign in' })).toHaveCount(0)
+
+    await avatar.click()
+    const menu = page.locator('#user-menu')
+    await expect(menu).toBeVisible()
+    await expect(menu).toContainText('reader@example.com')
+    await expect(menu.getByRole('button', { name: 'Log out' })).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeHidden()
+
+    await avatar.click()
+    await menu.getByRole('link', { name: 'Demo Band' }).click()
+    await expect(page).toHaveURL(/\/demo-band\/events$/)
+    await expect(menu).toBeHidden()
+
+    await avatar.click()
+    await menu.getByRole('link', { name: 'Settings' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Settings')
+  })
+})
+
+test('signed-out visitors see "Sign in" instead of the menu', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Account menu/ })).toHaveCount(0)
+})

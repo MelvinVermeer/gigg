@@ -24,13 +24,19 @@ test('sign in with an email link, add a passkey, sign back in with it', async ({
   await signIn(page, 'member@example.com')
   await expect(page).toHaveURL(/\/demo-band\/events$/)
 
+  await page.getByRole('button', { name: /Account menu/ }).click()
   await page.getByRole('link', { name: 'Settings' }).click()
   await page.getByRole('button', { name: 'Add a passkey' }).click()
   await expect(page.getByRole('status')).toHaveText('Passkey added')
-  await page.getByRole('button', { name: 'Sign out' }).click()
-  await expect(page).toHaveURL(/\/$/)
 
-  await page.goto('/login')
+  // Log out via the user menu: back home, menu replaced by "Sign in".
+  await page.getByRole('button', { name: /Account menu/ }).click()
+  await page.getByRole('button', { name: 'Log out' }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByRole('button', { name: /Account menu/ })).toHaveCount(0)
+
+  await page.getByRole('link', { name: 'Sign in' }).click()
   await page.getByRole('button', { name: 'Sign in with a passkey' }).click()
   await expect(page).toHaveURL(/\/demo-band\/events$/)
+  await expect(page.getByRole('button', { name: 'Account menu for member@example.com' })).toHaveText('M')
 })

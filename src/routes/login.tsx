@@ -1,11 +1,10 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 
 export const Route = createFileRoute('/login')({ component: Login })
 
 function Login() {
-  const navigate = useNavigate()
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
 
@@ -20,7 +19,8 @@ function Login() {
   async function withPasskey() {
     const { error } = await authClient.signIn.passkey()
     if (error) setError(error.message ?? 'Passkey sign-in failed')
-    else navigate({ to: '/me' })
+    // Full page load, like the email link: every loader (and the user menu) starts fresh.
+    else window.location.assign('/me')
   }
 
   return (
