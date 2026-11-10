@@ -278,3 +278,74 @@ fieldset.theme {
 fieldset.theme input {
   width: auto;
 }
+
+/* Setlists & blocks */
+ol.song-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+  counter-reset: song;
+}
+
+/* Grid row: number · title · key · duration · actions. Numbers via a counter (grid drops ::marker). */
+ol.song-list li {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr 2.5rem 3.25rem auto;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  counter-increment: song;
+}
+
+ol.song-list li::before {
+  content: counter(song) '.';
+  opacity: 0.6;
+}
+
+ol.song-list .title {
+  overflow-wrap: anywhere;
+}
+
+ol.song-list .key,
+ol.song-list .duration {
+  opacity: 0.75;
+}
+
+ol.song-list .actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+ol.song-list .actions button {
+  min-width: 2rem;
+  min-height: 2rem;
+}
+
+.set h2 input {
+  font: inherit;
+  width: auto;
+  max-width: 70%;
+  padding: 0 0.25rem;
+}
+
+.set h2 small {
+  font-size: 0.6em;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.save-status {
+  margin-left: 0.75rem;
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+
+.save-status.error {
+  color: #c00;
+  opacity: 1;
+}
+
+p.empty {
+  opacity: 0.6;
+}

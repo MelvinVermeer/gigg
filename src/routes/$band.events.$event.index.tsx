@@ -1,5 +1,6 @@
 import { Link, createFileRoute, getRouteApi, redirect, useRouter } from '@tanstack/react-router'
 import { formatDate, statusLabel } from '#/lib/date'
+import { formatDuration } from '#/lib/duration'
 import { bandOp } from '#/server/fns'
 
 export const Route = createFileRoute('/$band/events/$event/')({
@@ -14,7 +15,7 @@ export const Route = createFileRoute('/$band/events/$event/')({
 const bandRoute = getRouteApi('/$band')
 
 function Event() {
-  const { event, venue, contacts } = Route.useLoaderData()
+  const { event, venue, contacts, setlist } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const router = useRouter()
   const params = { band: band.slug, event: event.slug }
@@ -77,6 +78,16 @@ function Event() {
         </dd>
         <dt>Tags</dt>
         <dd>{event.tags.length ? event.tags.join(', ') : '–'}</dd>
+        <dt>Setlist</dt>
+        <dd>
+          <Link to="/$band/events/$event/setlist" params={params}>
+            {setlist.songs
+              ? `${setlist.songs} songs · ${formatDuration(setlist.durationSec)}`
+              : band.role === 'member'
+                ? 'Build setlist'
+                : 'No setlist yet'}
+          </Link>
+        </dd>
       </dl>
       {event.notes && <p className="notes">{event.notes}</p>}
       {band.role === 'member' && (

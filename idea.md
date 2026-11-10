@@ -75,7 +75,9 @@ Setlist
 
 - **Blocks are reusable templates**: define "Acoustic bit" or "Encore" once. Adding a block to a set *copies* its songs into the setlist, with no live reference, so later edits to the block never change existing setlists (including played events).
 
-- Linked to a event (one setlist per event)
+- Linked to an event (one setlist per event), at `/<band>/events/<event>/setlist`
+- Builder: every change saves immediately; songs move with ↑ ↓ (no drag and drop, works on phones); new setlist starts empty or as a copy of another event's
+- Blocks are managed at `/<band>/blocks` (linked from Songs and the builder)
 - Clonable
 - Total duration per set / setlist
 - **Show mode** (single person): big type, swipe between songs, screen stays on, per-song notes visible, works offline.

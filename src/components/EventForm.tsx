@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react'
+import { withLabels } from '#/lib/labels'
 import type { EventFields } from '#/server/ops'
 
 type Venue = { id: string; name: string; address: string | null }
@@ -29,19 +30,12 @@ const bookingStatuses = ['lead', 'option', 'confirmed', 'played', 'cancelled'] a
 const paymentStatuses = ['open', 'invoiced', 'paid'] as const
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1)
 
-/** Search-box labels; a detail is added only when names collide, so each label maps to one item. */
-function withLabels<T extends { name: string }>(items: T[], detail: (t: T) => string | null) {
-  const count = new Map<string, number>()
-  for (const i of items) count.set(i.name, (count.get(i.name) ?? 0) + 1)
-  return items.map((i) => ({ ...i, label: count.get(i.name)! > 1 && detail(i) ? `${i.name} · ${detail(i)}` : i.name }))
-}
-
 let nextKey = 0
 
 export function EventForm({ data, initial = {}, submitLabel, onSubmit }: Props) {
   const ids = useId()
-  const venues = useMemo(() => withLabels(data.venues, (v) => v.address), [data.venues])
-  const contacts = useMemo(() => withLabels(data.contacts, (c) => c.email ?? c.phone), [data.contacts])
+  const venues = useMemo(() => withLabels(data.venues, (v) => v.name, (v) => v.address), [data.venues])
+  const contacts = useMemo(() => withLabels(data.contacts, (c) => c.name, (c) => c.email ?? c.phone), [data.contacts])
   const contactById = (id: string) => contacts.find((c) => c.id === id)!
 
   const [venueText, setVenueText] = useState(venues.find((v) => v.id === initial.venueId)?.label ?? '')

@@ -5,12 +5,17 @@ import { z } from 'zod'
 import type { Db } from './db'
 import {
   bands,
+  blockSongs,
+  blocks,
   bookingStatus,
   contacts,
   eventContacts,
   events,
   memberships,
   paymentStatus,
+  setItems,
+  setlists,
+  sets,
   slugRedirects,
   songs,
   venues,
@@ -179,6 +184,7 @@ const songOps = {
   listSongs: bandOp('reader', z.object({ archived: z.boolean().default(false) }), ({ tx, bandId }, { archived }) =>
     tx
       .select({
+        id: songs.id,
         slug: songs.slug,
         title: songs.title,
         durationSec: songs.durationSec,
@@ -351,7 +357,17 @@ const eventOps = {
       .innerJoin(contacts, eq(contacts.id, eventContacts.contactId))
       .where(eq(eventContacts.eventId, row.event.id))
       .orderBy(asc(contacts.name))
-    return { moved: false as const, event: row.event, venue: row.venue, contacts: eventContactRows }
+    const [setlist] = await tx
+      .select({
+        songs: sql<number>`count(*)::int`,
+        durationSec: sql<number>`coalesce(sum(songs.duration_sec), 0)::int`,
+      })
+      .from(setItems)
+      .innerJoin(sets, eq(sets.id, setItems.setId))
+      .innerJoin(setlists, eq(setlists.id, sets.setlistId))
+      .innerJoin(songs, eq(songs.id, setItems.songId))
+      .where(eq(setlists.eventId, row.event.id))
+    return { moved: false as const, event: row.event, venue: row.venue, contacts: eventContactRows, setlist }
   }),
 
   /** Everything the event form needs: venues and contacts to search, and per venue the contacts used last time. */
@@ -529,6 +545,223 @@ const venueContactOps = {
   ),
 }
 
+// Setlists & blocks ----------------------------------------------------------
+
+const songIds = z.array(z.uuid()).max(100)
+const setsInput = z
+  .array(z.object({ name: z.string().trim().min(1).max(60), songIds }))
+  .max(10)
+
+/** Song ids must belong to this band (archived songs are fine: old setlists keep them). */
+async function assertOwnSongs(tx: Tx, bandId: string, ids: string[]) {
+  const unique = [...new Set(ids)]
+  if (!unique.length) return
+  const found = await tx
+    .select({ id: songs.id })
+    .from(songs)
+    .where(and(inArray(songs.id, unique), eq(songs.bandId, bandId)))
+  if (found.length !== unique.length) throw new NotFound()
+}
+
+const songSummary = { id: songs.id, slug: songs.slug, title: songs.title, key: songs.key, durationSec: songs.durationSec }
+
+async function eventBySlug(tx: Tx, bandId: string, slug: string) {
+  const [ev] = await tx
+    .select({ id: events.id, slug: events.slug, title: events.title, date: events.date })
+    .from(events)
+    .where(and(eq(events.bandId, bandId), eq(events.slug, slug)))
+  if (!ev) throw new NotFound()
+  return ev
+}
+
+/** The sets of an event's setlist, each with its songs in order. [] when there is no setlist. */
+async function readSets(tx: Tx, eventId: string) {
+  const setRows = await tx
+    .select({ id: sets.id, name: sets.name })
+    .from(sets)
+    .innerJoin(setlists, eq(setlists.id, sets.setlistId))
+    .where(eq(setlists.eventId, eventId))
+    .orderBy(asc(sets.position))
+  if (!setRows.length) return []
+  const items = await tx
+    .select({ setId: setItems.setId, ...songSummary })
+    .from(setItems)
+    .innerJoin(songs, eq(songs.id, setItems.songId))
+    .where(
+      inArray(
+        setItems.setId,
+        setRows.map((r) => r.id),
+      ),
+    )
+    .orderBy(asc(setItems.position))
+  return setRows.map((set) => ({
+    name: set.name,
+    songs: items.filter((i) => i.setId === set.id).map(({ setId: _, ...song }) => song),
+  }))
+}
+
+/** Replace an event's setlist with `input` (one setlist per event; created on first save). */
+async function writeSets(
+  tx: Tx,
+  bandId: string,
+  ev: { id: string; title: string },
+  input: { name: string; songIds: string[] }[],
+) {
+  await assertOwnSongs(
+    tx,
+    bandId,
+    input.flatMap((s) => s.songIds),
+  )
+  let [setlist] = await tx.select({ id: setlists.id }).from(setlists).where(eq(setlists.eventId, ev.id))
+  if (!setlist)
+    [setlist] = await tx
+      .insert(setlists)
+      .values({ bandId, eventId: ev.id, name: ev.title })
+      .returning({ id: setlists.id })
+  const old = await tx.select({ id: sets.id }).from(sets).where(eq(sets.setlistId, setlist.id))
+  if (old.length) {
+    await tx.delete(setItems).where(
+      inArray(
+        setItems.setId,
+        old.map((o) => o.id),
+      ),
+    )
+    await tx.delete(sets).where(eq(sets.setlistId, setlist.id))
+  }
+  for (const [position, s] of input.entries()) {
+    const [set] = await tx
+      .insert(sets)
+      .values({ bandId, setlistId: setlist.id, position, name: s.name })
+      .returning({ id: sets.id })
+    if (s.songIds.length)
+      await tx
+        .insert(setItems)
+        .values(s.songIds.map((songId, i) => ({ bandId, setId: set.id, position: i, songId })))
+  }
+}
+
+async function readBlocks(tx: Tx, bandId: string, archived: boolean) {
+  const blockRows = await tx
+    .select({ id: blocks.id, name: blocks.name, archivedAt: blocks.archivedAt })
+    .from(blocks)
+    .where(and(eq(blocks.bandId, bandId), archived ? undefined : isNull(blocks.archivedAt)))
+    .orderBy(sql`${blocks.archivedAt} is not null`, asc(blocks.name))
+  const items = blockRows.length
+    ? await tx
+        .select({ blockId: blockSongs.blockId, ...songSummary })
+        .from(blockSongs)
+        .innerJoin(songs, eq(songs.id, blockSongs.songId))
+        .where(
+          inArray(
+            blockSongs.blockId,
+            blockRows.map((b) => b.id),
+          ),
+        )
+        .orderBy(asc(blockSongs.position))
+    : []
+  return blockRows.map((b) => ({
+    ...b,
+    songs: items.filter((i) => i.blockId === b.id).map(({ blockId: _, ...song }) => song),
+  }))
+}
+
+/** Songs that can be added to a set or block (not archived). */
+const repertoire = (tx: Tx, bandId: string) =>
+  tx
+    .select(songSummary)
+    .from(songs)
+    .where(and(eq(songs.bandId, bandId), isNull(songs.archivedAt)))
+    .orderBy(asc(songs.title))
+
+const setlistOps = {
+  /** An event's setlist plus what the builder needs: repertoire, blocks, other setlists to copy. */
+  getSetlist: bandOp('reader', z.object({ event: z.string() }), async ({ tx, bandId }, { event }) => {
+    const ev = await eventBySlug(tx, bandId, event)
+    const copyFrom = await tx
+      .select({ slug: events.slug, title: events.title, date: events.date })
+      .from(events)
+      .innerJoin(setlists, eq(setlists.eventId, events.id))
+      .where(
+        and(
+          eq(events.bandId, bandId),
+          ne(events.id, ev.id),
+          sql`exists (select 1 from sets where sets.setlist_id = setlists.id)`,
+        ),
+      )
+      .orderBy(desc(events.date))
+    return {
+      event: ev,
+      sets: await readSets(tx, ev.id),
+      songs: await repertoire(tx, bandId),
+      blocks: await readBlocks(tx, bandId, false),
+      copyFrom,
+    }
+  }),
+
+  saveSetlist: bandOp('member', z.object({ event: z.string(), sets: setsInput }), async ({ tx, bandId }, input) => {
+    await writeSets(tx, bandId, await eventBySlug(tx, bandId, input.event), input.sets)
+  }),
+
+  /** Copy another event's setlist into this one (replacing what's there). */
+  copySetlist: bandOp('member', z.object({ event: z.string(), from: z.string() }), async ({ tx, bandId }, input) => {
+    const ev = await eventBySlug(tx, bandId, input.event)
+    const source = await readSets(tx, (await eventBySlug(tx, bandId, input.from)).id)
+    await writeSets(
+      tx,
+      bandId,
+      ev,
+      source.map((s) => ({ name: s.name, songIds: s.songs.map((song) => song.id) })),
+    )
+  }),
+
+  listBlocks: bandOp('reader', z.object({}), async ({ tx, bandId }) => ({
+    blocks: await readBlocks(tx, bandId, true),
+    songs: await repertoire(tx, bandId),
+  })),
+
+  /** Create (no id) or update a block: a reusable run of songs, copied into sets when used. */
+  saveBlock: bandOp(
+    'member',
+    z.object({ id: z.uuid().optional(), name: z.string().trim().min(1).max(60), songIds }),
+    async ({ tx, bandId }, { id, name, songIds: ids }) => {
+      await assertOwnSongs(tx, bandId, ids)
+      let blockId = id
+      if (blockId) {
+        const rows = await tx
+          .update(blocks)
+          .set({ name })
+          .where(and(eq(blocks.id, blockId), eq(blocks.bandId, bandId)))
+          .returning({ id: blocks.id })
+        if (!rows.length) throw new NotFound()
+        await tx.delete(blockSongs).where(eq(blockSongs.blockId, blockId))
+      } else {
+        ;[{ id: blockId }] = await tx.insert(blocks).values({ bandId, name }).returning({ id: blocks.id })
+      }
+      if (ids.length)
+        await tx.insert(blockSongs).values(ids.map((songId, position) => ({ bandId, blockId: blockId!, position, songId })))
+      return { id: blockId }
+    },
+  ),
+
+  archiveBlock: bandOp('member', byId, async ({ tx, bandId }, { id }) => {
+    const rows = await tx
+      .update(blocks)
+      .set({ archivedAt: new Date() })
+      .where(and(eq(blocks.id, id), eq(blocks.bandId, bandId)))
+      .returning({ id: blocks.id })
+    if (!rows.length) throw new NotFound()
+  }),
+
+  restoreBlock: bandOp('member', byId, async ({ tx, bandId }, { id }) => {
+    const rows = await tx
+      .update(blocks)
+      .set({ archivedAt: null })
+      .where(and(eq(blocks.id, id), eq(blocks.bandId, bandId)))
+      .returning({ id: blocks.id })
+    if (!rows.length) throw new NotFound()
+  }),
+}
+
 // All band operations ------------------------------------------------------
 
 /** Every band-scoped operation. The authorisation tests run all of them, so add new ones here. */
@@ -543,6 +776,7 @@ export const bandOps = {
   ...songOps,
   ...eventOps,
   ...venueContactOps,
+  ...setlistOps,
 }
 
 export type BandOps = typeof bandOps

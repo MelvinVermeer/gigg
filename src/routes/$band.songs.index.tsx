@@ -35,9 +35,15 @@ function Songs() {
             Back to songs
           </Link>
         ) : (
-          <Link to="/$band/songs" params={{ band: band.slug }} search={{ archived: true }}>
-            Archived songs
-          </Link>
+          <>
+            <Link to="/$band/blocks" params={{ band: band.slug }}>
+              Blocks
+            </Link>{' '}
+            ·{' '}
+            <Link to="/$band/songs" params={{ band: band.slug }} search={{ archived: true }}>
+              Archived songs
+            </Link>
+          </>
         )}
       </p>
       {songs.length ? (

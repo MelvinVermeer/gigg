@@ -14,6 +14,7 @@ import { Route as BandRouteImport } from './routes/$band'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as BandIndexRouteImport } from './routes/$band.index'
+import { Route as BandBlocksRouteImport } from './routes/$band.blocks'
 import { Route as BandEventsIndexRouteImport } from './routes/$band.events.index'
 import { Route as BandEventsNewRouteImport } from './routes/$band.events.new'
 import { Route as BandSettingsIndexRouteImport } from './routes/$band.settings.index'
@@ -24,6 +25,7 @@ import { Route as BandSongsNewRouteImport } from './routes/$band.songs.new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as BandEventsEventIndexRouteImport } from './routes/$band.events.$event.index'
 import { Route as BandEventsEventEditRouteImport } from './routes/$band.events.$event.edit'
+import { Route as BandEventsEventSetlistRouteImport } from './routes/$band.events.$event.setlist'
 import { Route as BandSongsSongIndexRouteImport } from './routes/$band.songs.$song.index'
 import { Route as BandSongsSongEditRouteImport } from './routes/$band.songs.$song.edit'
 
@@ -50,6 +52,11 @@ const MeRoute = MeRouteImport.update({
 const BandIndexRoute = BandIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandBlocksRoute = BandBlocksRouteImport.update({
+  id: '/blocks',
+  path: '/blocks',
   getParentRoute: () => BandRoute,
 } as any)
 const BandEventsIndexRoute = BandEventsIndexRouteImport.update({
@@ -102,6 +109,11 @@ const BandEventsEventEditRoute = BandEventsEventEditRouteImport.update({
   path: '/events/$event/edit',
   getParentRoute: () => BandRoute,
 } as any)
+const BandEventsEventSetlistRoute = BandEventsEventSetlistRouteImport.update({
+  id: '/events/$event/setlist',
+  path: '/events/$event/setlist',
+  getParentRoute: () => BandRoute,
+} as any)
 const BandSongsSongIndexRoute = BandSongsSongIndexRouteImport.update({
   id: '/songs/$song/',
   path: '/songs/$song/',
@@ -118,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/$band': typeof BandRouteWithChildren
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
+  '/$band/blocks': typeof BandBlocksRoute
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
   '/$band/settings/contacts': typeof BandSettingsContactsRoute
@@ -128,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/$band/settings/': typeof BandSettingsIndexRoute
   '/$band/songs/': typeof BandSongsIndexRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
+  '/$band/events/$event/setlist': typeof BandEventsEventSetlistRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
   '/$band/events/$event/': typeof BandEventsEventIndexRoute
   '/$band/songs/$song/': typeof BandSongsSongIndexRoute
@@ -136,6 +150,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
+  '/$band/blocks': typeof BandBlocksRoute
   '/$band': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
   '/$band/settings/contacts': typeof BandSettingsContactsRoute
@@ -146,6 +161,7 @@ export interface FileRoutesByTo {
   '/$band/settings': typeof BandSettingsIndexRoute
   '/$band/songs': typeof BandSongsIndexRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
+  '/$band/events/$event/setlist': typeof BandEventsEventSetlistRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
   '/$band/events/$event': typeof BandEventsEventIndexRoute
   '/$band/songs/$song': typeof BandSongsSongIndexRoute
@@ -156,6 +172,7 @@ export interface FileRoutesById {
   '/$band': typeof BandRouteWithChildren
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
+  '/$band/blocks': typeof BandBlocksRoute
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
   '/$band/settings/contacts': typeof BandSettingsContactsRoute
@@ -166,6 +183,7 @@ export interface FileRoutesById {
   '/$band/settings/': typeof BandSettingsIndexRoute
   '/$band/songs/': typeof BandSongsIndexRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
+  '/$band/events/$event/setlist': typeof BandEventsEventSetlistRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
   '/$band/events/$event/': typeof BandEventsEventIndexRoute
   '/$band/songs/$song/': typeof BandSongsSongIndexRoute
@@ -177,6 +195,7 @@ export interface FileRouteTypes {
     | '/$band'
     | '/login'
     | '/me'
+    | '/$band/blocks'
     | '/$band/'
     | '/$band/events/new'
     | '/$band/settings/contacts'
@@ -187,6 +206,7 @@ export interface FileRouteTypes {
     | '/$band/settings/'
     | '/$band/songs/'
     | '/$band/events/$event/edit'
+    | '/$band/events/$event/setlist'
     | '/$band/songs/$song/edit'
     | '/$band/events/$event/'
     | '/$band/songs/$song/'
@@ -195,6 +215,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/me'
+    | '/$band/blocks'
     | '/$band'
     | '/$band/events/new'
     | '/$band/settings/contacts'
@@ -205,6 +226,7 @@ export interface FileRouteTypes {
     | '/$band/settings'
     | '/$band/songs'
     | '/$band/events/$event/edit'
+    | '/$band/events/$event/setlist'
     | '/$band/songs/$song/edit'
     | '/$band/events/$event'
     | '/$band/songs/$song'
@@ -214,6 +236,7 @@ export interface FileRouteTypes {
     | '/$band'
     | '/login'
     | '/me'
+    | '/$band/blocks'
     | '/$band/'
     | '/$band/events/new'
     | '/$band/settings/contacts'
@@ -224,6 +247,7 @@ export interface FileRouteTypes {
     | '/$band/settings/'
     | '/$band/songs/'
     | '/$band/events/$event/edit'
+    | '/$band/events/$event/setlist'
     | '/$band/songs/$song/edit'
     | '/$band/events/$event/'
     | '/$band/songs/$song/'
@@ -272,6 +296,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/$band/'
       preLoaderRoute: typeof BandIndexRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/blocks': {
+      id: '/$band/blocks'
+      path: '/blocks'
+      fullPath: '/$band/blocks'
+      preLoaderRoute: typeof BandBlocksRouteImport
       parentRoute: typeof BandRoute
     }
     '/$band/events/': {
@@ -344,6 +375,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BandEventsEventEditRouteImport
       parentRoute: typeof BandRoute
     }
+    '/$band/events/$event/setlist': {
+      id: '/$band/events/$event/setlist'
+      path: '/events/$event/setlist'
+      fullPath: '/$band/events/$event/setlist'
+      preLoaderRoute: typeof BandEventsEventSetlistRouteImport
+      parentRoute: typeof BandRoute
+    }
     '/$band/songs/$song/': {
       id: '/$band/songs/$song/'
       path: '/songs/$song'
@@ -362,6 +400,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface BandRouteChildren {
+  BandBlocksRoute: typeof BandBlocksRoute
   BandIndexRoute: typeof BandIndexRoute
   BandEventsNewRoute: typeof BandEventsNewRoute
   BandSettingsContactsRoute: typeof BandSettingsContactsRoute
@@ -371,12 +410,14 @@ interface BandRouteChildren {
   BandSettingsIndexRoute: typeof BandSettingsIndexRoute
   BandSongsIndexRoute: typeof BandSongsIndexRoute
   BandEventsEventEditRoute: typeof BandEventsEventEditRoute
+  BandEventsEventSetlistRoute: typeof BandEventsEventSetlistRoute
   BandSongsSongEditRoute: typeof BandSongsSongEditRoute
   BandEventsEventIndexRoute: typeof BandEventsEventIndexRoute
   BandSongsSongIndexRoute: typeof BandSongsSongIndexRoute
 }
 
 const BandRouteChildren: BandRouteChildren = {
+  BandBlocksRoute: BandBlocksRoute,
   BandIndexRoute: BandIndexRoute,
   BandEventsNewRoute: BandEventsNewRoute,
   BandSettingsContactsRoute: BandSettingsContactsRoute,
@@ -386,6 +427,7 @@ const BandRouteChildren: BandRouteChildren = {
   BandSettingsIndexRoute: BandSettingsIndexRoute,
   BandSongsIndexRoute: BandSongsIndexRoute,
   BandEventsEventEditRoute: BandEventsEventEditRoute,
+  BandEventsEventSetlistRoute: BandEventsEventSetlistRoute,
   BandSongsSongEditRoute: BandSongsSongEditRoute,
   BandEventsEventIndexRoute: BandEventsEventIndexRoute,
   BandSongsSongIndexRoute: BandSongsSongIndexRoute,

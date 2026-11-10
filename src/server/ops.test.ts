@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
-import { bands, changes, contacts, memberships, venues } from './db/schema'
+import { bands, changes, contacts, memberships, songs, venues } from './db/schema'
 import { bandOps, Forbidden, NotFound, slugify } from './ops'
 import type { BandOpName } from './ops'
 import { testDb } from './test-db'
@@ -249,6 +249,93 @@ describe('venues & contacts', () => {
       bandOps.updateContact(t.db, t.member, t.band, { id: contact.id, fields: { name: 'Mine now' } }),
     ).rejects.toBeInstanceOf(NotFound)
     await expect(bandOps.restoreContact(t.db, t.member, t.band, { id: contact.id })).rejects.toBeInstanceOf(NotFound)
+  })
+})
+
+describe('setlists & blocks', () => {
+  const ids = async (t: Awaited<ReturnType<typeof testDb>>) => {
+    const list = await bandOps.listSongs(t.db, t.member, t.band, {})
+    return Object.fromEntries(list.map((s) => [s.slug, s.id]))
+  }
+
+  it('saves sets with songs in order and sums durations on the event', async () => {
+    const t = await testDb()
+    const song = await ids(t)
+    await bandOps.saveSetlist(t.db, t.member, t.band, {
+      event: 'summer-party',
+      sets: [
+        { name: 'Set 1', songIds: [song['opening-song'], song['slow-one']] },
+        { name: 'Set 2', songIds: [song.closer] },
+      ],
+    })
+    const res = await bandOps.getSetlist(t.db, t.reader, t.band, { event: 'summer-party' })
+    expect(res.sets.map((s) => [s.name, s.songs.map((x) => x.slug)])).toEqual([
+      ['Set 1', ['opening-song', 'slow-one']],
+      ['Set 2', ['closer']],
+    ])
+    const ev = await bandOps.getEvent(t.db, t.reader, t.band, { slug: 'summer-party' })
+    expect(!ev.moved && ev.setlist).toEqual({ songs: 3, durationSec: 210 + 260 + 300 })
+  })
+
+  it('saving again replaces the sets', async () => {
+    const t = await testDb()
+    const song = await ids(t)
+    const save = (sets: { name: string; songIds: string[] }[]) =>
+      bandOps.saveSetlist(t.db, t.member, t.band, { event: 'summer-party', sets })
+    await save([{ name: 'A', songIds: [song.closer] }, { name: 'B', songIds: [] }])
+    await save([{ name: 'Only', songIds: [song['slow-one'], song.closer] }])
+    const res = await bandOps.getSetlist(t.db, t.member, t.band, { event: 'summer-party' })
+    expect(res.sets).toEqual([{ name: 'Only', songs: [expect.objectContaining({ slug: 'slow-one' }), expect.objectContaining({ slug: 'closer' })] }])
+  })
+
+  it('copies a setlist from another event', async () => {
+    const t = await testDb()
+    const song = await ids(t)
+    await bandOps.saveSetlist(t.db, t.member, t.band, {
+      event: 'spring-show',
+      sets: [{ name: 'Set 1', songIds: [song.closer, song['opening-song']] }],
+    })
+    const before = await bandOps.getSetlist(t.db, t.member, t.band, { event: 'summer-party' })
+    expect(before.copyFrom.map((e) => e.slug)).toEqual(['spring-show'])
+
+    await bandOps.copySetlist(t.db, t.member, t.band, { event: 'summer-party', from: 'spring-show' })
+    const res = await bandOps.getSetlist(t.db, t.member, t.band, { event: 'summer-party' })
+    expect(res.sets.map((s) => s.songs.map((x) => x.slug))).toEqual([['closer', 'opening-song']])
+  })
+
+  it("refuses another band's songs", async () => {
+    const t = await testDb()
+    const [other] = await t.db.insert(bands).values({ slug: 'other-band', name: 'Other' }).returning()
+    const [theirs] = await t.db.insert(songs).values({ bandId: other.id, slug: 'theirs', title: 'Theirs' }).returning()
+    await expect(
+      bandOps.saveSetlist(t.db, t.member, t.band, { event: 'summer-party', sets: [{ name: 'S', songIds: [theirs.id] }] }),
+    ).rejects.toBeInstanceOf(NotFound)
+    await expect(bandOps.saveBlock(t.db, t.member, t.band, { name: 'B', songIds: [theirs.id] })).rejects.toBeInstanceOf(
+      NotFound,
+    )
+  })
+
+  it('blocks: create, update, archive; archived blocks are not offered in the builder', async () => {
+    const t = await testDb()
+    const song = await ids(t)
+    const { id } = await bandOps.saveBlock(t.db, t.member, t.band, { name: 'Encore', songIds: [song.closer] })
+    await bandOps.saveBlock(t.db, t.member, t.band, { id, name: 'Encore!', songIds: [song['slow-one'], song.closer] })
+    const { blocks } = await bandOps.listBlocks(t.db, t.reader, t.band, {})
+    expect(blocks.map((b) => [b.name, b.songs.map((s) => s.slug)])).toEqual([['Encore!', ['slow-one', 'closer']]])
+
+    await bandOps.archiveBlock(t.db, t.member, t.band, { id })
+    expect((await bandOps.getSetlist(t.db, t.member, t.band, { event: 'summer-party' })).blocks).toEqual([])
+    expect((await bandOps.listBlocks(t.db, t.member, t.band, {})).blocks[0].archivedAt).not.toBeNull()
+  })
+
+  it('archived songs stay in existing setlists but are not offered for new ones', async () => {
+    const t = await testDb()
+    const song = await ids(t)
+    await bandOps.saveSetlist(t.db, t.member, t.band, { event: 'summer-party', sets: [{ name: 'S', songIds: [song.closer] }] })
+    await bandOps.archiveSong(t.db, t.member, t.band, { slug: 'closer' })
+    const res = await bandOps.getSetlist(t.db, t.member, t.band, { event: 'summer-party' })
+    expect(res.sets[0].songs.map((s) => s.slug)).toEqual(['closer'])
+    expect(res.songs.map((s) => s.slug)).not.toContain('closer')
   })
 })
 
