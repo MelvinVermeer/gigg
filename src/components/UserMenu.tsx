@@ -14,6 +14,8 @@ export function UserMenu({ email, bands }: Props) {
   async function logOut() {
     close()
     await authClient.signOut()
+    // The offline cache holds band data too (public/sw.js).
+    for (const key of (await globalThis.caches?.keys()) ?? []) await caches.delete(key)
     // Full page load: drops all band data the browser still holds in memory.
     window.location.assign('/')
   }

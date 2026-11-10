@@ -2,6 +2,7 @@ import { HeadContent, Link, Outlet, Scripts, createRootRoute } from '@tanstack/r
 
 import lockup from '../assets/gigg-lockup.svg'
 import lockupInk from '../assets/gigg-lockup-ink.svg'
+import { useEffect, useState } from 'react'
 import { UserMenu } from '#/components/UserMenu'
 import { themeScript } from '#/lib/theme'
 import { getMe } from '#/server/fns'
@@ -46,10 +47,33 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   )
 }
 
+/** Registers the offline service worker (production only) and tracks whether we're online. */
+function useOnline() {
+  const [online, setOnline] = useState(true)
+  useEffect(() => {
+    if (import.meta.env.PROD) navigator.serviceWorker?.register('/sw.js')
+    const update = () => setOnline(navigator.onLine)
+    update()
+    addEventListener('online', update)
+    addEventListener('offline', update)
+    return () => {
+      removeEventListener('online', update)
+      removeEventListener('offline', update)
+    }
+  }, [])
+  return online
+}
+
 function RootLayout() {
   const me = Route.useLoaderData()
+  const online = useOnline()
   return (
     <>
+      {!online && (
+        <p className="offline" role="status">
+          Offline: showing saved data. Changes can't be saved.
+        </p>
+      )}
       <header className="site-header">
         <Link to="/" aria-label="Gigg home">
           {/* CSS shows the one matching the theme (handover: no yellow wordmark on light). */}

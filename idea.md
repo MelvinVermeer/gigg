@@ -99,7 +99,7 @@ Common PDFs, recordings, lyrics, song notes, riders. Attachable to songs, events
 
 ## Offline
 
-**Read-only.** Service worker + TanStack Query cache persisted to IndexedDB, refreshed when online. No sync engine, no conflict handling.
+**Read-only.** A small service worker (`public/sw.js`) caches every GET network-first: pages, the single client bundle, and read operations (`get*`/`list*`/`search` go over GET, in a read-only transaction). Offline, the last cached copy is served; writes fail. The events list preloads the next three gigs and their setlists. Logging out clears the cache. No sync engine, no conflict handling.
 
 ## Feedback
 
@@ -128,7 +128,7 @@ One page per band: `/<band>/settings`, reached from the user menu (avatar with t
 | Auth | **Better Auth** (passkey + magic-link plugins) |
 | Email | **SMTP** (one env var; any provider, e.g. Resend) |
 | Files | **Vercel Blob** |
-| PWA / offline | `vite-plugin-pwa` + TanStack Query cache persisted to IndexedDB |
+| PWA / offline | Hand-written service worker, network-first cache of GETs |
 | Search | Postgres `pg_trgm` |
 | Stage-floor PDF | Print stylesheet first; PDF library only if phone download is clumsy |
 

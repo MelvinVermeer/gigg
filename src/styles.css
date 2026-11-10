@@ -505,3 +505,11 @@ ul.results li {
     break-after: auto;
   }
 }
+
+.offline {
+  margin: 0;
+  padding: 0.4rem 1rem;
+  text-align: center;
+  background: var(--stage);
+  color: var(--ink);
+}

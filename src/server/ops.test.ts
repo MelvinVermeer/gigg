@@ -19,6 +19,13 @@ describe('authorisation', () => {
     await expect(bandOps[op](t.db, t.reader, t.band, {})).rejects.toBeInstanceOf(Forbidden)
   })
 
+  it('read-only transactions allow reads and reject writes', async () => {
+    const t = await testDb()
+    await expect(bandOps.listSongs(t.db, t.reader, t.band, {}, true)).resolves.toHaveLength(3)
+    await expect(bandOps.getSetlist(t.db, t.reader, t.band, { event: 'summer-party' }, true)).resolves.toBeTruthy()
+    await expect(bandOps.archiveSong(t.db, t.member, t.band, { slug: 'closer' }, true)).rejects.toMatchObject({ cause: { message: expect.stringMatching(/read-only transaction/) } })
+  })
+
   it('lets readers read', async () => {
     const t = await testDb()
     await expect(bandOps.listSongs(t.db, t.reader, t.band, {})).resolves.toHaveLength(3)

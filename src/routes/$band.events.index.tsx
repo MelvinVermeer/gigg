@@ -1,4 +1,5 @@
-import { Link, createFileRoute, getRouteApi } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { formatDate, statusLabel } from '#/lib/date'
 import { bandOp } from '#/server/fns'
 
@@ -20,6 +21,17 @@ function Events() {
   const when = Route.useSearch().when ?? 'upcoming'
   const band = bandRoute.useLoaderData()
   const params = { band: band.slug }
+  const router = useRouter()
+
+  // Fetch the next few gigs and their setlists now, so the service worker has them for offline use.
+  useEffect(() => {
+    if (when !== 'upcoming') return
+    for (const e of events.slice(0, 3)) {
+      const p = { band: band.slug, event: e.slug }
+      router.preloadRoute({ to: '/$band/events/$event', params: p }).catch(() => {})
+      router.preloadRoute({ to: '/$band/events/$event/show', params: p }).catch(() => {})
+    }
+  }, [events, when, band.slug, router])
 
   return (
     <>

@@ -46,8 +46,10 @@ function bandOp<S extends z.ZodType, O>(
   input: S,
   run: (ctx: Ctx, input: z.output<S>) => Promise<O>,
 ) {
-  const op = (db: Db, userId: string, bandSlug: string, rawInput: unknown): Promise<O> =>
+  /** readOnly: Postgres rejects any write, so reads can safely be served over GET. */
+  const op = (db: Db, userId: string, bandSlug: string, rawInput: unknown, readOnly = false): Promise<O> =>
     db.transaction(async (tx) => {
+      if (readOnly) await tx.execute(sql`set transaction read only`)
       const [m] = await tx
         .select({ bandId: bands.id, role: memberships.role })
         .from(memberships)
