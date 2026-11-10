@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as BandIndexRouteImport } from './routes/$band.index'
 import { Route as BandBlocksRouteImport } from './routes/$band.blocks'
+import { Route as BandSearchRouteImport } from './routes/$band.search'
 import { Route as BandEventsIndexRouteImport } from './routes/$band.events.index'
 import { Route as BandEventsNewRouteImport } from './routes/$band.events.new'
 import { Route as BandSettingsIndexRouteImport } from './routes/$band.settings.index'
@@ -57,6 +58,11 @@ const BandIndexRoute = BandIndexRouteImport.update({
 const BandBlocksRoute = BandBlocksRouteImport.update({
   id: '/blocks',
   path: '/blocks',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandSearchRoute = BandSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => BandRoute,
 } as any)
 const BandEventsIndexRoute = BandEventsIndexRouteImport.update({
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
+  '/$band/search': typeof BandSearchRoute
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
   '/$band/settings/contacts': typeof BandSettingsContactsRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
+  '/$band/search': typeof BandSearchRoute
   '/$band': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
   '/$band/settings/contacts': typeof BandSettingsContactsRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
+  '/$band/search': typeof BandSearchRoute
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
   '/$band/settings/contacts': typeof BandSettingsContactsRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/$band/blocks'
+    | '/$band/search'
     | '/$band/'
     | '/$band/events/new'
     | '/$band/settings/contacts'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/$band/blocks'
+    | '/$band/search'
     | '/$band'
     | '/$band/events/new'
     | '/$band/settings/contacts'
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/$band/blocks'
+    | '/$band/search'
     | '/$band/'
     | '/$band/events/new'
     | '/$band/settings/contacts'
@@ -303,6 +315,13 @@ declare module '@tanstack/react-router' {
       path: '/blocks'
       fullPath: '/$band/blocks'
       preLoaderRoute: typeof BandBlocksRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/search': {
+      id: '/$band/search'
+      path: '/search'
+      fullPath: '/$band/search'
+      preLoaderRoute: typeof BandSearchRouteImport
       parentRoute: typeof BandRoute
     }
     '/$band/events/': {
@@ -401,6 +420,7 @@ declare module '@tanstack/react-router' {
 
 interface BandRouteChildren {
   BandBlocksRoute: typeof BandBlocksRoute
+  BandSearchRoute: typeof BandSearchRoute
   BandIndexRoute: typeof BandIndexRoute
   BandEventsNewRoute: typeof BandEventsNewRoute
   BandSettingsContactsRoute: typeof BandSettingsContactsRoute
@@ -418,6 +438,7 @@ interface BandRouteChildren {
 
 const BandRouteChildren: BandRouteChildren = {
   BandBlocksRoute: BandBlocksRoute,
+  BandSearchRoute: BandSearchRoute,
   BandIndexRoute: BandIndexRoute,
   BandEventsNewRoute: BandEventsNewRoute,
   BandSettingsContactsRoute: BandSettingsContactsRoute,

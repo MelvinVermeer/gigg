@@ -349,3 +349,18 @@ ol.song-list .actions button {
 p.empty {
   opacity: 0.6;
 }
+
+/* Search */
+input[type='search'] {
+  font-size: 1.1rem;
+}
+
+ul.results {
+  list-style: none;
+  padding: 0;
+}
+
+ul.results li {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}

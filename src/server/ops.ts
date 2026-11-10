@@ -762,6 +762,54 @@ const setlistOps = {
   }),
 }
 
+// Search ---------------------------------------------------------------------
+
+export type SearchResult = {
+  type: 'song' | 'event' | 'venue' | 'contact'
+  /** Slug (songs, events) or id (venues, contacts): what the link needs. */
+  ref: string
+  label: string
+  detail: string | null
+}
+
+const searchOps = {
+  /**
+   * Fuzzy search across songs, events (also by venue name), venues and contacts. Substring matches
+   * (ILIKE) plus typo tolerance (pg_trgm word_similarity, `<%`); best matches first. Archived items
+   * are left out. Columns are table-qualified on purpose (see listVenues).
+   */
+  search: bandOp('reader', z.object({ q: z.string().trim().max(100) }), async ({ tx, bandId }, { q }) => {
+    if (!q) return []
+    const like = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+    const matches = (text: ReturnType<typeof sql>) => sql`(${text} ilike ${like} or ${q} <% ${text})`
+    const score = (text: ReturnType<typeof sql>) =>
+      sql`(case when ${text} ilike ${like} then 1 else 0 end + word_similarity(${q}, ${text}))`
+    const eventText = sql`concat_ws(' ', events.title, venues.name)`
+    const contactText = sql`concat_ws(' ', contacts.name, contacts.organisation, contacts.email)`
+    const venueText = sql`concat_ws(' ', venues.name, venues.address)`
+    const { rows } = (await tx.execute(sql`
+      select 'song' as type, songs.slug as ref, songs.title as label, songs.key as detail, ${score(sql`songs.title`)} as score
+        from songs
+        where songs.band_id = ${bandId} and songs.archived_at is null and ${matches(sql`songs.title`)}
+      union all
+      select 'event', events.slug, events.title, concat_ws(' · ', to_char(events.date, 'YYYY-MM-DD'), venues.name), ${score(eventText)}
+        from events left join venues on venues.id = events.venue_id
+        where events.band_id = ${bandId} and events.archived_at is null and ${matches(eventText)}
+      union all
+      select 'venue', venues.id::text, venues.name, venues.address, ${score(venueText)}
+        from venues
+        where venues.band_id = ${bandId} and venues.archived_at is null and ${matches(venueText)}
+      union all
+      select 'contact', contacts.id::text, contacts.name, nullif(concat_ws(' · ', contacts.organisation, contacts.email), ''), ${score(contactText)}
+        from contacts
+        where contacts.band_id = ${bandId} and contacts.archived_at is null and ${matches(contactText)}
+      order by score desc, label
+      limit 40
+    `)) as unknown as { rows: (SearchResult & { score: number })[] }
+    return rows.map(({ score: _, ...r }) => r)
+  }),
+}
+
 // All band operations ------------------------------------------------------
 
 /** Every band-scoped operation. The authorisation tests run all of them, so add new ones here. */
@@ -777,6 +825,7 @@ export const bandOps = {
   ...eventOps,
   ...venueContactOps,
   ...setlistOps,
+  ...searchOps,
 }
 
 export type BandOps = typeof bandOps

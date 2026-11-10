@@ -35,7 +35,7 @@ Why a trigger and not app code: it can't be bypassed (migrations, scripts and ma
 
 ## Search
 
-`pg_trgm` GIN indexes on `songs.title`, `events.title`, `venues.name`, `contacts.name`, `files.name`. One `UNION ALL` query returns typed results ranked by `similarity()`.
+One `UNION ALL` query over songs, events (+ venue name), venues and contacts: `ILIKE` for substrings plus `pg_trgm` `<%` / `word_similarity()` for typos, ranked by score. GIN trigram indexes exist on the main name columns; the combined fields (e.g. contact name + email) are scanned, which is fine at band scale.
 
 ## Offline
 

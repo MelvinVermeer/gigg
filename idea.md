@@ -90,7 +90,12 @@ Common PDFs, recordings, lyrics, song notes, riders. Attachable to songs, events
 
 ## Search
 
-Fast, fuzzy, typed: songs / events / contacts / venues / files. Postgres `pg_trgm`, no separate search service.
+`/<band>/search`, linked from the band navigation. Results update as you type.
+
+- Songs (title), events (title and venue name), venues (name, address), contacts (name, organisation, email)
+- Substring matches plus typo tolerance (Postgres `pg_trgm` `word_similarity`), best first; no separate search service
+- Venue/contact results open their row on the settings page
+- Archived items are left out. Files come with the files feature.
 
 ## Offline
 

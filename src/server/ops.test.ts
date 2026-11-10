@@ -339,6 +339,53 @@ describe('setlists & blocks', () => {
   })
 })
 
+describe('search', () => {
+  const find = async (t: Awaited<ReturnType<typeof testDb>>, q: string) =>
+    (await bandOps.search(t.db, t.reader, t.band, { q })).map((r) => `${r.type}:${r.label}`)
+
+  it('finds by substring and puts the best match first', async () => {
+    const t = await testDb()
+    expect((await find(t, 'clos'))[0]).toBe('song:Closer')
+    expect(await find(t, 'SLOW')).toContain('song:Slow One')
+  })
+
+  it('tolerates typos', async () => {
+    const t = await testDb()
+    expect(await find(t, 'closr')).toContain('song:Closer')
+    expect(await find(t, 'promotor')).toContain('contact:Pat Promoter')
+  })
+
+  it('finds events by venue name, and the venue itself', async () => {
+    const t = await testDb()
+    const results = await find(t, 'local hall')
+    expect(results).toEqual(expect.arrayContaining(['venue:The Local Hall', 'event:Summer Party', 'event:Spring Show']))
+  })
+
+  it('returns refs the links need: slugs for songs/events, ids for venues/contacts', async () => {
+    const t = await testDb()
+    const [song] = await bandOps.search(t.db, t.reader, t.band, { q: 'closer' })
+    expect(song).toMatchObject({ type: 'song', ref: 'closer', detail: 'G' })
+    const contact = (await bandOps.search(t.db, t.reader, t.band, { q: 'pat' })).find((r) => r.type === 'contact')!
+    expect(contact.ref).toMatch(/^[0-9a-f-]{36}$/)
+    expect(contact.detail).toBe('pat@example.com')
+  })
+
+  it("leaves out archived items and other bands' data", async () => {
+    const t = await testDb()
+    await bandOps.archiveSong(t.db, t.member, t.band, { slug: 'closer' })
+    const [other] = await t.db.insert(bands).values({ slug: 'other-band', name: 'Other' }).returning()
+    await t.db.insert(songs).values({ bandId: other.id, slug: 'closer-theirs', title: 'Closer Theirs' })
+    expect((await find(t, 'closer')).filter((r) => r.startsWith('song:'))).toEqual([])
+  })
+
+  it('treats % and _ as text, and returns nothing for an empty query', async () => {
+    const t = await testDb()
+    expect(await find(t, '%')).toEqual([])
+    expect(await find(t, '_')).toEqual([])
+    expect(await find(t, '   ')).toEqual([])
+  })
+})
+
 describe('audit trail', () => {
   it('logs a write with the acting user and band', async () => {
     const t = await testDb()

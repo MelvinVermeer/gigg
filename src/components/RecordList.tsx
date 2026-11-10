@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export type Field = {
   name: string
@@ -24,6 +24,14 @@ type Props<T extends Item> = {
 export function RecordList<T extends Item>({ items, fields, detail, canEdit, onSave, onArchive }: Props<T>) {
   const [error, setError] = useState<{ id: string; message: string }>()
 
+  // Arriving from search (#<id>): open that row and scroll to it.
+  useEffect(() => {
+    const row = location.hash && document.getElementById(location.hash.slice(1))
+    if (!row) return
+    row.querySelector('details')!.open = true
+    row.scrollIntoView({ block: 'center' })
+  }, [])
+
   async function save(e: React.FormEvent<HTMLFormElement>, id: string) {
     e.preventDefault()
     const form = e.currentTarget
@@ -42,7 +50,7 @@ export function RecordList<T extends Item>({ items, fields, detail, canEdit, onS
   return (
     <ul className="records">
       {items.map((item) => (
-        <li key={item.id} className={item.archivedAt ? 'archived' : undefined}>
+        <li key={item.id} id={item.id} className={item.archivedAt ? 'archived' : undefined}>
           <details>
             <summary>
               <strong>{item.name}</strong>
