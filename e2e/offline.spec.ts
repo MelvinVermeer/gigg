@@ -17,9 +17,12 @@ test('visited pages, show mode and preloaded gigs work offline', async ({ page, 
   await context.setOffline(true)
   await page.reload()
   await expect(page.getByRole('status')).toContainText('Offline')
-  // Never opened, but preloaded from the events list.
-  await page.getByRole('link', { name: 'Summer Party' }).click()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Summer Party')
+  // Never opened, but preloaded from the events list (the first few gigs; other tests add events,
+  // so take whichever is first).
+  const first = page.locator('ul.events li a').first()
+  const title = (await first.textContent())!
+  await first.click()
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
 
   await page.goto('/demo-band/events/summer-party/show')
   await expect(page.locator('.show-bar')).toContainText('Summer Party')
