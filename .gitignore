@@ -21,3 +21,4 @@ playwright-report
 # Design source files (kept locally, not in the repo)
 logo_handover/
 e2e/.auth
+.vercel
