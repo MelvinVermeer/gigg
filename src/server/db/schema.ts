@@ -1,6 +1,7 @@
 // App schema. See data-model.md. Auth tables live in auth-schema.ts.
 import { sql } from 'drizzle-orm'
 import {
+  type AnyPgColumn,
   bigint,
   check,
   date,
@@ -135,6 +136,8 @@ export const events = pgTable(
     paymentStatus: paymentStatus('payment_status').notNull().default('open'),
     tags: text('tags').array().notNull().default(sql`'{}'`),
     notes: text('notes'),
+    // A standard (standalone) setlist used as is. Null: the event has its own (custom) setlist.
+    setlistId: uuid('setlist_id').references((): AnyPgColumn => setlists.id),
     createdAt: createdAt(),
     archivedAt: archivedAt(),
   },

@@ -39,6 +39,7 @@ test.describe('member', () => {
     // Build the setlist.
     await newEvent(page, `Setlist Show ${ts}`)
     await page.getByRole('link', { name: 'Build setlist' }).click()
+    await page.getByRole('button', { name: 'Edit', exact: true }).click()
     await page.getByRole('button', { name: 'Start an empty setlist' }).click()
     await addSong(page, 'Set 1', 'Opening Song')
     await addSong(page, 'Set 1', 'Slow One')
@@ -46,7 +47,7 @@ test.describe('member', () => {
     await expect(songsIn(page, 0)).toHaveText(['Slow One', 'Opening Song'])
 
     await page.getByRole('button', { name: 'Add set' }).click()
-    await page.getByLabel('Block to add to Set 2').selectOption({ label: `Encore ${ts} (1)` })
+    await page.getByLabel('Add song to Set 2').fill(`Block: Encore ${ts} (1)`)
     await page.locator('section.set').nth(1).getByRole('button', { name: 'Add block' }).click()
     await expect(songsIn(page, 1)).toHaveText(['Closer'])
     await expect(page.getByRole('status')).toHaveText('Saved')
@@ -85,6 +86,7 @@ test.describe('member', () => {
     // Copy to another event.
     await newEvent(page, `Copy Show ${ts}`)
     await page.getByRole('link', { name: 'Build setlist' }).click()
+    await page.getByRole('button', { name: 'Edit', exact: true }).click()
     const source = page.getByLabel('Copy setlist from')
     await source.selectOption((await source.locator('option', { hasText: `Setlist Show ${ts}` }).getAttribute('value'))!)
     await page.getByRole('button', { name: 'Copy that setlist' }).click()
@@ -110,9 +112,26 @@ test.describe('standalone setlists', () => {
     await page.goto('/demo-band/events/new')
     await page.getByLabel('Title').fill(`From template ${ts}`)
     await page.getByLabel('Date').fill(inDays(50))
-    await page.getByLabel(/^Setlist/).selectOption({ label: `Festival ${ts}` })
+    await page.getByLabel(/^Setlist/).selectOption({ value: (await page.locator('option', { hasText: `Festival ${ts}` }).last().getAttribute('value'))! })
     await page.getByRole('button', { name: 'Add event' }).click()
     await page.getByRole('link', { name: /2 songs/ }).click()
+    await expect(songsIn(page, 0)).toHaveText(['Neon Harbour', 'Closer'])
+
+    // A second event uses it as the standard: read-only, and switching to custom clones it.
+    await page.goto('/demo-band/events/new')
+    await page.getByLabel('Title').fill(`Standard ${ts}`)
+    await page.getByLabel('Date').fill(inDays(51))
+    await page.getByLabel(/^Setlist/).selectOption({ value: (await page.locator('option', { hasText: `Festival ${ts}` }).first().getAttribute('value'))! })
+    await page.getByRole('button', { name: 'Add event' }).click()
+    await expect(page.getByRole('link', { name: new RegExp(`Festival ${ts} · 2 songs`) })).toBeVisible()
+    await page.getByRole('link', { name: /2 songs/ }).click()
+    await expect(page.getByLabel('Standard setlist')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Edit', exact: true }).click()
+    await expect(page.getByLabel('Standard setlist')).toHaveValue(/.+/)
+    await expect(songsIn(page, 0)).toHaveText(['Neon Harbour', 'Closer'])
+    await expect(page.getByRole('button', { name: 'Add set' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Customize' }).click()
+    await expect(page.getByRole('button', { name: 'Add set' })).toBeVisible()
     await expect(songsIn(page, 0)).toHaveText(['Neon Harbour', 'Closer'])
   })
 

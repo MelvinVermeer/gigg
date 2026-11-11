@@ -31,7 +31,6 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
   const router = useRouter()
   const [sets, setSets] = useState<Set[]>(data.sets)
   const [status, setStatus] = useState<'saved' | 'saving' | 'error' | ''>('')
-  const [blockFor, setBlockFor] = useState<Record<number, string>>({})
   const [copyFrom, setCopyFrom] = useState(data.copyFrom[0]?.id ?? '')
   const queue = useRef(Promise.resolve())
 
@@ -121,40 +120,11 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
             label={set.name}
             songs={set.songs}
             repertoire={data.songs}
+            blocks={data.blocks}
             editable={editable}
-            onChange={(songs) => persist(updateSet(i, { songs }))}
+            // Removing the last song removes the set.
+            onChange={(songs) => persist(songs.length || !set.songs.length ? updateSet(i, { songs }) : sets.filter((_, j) => j !== i))}
           />
-          {editable && (
-            <p className="row">
-              {data.blocks.length > 0 && (
-                <>
-                  <select
-                    aria-label={`Block to add to ${set.name}`}
-                    value={blockFor[i] ?? data.blocks[0].id}
-                    onChange={(e) => setBlockFor({ ...blockFor, [i]: e.target.value })}
-                  >
-                    {data.blocks.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} ({b.songs.length})
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const block = data.blocks.find((b) => b.id === (blockFor[i] ?? data.blocks[0].id))!
-                      persist(updateSet(i, { songs: [...set.songs, ...block.songs] }))
-                    }}
-                  >
-                    Add block
-                  </button>
-                </>
-              )}
-              <button type="button" onClick={() => persist(sets.filter((_, j) => j !== i))}>
-                Remove set
-              </button>
-            </p>
-          )}
         </section>
       ))}
 

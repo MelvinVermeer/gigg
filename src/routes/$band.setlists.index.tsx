@@ -63,6 +63,15 @@ function Setlists() {
       ) : (
         <p>{archived ? 'No archived setlists.' : 'No setlists yet.'}</p>
       )}
+      {!archived && (
+        <ul className="records">
+          <li>
+            <Link to="/$band/songs" params={{ band: band.slug }}>
+              <strong>All songs</strong>
+            </Link>
+          </li>
+        </ul>
+      )}
     </>
   )
 }

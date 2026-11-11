@@ -17,7 +17,7 @@ export const Route = createFileRoute('/$band/events/$event/')({
 const bandRoute = getRouteApi('/$band')
 
 function Event() {
-  const { event, venue, contacts, setlist, files, availability } = Route.useLoaderData()
+  const { event, venue, contacts, setlist, standardName, files, availability } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const params = { band: band.slug, event: event.slug }
 
@@ -78,7 +78,7 @@ function Event() {
         <dd>
           <Link to="/$band/events/$event/setlist" params={params}>
             {setlist.songs
-              ? `${setlist.songs} songs · ${formatDuration(setlist.durationSec)}`
+              ? `${standardName ? `${standardName} · ` : ''}${setlist.songs} songs · ${formatDuration(setlist.durationSec)}`
               : band.role === 'member'
                 ? 'Build setlist'
                 : 'No setlist yet'}

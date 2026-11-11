@@ -12,7 +12,7 @@ it('the demo seed loads and reads back through the normal operations', async () 
   await seedDemo(db)
   await seedDemo(db) // idempotent
   const [member] = await db.select().from(users).limit(1)
-  expect(await bandOps.listSongs(db, member.id, 'demo-band', {})).toHaveLength(23)
+  expect(await bandOps.listSongs(db, member.id, 'demo-band', {})).toHaveLength(103)
   expect((await bandOps.listSetlists(db, member.id, 'demo-band', {})).map((s) => s.name)).toEqual(['Short club set', 'Standard 2 sets'])
   const upcoming = await bandOps.listEvents(db, member.id, 'demo-band', {})
   expect(upcoming.slice(0, 3).map((e) => e.title)).toEqual(['Rusty Anchor Friday', 'Wedding at Hotel Meridian', 'Summer Party'])

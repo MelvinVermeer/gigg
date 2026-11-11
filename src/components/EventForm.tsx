@@ -23,7 +23,7 @@ type Props = {
   submitLabel: string
   /** New events only: offer to start the setlist from a standalone one. */
   pickSetlist?: boolean
-  onSubmit: (fields: EventFields & { setlistFrom?: string | null }) => Promise<void>
+  onSubmit: (fields: EventFields & { setlistFrom?: string | null; setlistStandard?: string | null }) => Promise<void>
 }
 
 /** A picked contact: existing (id) or new (typed name plus optional details). */
@@ -71,6 +71,7 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
+    const setlist = String(f.get('setlist') ?? '')
     setBusy(true)
     setError('')
     try {
@@ -86,7 +87,8 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
           .split(',')
           .map((t) => t.trim())
           .filter(Boolean),
-        setlistFrom: (f.get('setlistFrom') as string | null) || null,
+        setlistStandard: setlist.startsWith('standard:') ? setlist.slice(9) : null,
+        setlistFrom: setlist.startsWith('custom:') ? setlist.slice(7) : null,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Saving failed')
@@ -227,14 +229,23 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
       </label>
       {pickSetlist && data.setlists.length > 0 && (
         <label>
-          Setlist <small>(starts as a copy, change it freely)</small>
-          <select name="setlistFrom" defaultValue="">
+          Setlist
+          <select name="setlist" defaultValue="">
             <option value="">Empty</option>
-            {data.setlists.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
+            <optgroup label="Standard (use as is)">
+              {data.setlists.map((s) => (
+                <option key={s.id} value={`standard:${s.id}`}>
+                  {s.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Custom (start as a copy)">
+              {data.setlists.map((s) => (
+                <option key={s.id} value={`custom:${s.id}`}>
+                  {s.name}
+                </option>
+              ))}
+            </optgroup>
           </select>
         </label>
       )}

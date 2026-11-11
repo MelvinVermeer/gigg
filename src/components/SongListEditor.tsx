@@ -1,7 +1,8 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 import { useId, useMemo, useState } from 'react'
 import { formatDuration } from '#/lib/duration'
 import { withLabels } from '#/lib/labels'
+import { bandOp } from '#/server/fns'
 
 export type SongRef = { id: string; slug: string; title: string; key: string | null; durationSec: number | null }
 
@@ -11,6 +12,8 @@ type Props = {
   label: string
   songs: SongRef[]
   repertoire: SongRef[]
+  /** Blocks that can be searched too; picking one adds all its songs. */
+  blocks?: { id: string; name: string; songs: SongRef[] }[]
   editable: boolean
   onChange: (songs: SongRef[]) => void
 }
@@ -18,14 +21,31 @@ type Props = {
 export const totalDuration = (songs: SongRef[]) => songs.reduce((sum, s) => sum + (s.durationSec ?? 0), 0)
 
 /** An ordered list of songs: move up/down, remove, add from the repertoire. Used for sets and blocks. */
-export function SongListEditor({ band, label, songs, repertoire, editable, onChange }: Props) {
+export function SongListEditor({ band, label, songs, repertoire, blocks = [], editable, onChange }: Props) {
   const listId = useId()
+  const router = useRouter()
   const [text, setText] = useState('')
   const options = useMemo(() => withLabels(repertoire, (s) => s.title, (s) => s.key), [repertoire])
 
-  function add() {
-    const song = options.find((o) => o.label === text.trim())
-    if (!song) return
+  const blockLabel = (b: { name: string; songs: SongRef[] }) => `Block: ${b.name} (${b.songs.length})`
+
+  const pickedBlock = blocks.find((b) => blockLabel(b) === text.trim())
+
+  async function add() {
+    const title = text.trim()
+    if (!title) return
+    const block = pickedBlock
+    if (block) {
+      onChange([...songs, ...block.songs])
+      setText('')
+      return
+    }
+    let song: SongRef | undefined = options.find((o) => o.label === title)
+    // Not in the repertoire: create it with that title.
+    if (!song) {
+      song = (await bandOp('createSong', band, { title })) as SongRef
+      await router.invalidate()
+    }
     onChange([...songs, song])
     setText('')
   }
@@ -90,13 +110,16 @@ export function SongListEditor({ band, label, songs, repertoire, editable, onCha
                 add()
               }
             }}
-            placeholder="Search a song"
+            placeholder={blocks.length ? 'Search a song or block' : 'Search a song'}
             autoComplete="off"
           />
           <button type="button" onClick={add}>
-            Add song
+            {pickedBlock ? 'Add block' : 'Add song'}
           </button>
           <datalist id={listId}>
+            {blocks.map((b) => (
+              <option key={b.id} value={blockLabel(b)} />
+            ))}
             {options.map((o) => (
               <option key={o.id} value={o.label} />
             ))}

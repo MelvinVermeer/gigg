@@ -1,4 +1,5 @@
-import { Link, createFileRoute, getRouteApi } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
+import { useState } from 'react'
 import { SetlistBuilder } from '#/components/SetlistBuilder'
 import { formatDate } from '#/lib/date'
 import { bandOp } from '#/server/fns'
@@ -14,7 +15,15 @@ const bandRoute = getRouteApi('/$band')
 function Setlist() {
   const data = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
+  const router = useRouter()
   const params = { band: band.slug, event: data.event.slug }
+  const member = band.role === 'member'
+  const [editing, setEditing] = useState(false)
+
+  async function run(op: 'useStandardSetlist' | 'useCustomSetlist', extra: object) {
+    await bandOp(op, band.slug, { event: data.event.slug, ...extra })
+    await router.invalidate()
+  }
 
   return (
     <>
@@ -39,7 +48,44 @@ function Setlist() {
         <HistoryLink item={data.event.id} />
       </p>
       <h1>Setlist</h1>
-      <SetlistBuilder band={band.slug} target={{ event: data.event.slug }} data={data} editable={band.role === 'member'} />
+      {member && (
+        <p>
+          <button type="button" onClick={() => setEditing(!editing)}>
+            {editing ? 'Done' : 'Edit'}
+          </button>
+        </p>
+      )}
+      {member && editing && data.standards.length > 0 && (
+        <p className="row">
+          <select
+            aria-label="Standard setlist"
+            value={data.standard?.id ?? ''}
+            onChange={(e) => e.target.value && run('useStandardSetlist', { setlist: e.target.value })}
+          >
+            {!data.standard && <option value="">Custom setlist</option>}
+            {data.standards.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          {data.standard && (
+            <button type="button" onClick={() => run('useCustomSetlist', {})}>
+              Customize
+            </button>
+          )}
+        </p>
+      )}
+      {data.standard && (
+        <p>
+          Using the standard setlist{' '}
+          <Link to="/$band/setlists/$setlist" params={{ band: band.slug, setlist: data.standard.id }}>
+            {data.standard.name}
+          </Link>
+          . Changes there show up here.
+        </p>
+      )}
+      <SetlistBuilder band={band.slug} target={{ event: data.event.slug }} data={data} editable={member && editing && !data.standard} />
     </>
   )
 }
