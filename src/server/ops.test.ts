@@ -635,6 +635,15 @@ describe('members', () => {
     await expect(bandOps.listSongs(t.db, id, t.band, {})).resolves.toBeTruthy()
   })
 
+  it('shows adding, changing and removing members in the history', async () => {
+    const t = await testDb()
+    await bandOps.inviteMember(t.db, t.member, t.band, { email: 'new@example.com', role: 'reader' })
+    await bandOps.inviteMember(t.db, t.member, t.band, { email: 'new@example.com', role: 'member' })
+    await bandOps.removeMember(t.db, t.member, t.band, { email: 'new@example.com' })
+    const lines = (await bandOps.listChanges(t.db, t.reader, t.band, {})).flatMap((s) => s.lines)
+    expect(lines.slice(0, 3)).toEqual(['Removed member “new@example.com”', 'Changed “new@example.com” from reader to member', 'Added reader “new@example.com”'])
+  })
+
   it('refuses bad emails and removing yourself', async () => {
     const t = await testDb()
     await expect(bandOps.inviteMember(t.db, t.member, t.band, { email: 'nope', role: 'reader' })).rejects.toThrow()
