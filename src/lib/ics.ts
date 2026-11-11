@@ -59,6 +59,8 @@ export function zonedToUtc(date: string, time: string, timeZone: string) {
 }
 
 const DAY = 86_400_000
+/** A start without an end lasts this long in the calendar. */
+const DEFAULT_LENGTH = 3 * 3_600_000
 
 export function toIcs(cal: { name: string; timeZone: string; events: IcsEvent[] }, now = new Date()) {
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//gigg//calendar//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', `X-WR-CALNAME:${esc(cal.name)}`, `X-WR-TIMEZONE:${cal.timeZone}`]
@@ -66,7 +68,7 @@ export function toIcs(cal: { name: string; timeZone: string; events: IcsEvent[] 
     lines.push('BEGIN:VEVENT', `UID:${e.id}@gigg`, `DTSTAMP:${utcStamp(now)}`)
     if (e.startTime) {
       const start = zonedToUtc(e.date, e.startTime, cal.timeZone)
-      let end = e.endTime ? zonedToUtc(e.date, e.endTime, cal.timeZone) : start
+      let end = e.endTime ? zonedToUtc(e.date, e.endTime, cal.timeZone) : new Date(+start + DEFAULT_LENGTH)
       if (end < start) end = zonedToUtc(new Date(Date.parse(`${e.date}T00:00Z`) + DAY).toISOString().slice(0, 10), e.endTime!, cal.timeZone)
       lines.push(`DTSTART:${utcStamp(start)}`, `DTEND:${utcStamp(end)}`)
     } else {

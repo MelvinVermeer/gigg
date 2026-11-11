@@ -15,6 +15,10 @@ describe('ics', () => {
     expect(ics({})).toContain('DTSTART;VALUE=DATE:20261214\r\nDTEND;VALUE=DATE:20261215')
   })
 
+  it('lasts 3 hours without an end time', () => {
+    expect(ics({ startTime: '22:30' })).toContain('DTSTART:20261214T213000Z\r\nDTEND:20261215T003000Z')
+  })
+
   it('runs past midnight when the end is before the start', () => {
     expect(ics({ startTime: '21:00', endTime: '01:30' })).toContain('DTSTART:20261214T200000Z\r\nDTEND:20261215T003000Z')
   })
