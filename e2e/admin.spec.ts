@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { asReader, lastLinkFor, signIn } from './helpers'
 
 test('admin adds a band, its first member is invited, then the band is deleted for good', async ({ page, browser }) => {
-  await signIn(page, 'admin@example.com') // ADMIN_EMAILS in playwright.config.ts
+  await signIn(page, 'admin@example.com') // the admin in local mode (auth.ts)
   await page.getByRole('button', { name: /Account menu/ }).click()
   await page.locator('#user-menu').getByRole('link', { name: 'Admin' }).click()
 

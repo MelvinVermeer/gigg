@@ -7,7 +7,8 @@ import { eq } from 'drizzle-orm'
 import { db, isLocal, schema } from './db'
 import { sendMail } from './mail'
 
-const adminEmails = (process.env.ADMIN_EMAILS ?? '')
+// Local mode (dev/test): admin@example.com is the admin unless ADMIN_EMAILS says otherwise.
+const adminEmails = (process.env.ADMIN_EMAILS ?? (isLocal ? 'admin@example.com' : ''))
   .split(',')
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean)
