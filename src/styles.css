@@ -118,6 +118,15 @@ main {
   cursor: pointer;
 }
 
+.user-menu .current-band {
+  display: flex;
+  justify-content: space-between;
+}
+
+.user-menu .current-band a {
+  flex: 1;
+}
+
 .site-header img {
   height: 32px;
   width: auto;
