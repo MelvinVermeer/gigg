@@ -4,9 +4,9 @@ import { notFound, redirect } from '@tanstack/react-router'
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type { z } from 'zod'
-import { auth } from './auth'
+import { auth, isAdminEmail } from './auth'
 import { db } from './db'
-import { bandOps, Forbidden, myBands, NotFound } from './ops'
+import { archiveBand, bandOps, createBand, Forbidden, listAllBands, myBands, NotFound } from './ops'
 import type { BandOpName, BandOps } from './ops'
 
 const authed = createMiddleware({ type: 'function' }).server(async ({ next }) => {
@@ -19,8 +19,30 @@ const authed = createMiddleware({ type: 'function' }).server(async ({ next }) =>
 export const getMe = createServerFn({ method: 'GET' }).handler(async () => {
   const session = await auth.api.getSession({ headers: getRequestHeaders() })
   if (!session) return null
-  return { email: session.user.email, bands: await myBands(db, session.user.id) }
+  return { email: session.user.email, isAdmin: isAdminEmail(session.user.email), bands: await myBands(db, session.user.id) }
 })
+
+// Instance admin (ADMIN_EMAILS). Others get a 404, like outsiders of a band.
+const admin = createMiddleware({ type: 'function' }).server(async ({ next }) => {
+  const session = await auth.api.getSession({ headers: getRequestHeaders() })
+  if (!session) throw redirect({ to: '/login' })
+  if (!isAdminEmail(session.user.email)) throw notFound()
+  return next()
+})
+
+export const getAllBands = createServerFn({ method: 'GET' })
+  .middleware([admin])
+  .handler(() => listAllBands(db))
+
+export const addBand = createServerFn({ method: 'POST' })
+  .middleware([admin])
+  .validator((data: { name: string; email: string }) => data)
+  .handler(({ data }) => createBand(db, data))
+
+export const deleteBand = createServerFn({ method: 'POST' })
+  .middleware([admin])
+  .validator((data: { slug: string }) => data)
+  .handler(({ data }) => archiveBand(db, String(data.slug)))
 
 export const getMyBands = createServerFn({ method: 'GET' })
   .middleware([authed])

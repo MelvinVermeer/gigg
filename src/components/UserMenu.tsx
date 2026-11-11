@@ -2,10 +2,10 @@ import { Link, useParams } from '@tanstack/react-router'
 import { useRef } from 'react'
 import { authClient } from '#/lib/auth-client'
 
-type Props = { email: string; bands: { slug: string; name: string }[] }
+type Props = { email: string; bands: { slug: string; name: string }[]; isAdmin: boolean }
 
 /** Avatar button + menu. Native popover: closes on outside click and Escape, no library. */
-export function UserMenu({ email, bands }: Props) {
+export function UserMenu({ email, bands, isAdmin }: Props) {
   const menu = useRef<HTMLDivElement>(null)
   const close = () => menu.current?.hidePopover()
   // Settings live per band: the band you're in, otherwise your first band.
@@ -36,6 +36,11 @@ export function UserMenu({ email, bands }: Props) {
           {settingsBand && (
             <Link to="/$band/settings" params={{ band: settingsBand }} onClick={close}>
               Settings
+            </Link>
+          )}
+          {isAdmin && (
+            <Link to="/admin" onClick={close}>
+              Admin
             </Link>
           )}
           <button type="button" onClick={logOut}>

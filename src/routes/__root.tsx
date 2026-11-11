@@ -80,7 +80,7 @@ function RootLayout() {
           <img className="logo-on-light" src={lockupInk} alt="Gigg" height={32} width={97} />
           <img className="logo-on-dark" src={lockup} alt="Gigg" height={32} width={97} />
         </Link>
-        {me ? <UserMenu email={me.email} bands={me.bands} /> : <Link to="/login">Sign in</Link>}
+        {me ? <UserMenu email={me.email} bands={me.bands} isAdmin={me.isAdmin} /> : <Link to="/login">Sign in</Link>}
       </header>
       <Outlet />
     </>

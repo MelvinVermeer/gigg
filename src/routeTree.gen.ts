@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BandRouteImport } from './routes/$band'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as BandIndexRouteImport } from './routes/$band.index'
@@ -43,6 +44,11 @@ const IndexRoute = IndexRouteImport.update({
 const BandRoute = BandRouteImport.update({
   id: '/$band',
   path: '/$band',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -164,6 +170,7 @@ const BandSongsSongEditRoute = BandSongsSongEditRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$band': typeof BandRouteWithChildren
+  '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
@@ -218,6 +226,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$band': typeof BandRouteWithChildren
+  '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
@@ -247,6 +256,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$band'
+    | '/admin'
     | '/login'
     | '/me'
     | '/$band/blocks'
@@ -273,6 +283,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/login'
     | '/me'
     | '/$band/blocks'
@@ -300,6 +311,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$band'
+    | '/admin'
     | '/login'
     | '/me'
     | '/$band/blocks'
@@ -328,6 +340,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BandRoute: typeof BandRouteWithChildren
+  AdminRoute: typeof AdminRoute
   LoginRoute: typeof LoginRoute
   MeRoute: typeof MeRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -347,6 +360,13 @@ declare module '@tanstack/react-router' {
       path: '/$band'
       fullPath: '/$band'
       preLoaderRoute: typeof BandRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -564,6 +584,7 @@ const BandRouteWithChildren = BandRoute._addFileChildren(BandRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BandRoute: BandRouteWithChildren,
+  AdminRoute: AdminRoute,
   LoginRoute: LoginRoute,
   MeRoute: MeRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

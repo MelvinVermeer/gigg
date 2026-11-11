@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
-import { bands, changes, contacts, memberships, songs, venues } from './db/schema'
-import { bandOps, Forbidden, NotFound, slugify } from './ops'
+import { bands, changes, contacts, memberships, songs, users, venues } from './db/schema'
+import { archiveBand, bandOps, createBand, Forbidden, listAllBands, myBands, NotFound, slugify } from './ops'
 import type { BandOpName } from './ops'
 import { testDb } from './test-db'
 
@@ -536,4 +536,32 @@ it('slugify', () => {
   expect(slugify('A Day in the Life')).toBe('a-day-in-the-life')
   expect(slugify('  Café   Olé!! ')).toBe('cafe-ole')
   expect(slugify('!!!')).toBe('untitled')
+})
+
+describe('admin', () => {
+  it('creates a band with its first member, who may then sign in', async () => {
+    const t = await testDb()
+    const band = await createBand(t.db, { name: 'Demo Band', email: ' New@Example.com ' })
+    expect(band.slug).toBe('demo-band-2')
+    const [user] = await t.db.select().from(users).where(eq(users.email, 'new@example.com'))
+    await expect(bandOps.listSongs(t.db, user.id, band.slug, {})).resolves.toEqual([])
+    await expect(bandOps.createSong(t.db, user.id, band.slug, { title: 'X' })).resolves.toBeTruthy()
+  })
+
+  it('adds an existing user, avoids route slugs and requires a member', async () => {
+    const t = await testDb()
+    await createBand(t.db, { name: 'Second', email: 'member@example.com' })
+    expect((await myBands(t.db, t.member)).map((b) => b.slug)).toEqual(['demo-band', 'second'])
+    expect((await createBand(t.db, { name: 'Admin', email: 'a@example.com' })).slug).toBe('admin-2')
+    await expect(createBand(t.db, { name: 'Ghost', email: '' })).rejects.toThrow()
+    expect((await listAllBands(t.db)).map((b) => b.name)).not.toContain('Ghost')
+  })
+
+  it('deletes a band for everyone', async () => {
+    const t = await testDb()
+    await archiveBand(t.db, t.band)
+    await expect(bandOps.listSongs(t.db, t.member, t.band, {})).rejects.toBeInstanceOf(Forbidden)
+    expect(await listAllBands(t.db)).toEqual([])
+    await expect(archiveBand(t.db, t.band)).rejects.toBeInstanceOf(NotFound)
+  })
 })

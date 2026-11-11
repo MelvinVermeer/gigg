@@ -1049,3 +1049,58 @@ export function myBands(db: Db, userId: string) {
     .where(and(eq(memberships.userId, userId), isNull(bands.archivedAt), isNull(memberships.archivedAt)))
     .orderBy(asc(bands.name))
 }
+
+// Instance admin -----------------------------------------------------------
+// Not band-scoped: fns.ts checks ADMIN_EMAILS before calling these.
+
+/** Band slugs live at the top level, next to these routes. */
+const reservedBandSlugs = ['admin', 'api', 'login', 'me', 'new']
+
+export function listAllBands(db: Db) {
+  return db
+    .select({
+      slug: bands.slug,
+      name: bands.name,
+      members: sql<string[]>`coalesce(array_agg(${users.email} order by ${users.email}) filter (where ${users.email} is not null), '{}')`,
+    })
+    .from(bands)
+    .leftJoin(memberships, and(eq(memberships.bandId, bands.id), isNull(memberships.archivedAt)))
+    .leftJoin(users, eq(users.id, memberships.userId))
+    .where(isNull(bands.archivedAt))
+    .groupBy(bands.id)
+    .orderBy(asc(bands.name))
+}
+
+const newBand = z.object({ name: z.string().trim().min(1).max(200), email: z.string().trim().toLowerCase().email().max(200) })
+
+/** A band always starts with a first member, so there are no bands nobody can reach. */
+export async function createBand(db: Db, rawInput: z.input<typeof newBand>) {
+  const { name, email } = newBand.parse(rawInput)
+  return db.transaction(async (tx) => {
+    let slug = ''
+    for (const s of numbered(slugify(name))) {
+      if (reservedBandSlugs.includes(s)) continue
+      const [taken] = await tx.select({ id: bands.id }).from(bands).where(eq(bands.slug, s)) // archived bands keep theirs
+      if (!taken) {
+        slug = s
+        break
+      }
+    }
+    const [band] = await tx.insert(bands).values({ slug, name }).returning()
+    // Invitation only: having a users row is what lets them sign in (auth.ts).
+    await tx.insert(users).values({ name: email.split('@')[0], email }).onConflictDoNothing()
+    const [user] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email))
+    await tx.insert(memberships).values({ bandId: band.id, userId: user.id, role: 'member' })
+    return { slug: band.slug, name: band.name }
+  })
+}
+
+/** Soft delete: the band disappears for everyone; its data stays in the DB. */
+export async function archiveBand(db: Db, slug: string) {
+  const [band] = await db
+    .update(bands)
+    .set({ archivedAt: new Date() })
+    .where(and(eq(bands.slug, slug), isNull(bands.archivedAt)))
+    .returning({ id: bands.id })
+  if (!band) throw new NotFound()
+}
