@@ -31,7 +31,7 @@ function Answer() {
     e.preventDefault()
     if (!choice) return
     try {
-      await answerAvailabilityByToken({ data: { token, answer: choice, note: String(new FormData(e.currentTarget).get('note')) } })
+      await answerAvailabilityByToken({ data: { token, answer: choice, note: String(new FormData(e.currentTarget).get('note') ?? '') } })
       setSaved(true)
       setError('')
       await router.invalidate()
@@ -76,9 +76,11 @@ function Answer() {
                   ))}
                 </RadioGroup>
               </fieldset>
-              <Field label="Note (optional)">
-                <Textarea name="note" maxLength={500} rows={2} defaultValue={r.note ?? ''} />
-              </Field>
+              {choice === 'maybe' && (
+                <Field label="Why maybe? (optional)">
+                  <Textarea name="note" maxLength={500} rows={2} defaultValue={r.note ?? ''} />
+                </Field>
+              )}
               <Button type="submit" disabled={!choice}>
                 {r.answer ? 'Change my answer' : 'Confirm'}
               </Button>

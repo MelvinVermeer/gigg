@@ -1329,7 +1329,19 @@ async function availabilityEvent(tx: Tx, bandId: string, slug: string) {
   return event
 }
 
-const answered = (answer: 'yes' | 'no' | 'maybe', note: string | null) => ({ answer, note, answeredAt: new Date() })
+// Notes only explain a maybe.
+const answered = (answer: 'yes' | 'no' | 'maybe', note: string | null) => ({ answer, note: answer === 'maybe' ? note : null, answeredAt: new Date() })
+
+/** Record an answer; the request closes itself once everyone asked has answered. */
+async function saveAnswer(tx: Tx, responseId: string, requestId: string, answer: 'yes' | 'no' | 'maybe', note: string | null) {
+  await tx.update(availabilityResponses).set(answered(answer, note)).where(eq(availabilityResponses.id, responseId))
+  const [waiting] = await tx
+    .select({ id: availabilityResponses.id })
+    .from(availabilityResponses)
+    .where(and(eq(availabilityResponses.requestId, requestId), isNull(availabilityResponses.answer)))
+    .limit(1)
+  if (!waiting) await tx.update(availabilityRequests).set({ closedAt: new Date() }).where(eq(availabilityRequests.id, requestId))
+}
 
 const availabilityOps = {
   /** The event's latest request (open, or the last closed one) with everyone's answer; null if never asked. */
@@ -1410,12 +1422,12 @@ const availabilityOps = {
   answerAvailability: bandOp('reader', answerInput.extend({ event: z.string() }), async ({ tx, bandId, userId }, { event: slug, answer, note }) => {
     const event = await availabilityEvent(tx, bandId, slug)
     const [mine] = await tx
-      .select({ id: availabilityResponses.id })
+      .select({ id: availabilityResponses.id, requestId: availabilityResponses.requestId })
       .from(availabilityResponses)
       .innerJoin(availabilityRequests, eq(availabilityRequests.id, availabilityResponses.requestId))
       .where(and(eq(availabilityRequests.eventId, event.id), isNull(availabilityRequests.closedAt), eq(availabilityResponses.userId, userId)))
     if (!mine) throw new NotFound()
-    await tx.update(availabilityResponses).set(answered(answer, note)).where(eq(availabilityResponses.id, mine.id))
+    await saveAnswer(tx, mine.id, mine.requestId, answer, note)
   }),
 }
 
@@ -1424,6 +1436,7 @@ async function responseByToken(tx: Tx, token: string) {
   const [row] = await tx
     .select({
       id: availabilityResponses.id,
+      requestId: availabilityResponses.requestId,
       userId: availabilityResponses.userId,
       answer: availabilityResponses.answer,
       note: availabilityResponses.note,
@@ -1478,7 +1491,7 @@ export async function answerByToken(db: Db, token: string, rawInput: unknown) {
     const r = await responseByToken(tx, token)
     if (r.closed) throw new Error('This request is closed')
     await tx.execute(sql`select set_config('app.user_id', ${r.userId}, true)`) // the audit trail shows who answered
-    await tx.update(availabilityResponses).set(answered(input.answer, input.note)).where(eq(availabilityResponses.id, r.id))
+    await saveAnswer(tx, r.id, r.requestId, input.answer, input.note)
   })
 }
 

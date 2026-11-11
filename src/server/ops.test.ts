@@ -677,9 +677,10 @@ describe('availability', () => {
     const asked = await ask(t)
     expect(asked.recipients).toHaveLength(2)
     await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'summer-party', answer: 'maybe', note: 'after 9pm' })
-    await answerByToken(t.db, tokenOf(asked, 'member@example.com'), { answer: 'yes' })
+    expect(await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).toMatchObject({ open: true })
+    await answerByToken(t.db, tokenOf(asked, 'member@example.com'), { answer: 'yes', note: 'dropped: only a maybe explains itself' })
     const info = await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })
-    expect(info).toMatchObject({ open: true, stale: false })
+    expect(info).toMatchObject({ open: false, stale: false }) // everyone answered, so it closed itself
     expect(info!.responses.map((r) => [r.email, r.answer, r.note, r.mine])).toEqual([
       ['member@example.com', 'yes', null, false],
       ['reader@example.com', 'maybe', 'after 9pm', true],
