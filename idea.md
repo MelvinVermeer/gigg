@@ -41,7 +41,7 @@ Old slugs redirect after a rename.
 
 The term is **events** (URL `/<band>/events/<slug>`), not events.
 
-- Title, date (one date; times and other details go in the free-form notes), files
+- Title, date, optional start and end time (an end before the start is the next day), files. Other times (load-in, soundcheck) go in the free-form notes.
 - Slug: slugified title; if taken, the date in front (`2026-12-05-agnietenhof`), only then `-2`.
 - Linked **venue** (own record, reusable)
 - Linked **contact(s)** (own record, reusable)
@@ -56,7 +56,7 @@ The term is **events** (URL `/<band>/events/<slug>`), not events.
 
   Paid upfront = `confirmed` + `paid`. Paid afterwards = `played` + `invoiced`. Filters like "played but not paid" just work.
 - Free tags for anything else.
-- Add to calendar / iCal feed with all events.
+- Calendar feed: Settings → Calendar gives each person a private link per band to subscribe to in Google or Apple Calendar. It has options (tentative, “(option)” in front), confirmed and played events from the past year on; the description has the notes and a link to the event.
 
 ## Songs (repertoire)
 

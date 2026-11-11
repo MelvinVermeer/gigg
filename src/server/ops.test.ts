@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import { bands, changes, contacts, events, memberships, songs, users, venues } from './db/schema'
-import { answerByToken, archiveBand, availabilityByToken, bandOps, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, slugify } from './ops'
+import { answerByToken, archiveBand, availabilityByToken, bandOps, calendarByToken, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, slugify } from './ops'
 import type { BandOpName } from './ops'
 import { testDb } from './test-db'
 
@@ -458,7 +458,7 @@ describe('audit trail', () => {
 
   it('is attached to every table except auth internals', async () => {
     const t = await testDb()
-    const notAudited = ['changes', 'sessions', 'accounts', 'verifications', 'passkeys']
+    const notAudited = ['changes', 'sessions', 'accounts', 'verifications', 'passkeys', 'calendar_feeds'] // feeds: history would show the secret token
     const { rows } = (await t.db.execute(sql`
       select table_name from information_schema.tables
       where table_schema = 'public' and table_type = 'BASE TABLE'
@@ -730,5 +730,44 @@ describe('availability', () => {
     await expect(answerByToken(t.db, token, { answer: 'sure' })).rejects.toThrow()
     await t.db.update(memberships).set({ archivedAt: new Date() }).where(eq(memberships.userId, t.reader))
     await expect(availabilityByToken(t.db, token)).rejects.toBeInstanceOf(NotFound)
+  })
+})
+
+describe('calendar feed', () => {
+  it('one stable link per person; reset kills the old one; leaving the band kills it too', async () => {
+    const t = await testDb()
+    const { token } = await bandOps.calendarFeed(t.db, t.reader, t.band, {})
+    expect((await bandOps.calendarFeed(t.db, t.reader, t.band, {})).token).toBe(token)
+    expect((await bandOps.calendarFeed(t.db, t.member, t.band, {})).token).not.toBe(token)
+    expect(await calendarByToken(t.db, token)).toMatchObject({ band: { name: 'Demo Band', timeZone: 'Europe/Amsterdam' } })
+    const { token: fresh } = await bandOps.resetCalendarFeed(t.db, t.reader, t.band, {})
+    await expect(calendarByToken(t.db, token)).rejects.toBeInstanceOf(NotFound)
+    await t.db.update(memberships).set({ archivedAt: new Date() }).where(eq(memberships.userId, t.reader))
+    await expect(calendarByToken(t.db, fresh)).rejects.toBeInstanceOf(NotFound)
+  })
+
+  it('has options, confirmed and played events from the last year; no leads, cancelled or archived', async () => {
+    const t = await testDb()
+    const [{ bandId }] = await t.db.select({ bandId: events.bandId }).from(events).where(eq(events.slug, 'summer-party'))
+    const day = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString().slice(0, 10)
+    await t.db.insert(events).values([
+      { bandId, slug: 'opt', title: 'Opt', date: day(5), bookingStatus: 'option' },
+      { bandId, slug: 'lead', title: 'Lead', date: day(5), bookingStatus: 'lead' },
+      { bandId, slug: 'gone', title: 'Gone', date: day(5), bookingStatus: 'cancelled' },
+      { bandId, slug: 'arch', title: 'Arch', date: day(5), bookingStatus: 'confirmed', archivedAt: new Date() },
+      { bandId, slug: 'old', title: 'Old', date: day(-400), bookingStatus: 'played' },
+    ])
+    const { token } = await bandOps.calendarFeed(t.db, t.member, t.band, {})
+    const titles = (await calendarByToken(t.db, token)).events.map((e) => e.title).sort()
+    expect(titles).toEqual(['Opt', 'Spring Show', 'Summer Party'])
+  })
+
+  it('event times: optional, end needs a start', async () => {
+    const t = await testDb()
+    const ev = await bandOps.createEvent(t.db, t.member, t.band, { title: 'Late', date: '2031-01-01', startTime: '21:00', endTime: '01:30' })
+    expect(ev).toMatchObject({ startTime: '21:00:00', endTime: '01:30:00' })
+    expect(await bandOps.createEvent(t.db, t.member, t.band, { title: 'No time', date: '2031-01-01', startTime: '', endTime: '' })).toMatchObject({ startTime: null })
+    await expect(bandOps.createEvent(t.db, t.member, t.band, { title: 'X', date: '2031-01-01', endTime: '01:00' })).rejects.toThrow()
+    await expect(bandOps.createEvent(t.db, t.member, t.band, { title: 'X', date: '2031-01-01', startTime: '25:00' })).rejects.toThrow()
   })
 })

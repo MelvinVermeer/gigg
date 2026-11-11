@@ -1,6 +1,6 @@
 import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
 import { useEffect } from 'react'
-import { formatDate, statusLabel } from '#/lib/date'
+import { formatDate, formatTimes, statusLabel } from '#/lib/date'
 import { Plus } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -68,7 +68,10 @@ function Events() {
           {events.map((e) => (
             <li key={e.slug} className="relative flex items-center gap-4 px-4 py-3 hover:bg-muted/50">
               <span className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-4">
-              <span className="date shrink-0 text-sm text-muted-foreground tabular-nums sm:w-32">{formatDate(e.date)}</span>
+              <span className="date shrink-0 text-sm text-muted-foreground tabular-nums sm:w-32">
+                {formatDate(e.date)}
+                {e.startTime && <span className="block text-xs">{formatTimes(e.startTime, e.endTime)}</span>}
+              </span>
               <span className="grid min-w-0 flex-1 gap-0.5">
                 <Link to="/$band/events/$event" params={{ ...params, event: e.slug }} className="truncate font-medium after:absolute after:inset-0">
                   {e.title}

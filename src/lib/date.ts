@@ -9,4 +9,13 @@ export function formatDate(isoDate: string) {
   })
 }
 
+/** "21:00:00", "01:30:00" → "21:00–01:30"; just the start without an end; "" without times. */
+export function formatTimes(start: string | null, end: string | null) {
+  return start ? `${start.slice(0, 5)}${end ? `–${end.slice(0, 5)}` : ''}` : ''
+}
+
+/** "Sat 5 Dec 2026 · 21:00–01:30" */
+export const formatWhen = (e: { date: string; startTime?: string | null; endTime?: string | null }) =>
+  [formatDate(e.date), formatTimes(e.startTime ?? null, e.endTime ?? null)].filter(Boolean).join(' · ')
+
 export const statusLabel = (s: string) => s[0].toUpperCase() + s.slice(1)

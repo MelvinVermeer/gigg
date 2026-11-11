@@ -18,7 +18,10 @@ import type { Theme } from '#/lib/theme'
 
 export const Route = createFileRoute('/$band/settings/')({
   // Readers can't list members.
-  loader: async ({ params }) => ({ members: (await bandOp('getBand', params.band, {})).role === 'member' ? await bandOp('listMembers', params.band, {}) : [] }),
+  loader: async ({ params }) => ({
+    members: (await bandOp('getBand', params.band, {})).role === 'member' ? await bandOp('listMembers', params.band, {}) : [],
+    feed: await bandOp('calendarFeed', params.band, {}),
+  }),
   component: Settings,
 })
 
@@ -31,7 +34,7 @@ const themes: { value: Theme; label: string }[] = [
 ]
 
 function Settings() {
-  const { members } = Route.useLoaderData()
+  const { members, feed } = Route.useLoaderData()
   const router = useRouter()
   const me = rootRoute.useLoaderData()
   const band = bandRoute.useLoaderData()
@@ -82,6 +85,23 @@ function Settings() {
     const res = await authClient.updateUser({ name: String(new FormData(e.currentTarget).get('name')).trim() })
     setNameStatus(res.error ? (res.error.message ?? 'Could not save') : 'Saved')
     await router.invalidate()
+  }
+
+  const [feedStatus, setFeedStatus] = useState('')
+  const [feedUrl, setFeedUrl] = useState('')
+  useEffect(() => setFeedUrl(`${location.origin}/api/calendar/${feed.token}.ics`), [feed.token])
+  const webcal = feedUrl.replace(/^https?:/, 'webcal:')
+
+  async function copyFeed() {
+    await navigator.clipboard.writeText(feedUrl)
+    setFeedStatus('Link copied')
+  }
+
+  async function resetFeed() {
+    if (!confirm('Reset your calendar link? Calendars using the old link stop updating.')) return
+    await bandOp('resetCalendarFeed', band.slug, {})
+    await router.invalidate()
+    setFeedStatus('New link made. Add it to your calendar again.')
   }
 
   function pick(t: Theme) {
@@ -151,6 +171,42 @@ function Settings() {
                 ))}
               </RadioGroup>
             </fieldset>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle role="heading" aria-level={2}>
+              Calendar
+            </CardTitle>
+            <CardDescription>
+              Subscribe to {band.name}'s gigs (options, confirmed and played) in your own calendar. It updates by itself: Apple Calendar within minutes, Google
+              within a day. This link is personal, so don't share it.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <Input aria-label="Your calendar link" readOnly value={feedUrl} onFocus={(e) => e.currentTarget.select()} />
+            <div className="flex flex-wrap gap-2">
+              <Button asChild>
+                <a href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}`} target="_blank" rel="noreferrer">
+                  Add to Google Calendar
+                </a>
+              </Button>
+              <Button asChild variant="outline">
+                <a href={webcal}>Add to Apple Calendar</a>
+              </Button>
+              <Button variant="outline" onClick={copyFeed}>
+                Copy link
+              </Button>
+              <Button variant="ghost" onClick={resetFeed}>
+                Reset link
+              </Button>
+            </div>
+            {feedStatus && (
+              <p role="status" className="text-sm text-muted-foreground">
+                {feedStatus}
+              </p>
+            )}
           </CardContent>
         </Card>
 

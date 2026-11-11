@@ -54,6 +54,8 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
     (initial.contacts ?? []).map((c) => ({ key: c.id, id: c.id, name: contacts.find((x) => x.id === c.id)?.label ?? c.name })),
   )
   const [contactText, setContactText] = useState('')
+  const [startTime, setStartTime] = useState(initial.startTime?.slice(0, 5) ?? '')
+  const [endTime, setEndTime] = useState(initial.endTime?.slice(0, 5) ?? '')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -85,6 +87,8 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
       await onSubmit({
         title: String(f.get('title')),
         date: String(f.get('date')),
+        startTime,
+        endTime,
         venue: venue ? { id: venue.id } : isNewVenue ? { name: venueText.trim(), address: venueAddress } : null,
         contacts: picked.map((c) => (c.id ? { id: c.id } : { name: c.name, email: c.email, phone: c.phone })),
         bookingStatus: f.get('bookingStatus') as EventFields['bookingStatus'],
@@ -111,6 +115,14 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
       <Field label="Date">
         <Input name="date" type="date" required defaultValue={initial.date ?? ''} />
       </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Start" hint="(optional)">
+          <Input name="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required={!!endTime} />
+        </Field>
+        <Field label="End" hint={startTime && endTime && endTime < startTime ? '(+1 day)' : '(optional)'}>
+          <Input name="endTime" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+        </Field>
+      </div>
 
       <Field label="Venue">
         <Input
@@ -228,7 +240,7 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
           </NativeSelect>
         </Field>
       </div>
-      <Field label="Notes" hint="(times, load-in, parking, …)">
+      <Field label="Notes" hint="(load-in, soundcheck, parking, …)">
         <Textarea name="notes" rows={6} maxLength={10_000} defaultValue={initial.notes ?? ''} />
       </Field>
       <Field label="Tags" hint="(comma separated)">

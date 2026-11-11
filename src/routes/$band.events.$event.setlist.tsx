@@ -1,7 +1,7 @@
 import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { SetlistBuilder } from '#/components/SetlistBuilder'
-import { formatDate } from '#/lib/date'
+import { formatWhen } from '#/lib/date'
 import { MonitorPlay, Printer } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
@@ -31,7 +31,7 @@ function Setlist() {
   return (
     <>
       <Link to="/$band/events/$event" params={params} className="text-sm text-muted-foreground hover:text-foreground">
-        ← {data.event.title} · {formatDate(data.event.date)}
+        ← {data.event.title} · {formatWhen(data.event)}
       </Link>
       <div className="mt-1 mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="mb-0">Setlist</h1>

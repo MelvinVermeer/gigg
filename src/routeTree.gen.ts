@@ -32,6 +32,7 @@ import { Route as BandSettingsVenuesRouteImport } from './routes/$band.settings.
 import { Route as BandSongsIndexRouteImport } from './routes/$band.songs.index'
 import { Route as BandSongsNewRouteImport } from './routes/$band.songs.new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiCalendarTokenRouteImport } from './routes/api/calendar.$token'
 import { Route as ApiFilesIdRouteImport } from './routes/api/files.$id'
 import { Route as ApiFilesUploadRouteImport } from './routes/api/files.upload'
 import { Route as BandEventsEventIndexRouteImport } from './routes/$band.events.$event.index'
@@ -157,6 +158,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCalendarTokenRoute = ApiCalendarTokenRouteImport.update({
+  id: '/api/calendar/$token',
+  path: '/api/calendar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiFilesIdRoute = ApiFilesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -223,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/$band/settings/venues': typeof BandSettingsVenuesRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/calendar/$token': typeof ApiCalendarTokenRoute
   '/api/files/$id': typeof ApiFilesIdRoute
   '/api/files/upload': typeof ApiFilesUploadRoute
   '/$band/events/': typeof BandEventsIndexRoute
@@ -256,6 +263,7 @@ export interface FileRoutesByTo {
   '/$band/settings/venues': typeof BandSettingsVenuesRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/calendar/$token': typeof ApiCalendarTokenRoute
   '/api/files/$id': typeof ApiFilesIdRoute
   '/api/files/upload': typeof ApiFilesUploadRoute
   '/$band/events': typeof BandEventsIndexRoute
@@ -291,6 +299,7 @@ export interface FileRoutesById {
   '/$band/settings/venues': typeof BandSettingsVenuesRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/calendar/$token': typeof ApiCalendarTokenRoute
   '/api/files/$id': typeof ApiFilesIdRoute
   '/api/files/upload': typeof ApiFilesUploadRoute
   '/$band/events/': typeof BandEventsIndexRoute
@@ -327,6 +336,7 @@ export interface FileRouteTypes {
     | '/$band/settings/venues'
     | '/$band/songs/new'
     | '/api/auth/$'
+    | '/api/calendar/$token'
     | '/api/files/$id'
     | '/api/files/upload'
     | '/$band/events/'
@@ -360,6 +370,7 @@ export interface FileRouteTypes {
     | '/$band/settings/venues'
     | '/$band/songs/new'
     | '/api/auth/$'
+    | '/api/calendar/$token'
     | '/api/files/$id'
     | '/api/files/upload'
     | '/$band/events'
@@ -394,6 +405,7 @@ export interface FileRouteTypes {
     | '/$band/settings/venues'
     | '/$band/songs/new'
     | '/api/auth/$'
+    | '/api/calendar/$token'
     | '/api/files/$id'
     | '/api/files/upload'
     | '/$band/events/'
@@ -419,6 +431,7 @@ export interface RootRouteChildren {
   ApiFilesRoute: typeof ApiFilesRouteWithChildren
   AvailabilityTokenRoute: typeof AvailabilityTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiCalendarTokenRoute: typeof ApiCalendarTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -584,6 +597,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/calendar/$token': {
+      id: '/api/calendar/$token'
+      path: '/api/calendar/$token'
+      fullPath: '/api/calendar/$token'
+      preLoaderRoute: typeof ApiCalendarTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/files/$id': {
       id: '/api/files/$id'
       path: '/$id'
@@ -724,6 +744,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFilesRoute: ApiFilesRouteWithChildren,
   AvailabilityTokenRoute: AvailabilityTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiCalendarTokenRoute: ApiCalendarTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -21,7 +21,8 @@ function Manual() {
       <p className="leading-7 text-muted-foreground">
         A gig with a date, a venue and contacts. Type a new venue or contact in the form to create it on the spot. Booking
         (lead → option → confirmed → played) and payment (open → invoiced → paid) are separate, so you can find "played but not
-        paid". Files such as contracts or riders go on the event page.
+        paid". Start and end times are optional; an end before the start means after midnight. Files such as contracts or riders go
+        on the event page. To get the gigs in your own Google or Apple calendar, use Settings → Calendar.
       </p>
 
       <h2 className="mt-8">Setlists</h2>

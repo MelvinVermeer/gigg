@@ -1,5 +1,5 @@
 import { Link, createFileRoute, getRouteApi } from '@tanstack/react-router'
-import { formatDate } from '#/lib/date'
+import { formatWhen } from '#/lib/date'
 import { stageFontMm } from '#/lib/stage'
 import { Printer } from 'lucide-react'
 import { Button } from '#/components/ui/button'
@@ -29,7 +29,7 @@ function Print() {
       {sets.map((set, i) => (
         <section key={i} className="stage-page my-4 rounded-xl border bg-card p-4 shadow-sm">
           <header className="text-[4mm] text-muted-foreground">
-            <strong className="text-foreground">{set.name}</strong> · {event.title} · {formatDate(event.date)}
+            <strong className="text-foreground">{set.name}</strong> · {event.title} · {formatWhen(event)}
           </header>
           <ol className="mt-[4mm] list-decimal pl-[1.6em] leading-[1.15] font-bold whitespace-nowrap" style={{ fontSize: `${stageFontMm(set.songs.map((s) => s.title))}mm` }}>
             {set.songs.map((song, j) => (

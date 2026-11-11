@@ -213,9 +213,9 @@ export async function seedDemo(db: Db) {
   const [friday, wedding, festival, , newYear, autumn, anchorSummer] = await db
     .insert(events)
     .values([
-      ev('rusty-anchor-friday', 'Rusty Anchor Friday', 9, anchor.id, { bookingStatus: 'confirmed', notes: 'Doors 21:00, on stage 22:00. Two sets.' }),
+      ev('rusty-anchor-friday', 'Rusty Anchor Friday', 9, anchor.id, { bookingStatus: 'confirmed', startTime: '22:00', endTime: '01:00', notes: 'Doors 21:00, on stage 22:00. Two sets.' }),
       ev('wedding-at-hotel-meridian', 'Wedding at Hotel Meridian', 16, meridian.id, {
-        bookingStatus: 'confirmed', paymentStatus: 'invoiced', tags: ['wedding'],
+        bookingStatus: 'confirmed', paymentStatus: 'invoiced', tags: ['wedding'], startTime: '16:00', endTime: '00:30',
         notes: 'Load-in 16:00, dinner 18:30, first set 21:00. Dress code: black.',
       }),
       ev('park-festival', 'Park Festival', 45, park.id, { bookingStatus: 'option', tags: ['festival'] }),

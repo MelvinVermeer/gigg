@@ -12,6 +12,7 @@ import {
   pgTable,
   primaryKey,
   text,
+  time,
   timestamp,
   unique,
   uniqueIndex,
@@ -33,6 +34,7 @@ export const bands = pgTable('bands', {
   id: id(),
   slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
+  timeZone: text('time_zone').notNull().default('Europe/Amsterdam'), // hidden setting, see data-model.md
   createdAt: createdAt(),
   archivedAt: archivedAt(),
 })
@@ -131,6 +133,9 @@ export const events = pgTable(
     slug: text('slug').notNull(),
     title: text('title').notNull(),
     date: date('date').notNull(),
+    // Optional wall-clock times in the band's time zone. An end before the start is the next day.
+    startTime: time('start_time'),
+    endTime: time('end_time'),
     venueId: uuid('venue_id').references(() => venues.id),
     bookingStatus: bookingStatus('booking_status').notNull().default('lead'),
     paymentStatus: paymentStatus('payment_status').notNull().default('open'),
@@ -153,6 +158,18 @@ export const eventContacts = pgTable(
     role: text('role'), // 'promoter', 'sound', ...
   },
   (t) => [primaryKey({ columns: [t.eventId, t.contactId] })],
+)
+
+// Calendar feed: one secret link per person per band. Not audited: history would show the token.
+export const calendarFeeds = pgTable(
+  'calendar_feeds',
+  {
+    bandId: bandId(),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    token: text('token').notNull().unique(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.bandId, t.userId] })],
 )
 
 // Availability ------------------------------------------------------------

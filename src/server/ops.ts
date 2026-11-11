@@ -13,6 +13,7 @@ import {
   blockSongs,
   blocks,
   bookingStatus,
+  calendarFeeds,
   changes,
   contacts,
   eventContacts,
@@ -165,6 +166,14 @@ const tags = z
   .transform((t) => [...new Set(t)])
 
 const bySlug = z.object({ slug: z.string() })
+
+/** Optional 'HH:MM'; "" becomes null. */
+const time = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM')
+  .or(z.literal(''))
+  .nullish()
+  .transform((v) => v || null)
 
 // Files --------------------------------------------------------------------
 
@@ -386,6 +395,8 @@ const contactRef = z.union([
 const eventFields = z.object({
   title: z.string().trim().min(1).max(200),
   date: z.iso.date(),
+  startTime: time,
+  endTime: time,
   venue: venueRef.nullish().transform((v) => v ?? null),
   contacts: z.array(contactRef).max(20).default([]),
   bookingStatus: z.enum(bookingStatus.enumValues).default('lead'),
@@ -395,6 +406,7 @@ const eventFields = z.object({
 })
 
 export type EventFields = z.input<typeof eventFields>
+const eventFieldsChecked = eventFields.refine((f) => !f.endTime || f.startTime, { message: 'Add a start time too', path: ['startTime'] })
 
 /** Resolve venue/contact refs to ids of *this band*, creating new ones. Foreign ids are rejected. */
 async function resolveRefs(tx: Tx, bandId: string, fields: z.output<typeof eventFields>) {
@@ -454,6 +466,8 @@ const eventOps = {
           slug: events.slug,
           title: events.title,
           date: events.date,
+          startTime: events.startTime,
+          endTime: events.endTime,
           venue: venues.name,
           bookingStatus: events.bookingStatus,
           paymentStatus: events.paymentStatus,
@@ -562,7 +576,7 @@ const eventOps = {
   }),
 
   /** Create an event; `setlistStandard` uses that standard setlist, `setlistFrom` starts its own setlist as a copy. */
-  createEvent: bandOp('member', eventFields.extend({ setlistFrom: z.uuid().nullish(), setlistStandard: z.uuid().nullish() }), async ({ tx, bandId }, fields) => {
+  createEvent: bandOp('member', eventFieldsChecked.safeExtend({ setlistFrom: z.uuid().nullish(), setlistStandard: z.uuid().nullish() }), async ({ tx, bandId }, fields) => {
     const { venueId, contactIds } = await resolveRefs(tx, bandId, fields)
     const { venue: _v, contacts: _c, setlistFrom, setlistStandard, ...rest } = fields
     const slug = await freeSlug(tx, events, bandId, eventSlugs(fields.title, fields.date))
@@ -577,7 +591,7 @@ const eventOps = {
   }),
 
   /** Update an event. A new title gets a new slug; the old one keeps working as a redirect. */
-  updateEvent: bandOp('member', bySlug.extend({ fields: eventFields }), async ({ tx, bandId }, { slug, fields }) => {
+  updateEvent: bandOp('member', bySlug.extend({ fields: eventFieldsChecked }), async ({ tx, bandId }, { slug, fields }) => {
     const old = await rowBySlug(tx, events, bandId, slug)
     const { venueId, contactIds } = await resolveRefs(tx, bandId, fields)
     const { venue: _v, contacts: _c, ...rest } = fields
@@ -717,7 +731,7 @@ const songSummary = { id: songs.id, slug: songs.slug, title: songs.title, key: s
 
 async function eventBySlug(tx: Tx, bandId: string, slug: string) {
   const [ev] = await tx
-    .select({ id: events.id, slug: events.slug, title: events.title, date: events.date, setlistId: events.setlistId })
+    .select({ id: events.id, slug: events.slug, title: events.title, date: events.date, startTime: events.startTime, endTime: events.endTime, setlistId: events.setlistId })
     .from(events)
     .where(and(eq(events.bandId, bandId), eq(events.slug, slug)))
   if (!ev) throw new NotFound()
@@ -1495,6 +1509,68 @@ export async function answerByToken(db: Db, token: string, rawInput: unknown) {
   })
 }
 
+// Calendar feed -------------------------------------------------------------
+// A subscribed calendar fetches /api/calendar/<token>.ics without a session: the token is the credential.
+
+const newToken = () => randomBytes(24).toString('base64url')
+
+const calendarOps = {
+  /** Your feed token for this band, created on first use. */
+  calendarFeed: bandOp('reader', z.object({}), async ({ tx, bandId, userId }) => {
+    await tx.insert(calendarFeeds).values({ bandId, userId, token: newToken() }).onConflictDoNothing()
+    const [feed] = await tx.select({ token: calendarFeeds.token }).from(calendarFeeds).where(and(eq(calendarFeeds.bandId, bandId), eq(calendarFeeds.userId, userId)))
+    return feed
+  }),
+  /** A new token; the old link stops working. */
+  resetCalendarFeed: bandOp('reader', z.object({}), async ({ tx, bandId, userId }) => {
+    const [feed] = await tx
+      .insert(calendarFeeds)
+      .values({ bandId, userId, token: newToken() })
+      .onConflictDoUpdate({ target: [calendarFeeds.bandId, calendarFeeds.userId], set: { token: newToken() } })
+      .returning({ token: calendarFeeds.token })
+    return feed
+  }),
+}
+
+/** The feed behind a token: options, confirmed and played events from a year ago on. Gone once you leave the band. */
+export function calendarByToken(db: Db, token: string) {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`set transaction read only`)
+    const [band] = await tx
+      .select({ id: bands.id, slug: bands.slug, name: bands.name, timeZone: bands.timeZone })
+      .from(calendarFeeds)
+      .innerJoin(bands, eq(bands.id, calendarFeeds.bandId))
+      .innerJoin(memberships, and(eq(memberships.bandId, calendarFeeds.bandId), eq(memberships.userId, calendarFeeds.userId), isNull(memberships.archivedAt)))
+      .where(and(eq(calendarFeeds.token, token), isNull(bands.archivedAt)))
+    if (!band) throw new NotFound()
+    const rows = await tx
+      .select({
+        id: events.id,
+        slug: events.slug,
+        title: events.title,
+        date: events.date,
+        startTime: events.startTime,
+        endTime: events.endTime,
+        bookingStatus: events.bookingStatus,
+        notes: events.notes,
+        venue: venues.name,
+        address: venues.address,
+      })
+      .from(events)
+      .leftJoin(venues, eq(venues.id, events.venueId))
+      .where(
+        and(
+          eq(events.bandId, band.id),
+          isNull(events.archivedAt),
+          inArray(events.bookingStatus, ['option', 'confirmed', 'played']),
+          gte(events.date, sql`current_date - interval '1 year'`),
+        ),
+      )
+      .orderBy(asc(events.date))
+    return { band, events: rows }
+  })
+}
+
 // All band operations ------------------------------------------------------
 
 /** Every band-scoped operation. The authorisation tests run all of them, so add new ones here. */
@@ -1516,6 +1592,7 @@ export const bandOps = {
   ...searchOps,
   ...historyOps,
   ...availabilityOps,
+  ...calendarOps,
 }
 
 export type BandOps = typeof bandOps
@@ -1609,7 +1686,7 @@ export async function deleteBandForever(db: Db, slug: string) {
       .where(and(eq(bands.slug, slug), isNotNull(bands.archivedAt)))
     if (!band) throw new NotFound()
     // Children before parents (foreign keys).
-    for (const table of [availabilityResponses, availabilityRequests, files, feedback, setItems, sets, setlists, blockSongs, blocks, eventContacts, events, contacts, venues, songs, slugRedirects, memberships])
+    for (const table of [calendarFeeds, availabilityResponses, availabilityRequests, files, feedback, setItems, sets, setlists, blockSongs, blocks, eventContacts, events, contacts, venues, songs, slugRedirects, memberships])
       await tx.delete(table).where(eq(table.bandId, band.id))
     await tx.delete(slugRedirects).where(and(eq(slugRedirects.type, 'band'), eq(slugRedirects.entityId, band.id)))
     await tx.delete(bands).where(eq(bands.id, band.id))

@@ -81,4 +81,18 @@ test.describe('reader', () => {
     await page.locator('ul.records summary').first().click()
     await expect(page.getByRole('button', { name: 'Save' })).toHaveCount(0)
   })
+
+  test('subscribes to the band calendar: the feed has timed gigs, options marked', async ({ page, request }) => {
+    await page.goto('/demo-band/settings')
+    const link = page.getByRole('textbox', { name: 'Your calendar link' })
+    await expect(link).toHaveValue(/\/api\/calendar\/.+\.ics$/)
+    await expect(page.getByRole('link', { name: 'Add to Apple Calendar' })).toHaveAttribute('href', /^webcal:/)
+    const res = await request.get(await link.inputValue())
+    expect(res.headers()['content-type']).toContain('text/calendar')
+    const ics = (await res.text()).replace(/\r\n /g, '')
+    expect(ics).toContain('SUMMARY:Rusty Anchor Friday')
+    expect(ics).toContain('SUMMARY:(option) Park Festival')
+    expect(ics).not.toContain('Rained-out Festival')
+    expect(ics).toContain('/demo-band/events/rusty-anchor-friday')
+  })
 })

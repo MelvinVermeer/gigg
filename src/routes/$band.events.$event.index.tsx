@@ -1,5 +1,5 @@
 import { Link, createFileRoute, getRouteApi, redirect } from '@tanstack/react-router'
-import { formatDate, statusLabel } from '#/lib/date'
+import { formatWhen, statusLabel } from '#/lib/date'
 import { formatDuration } from '#/lib/duration'
 import { Availability, AvailabilitySummary } from '#/components/Availability'
 import { Files } from '#/components/Files'
@@ -51,7 +51,7 @@ function Event() {
         <CardContent>
           <dl className="fields grid grid-cols-[max-content_1fr] gap-x-6 gap-y-3 text-sm">
             <dt className="text-muted-foreground">Date</dt>
-            <dd>{formatDate(event.date)}</dd>
+            <dd>{formatWhen(event)}</dd>
             <AvailabilitySummary band={band.slug} event={event.slug} info={availability} canAsk={band.role === 'member' && !event.archivedAt} />
             <dt className="text-muted-foreground">Venue</dt>
             <dd>
