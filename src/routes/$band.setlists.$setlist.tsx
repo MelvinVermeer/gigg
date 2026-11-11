@@ -2,6 +2,7 @@ import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-r
 import { useState } from 'react'
 import { SetlistBuilder } from '#/components/SetlistBuilder'
 import { bandOp } from '#/server/fns'
+import { HistoryLink } from '#/components/HistoryLink'
 
 export const Route = createFileRoute('/$band/setlists/$setlist')({
   loader: ({ params }) => bandOp('getStandaloneSetlist', params.band, { id: params.setlist }),
@@ -32,7 +33,8 @@ function Setlist() {
       <p>
         <Link to="/$band/setlists" params={{ band: band.slug }}>
           ← Setlists
-        </Link>
+        </Link>{' '}
+        · <HistoryLink item={id} />
       </p>
       <h1>
         {editable ? (

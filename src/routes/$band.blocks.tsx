@@ -4,6 +4,7 @@ import { SongListEditor, totalDuration } from '#/components/SongListEditor'
 import type { SongRef } from '#/components/SongListEditor'
 import { formatDuration } from '#/lib/duration'
 import { bandOp } from '#/server/fns'
+import { HistoryLink } from '#/components/HistoryLink'
 
 export const Route = createFileRoute('/$band/blocks')({
   loader: ({ params }) => bandOp('listBlocks', params.band, {}),
@@ -109,6 +110,7 @@ function BlockRow({ block, repertoire, editable }: { block: Block; repertoire: S
               <button type="button" onClick={() => setArchived(!block.archivedAt)}>
                 {block.archivedAt ? 'Restore' : 'Archive'}
               </button>{' '}
+              <HistoryLink item={block.id} />{' '}
               {status && <span role="status">{status}</span>}
             </p>
           )}

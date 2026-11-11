@@ -1,51 +1,54 @@
-import { createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
-import { useState } from 'react'
+import { createFileRoute } from '@tanstack/react-router'
 import { bandOp } from '#/server/fns'
 
 export const Route = createFileRoute('/$band/history')({
-  loader: ({ params }) => bandOp('listChanges', params.band, {}),
+  validateSearch: (search: Record<string, unknown>): { item?: string } =>
+    typeof search.item === 'string' ? { item: search.item } : {},
+  loaderDeps: ({ search }) => search,
+  loader: ({ params, deps }) => bandOp('listChanges', params.band, deps),
   component: History,
 })
-
-const bandRoute = getRouteApi('/$band')
 
 const when = (d: Date) =>
   new Date(d).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
-/** Who changed what, when; members can undo any save. */
+/** Who changed what, when; each save folds open to show before → after. */
 function History() {
   const saves = Route.useLoaderData()
-  const band = bandRoute.useLoaderData()
-  const router = useRouter()
-  const [message, setMessage] = useState<{ txId: number; text: string }>()
-
-  async function undo(txId: number) {
-    const res = await bandOp('undo', band.slug, { txId })
-    setMessage({ txId, text: res.ok ? 'Undone' : res.reason })
-    if (res.ok) await router.invalidate()
-  }
+  const { item } = Route.useSearch()
 
   return (
     <>
       <h1>History</h1>
-      <p>Every change, newest first. Undoing is a change too, so it can be undone as well.</p>
+      <p>Every change{item && ' to this item'}, newest first.</p>
+      {!saves.length && <p>No changes yet.</p>}
       <ul className="history">
         {saves.map((s) => (
           <li key={s.txId}>
             <small>
               {when(s.at)} · {s.who}
             </small>
-            {s.lines.map((line, i) => (
-              <span key={i}>{line}</span>
-            ))}
-            {band.role === 'member' && s.canUndo && (
-              <span>
-                <button type="button" onClick={() => undo(s.txId)}>
-                  Undo
-                </button>{' '}
-                {message?.txId === s.txId && <span role="status">{message.text}</span>}
-              </span>
-            )}
+            <details>
+              <summary>
+                {s.lines.map((line, i) => (
+                  <span key={i}>{line}</span>
+                ))}
+              </summary>
+              <ul className="diffs">
+                {s.diffs.map((d, i) => (
+                  <li key={i}>
+                    <small>
+                      {d.what} · {d.field}
+                    </small>
+                    <div className="diff">
+                      <span>{d.from}</span>
+                      <span aria-label="changed to">→</span>
+                      <span>{d.to}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </details>
           </li>
         ))}
       </ul>

@@ -14,8 +14,7 @@ function BandLayout() {
         <strong>{band.name}</strong> · <Link to="/$band/events" params={{ band: band.slug }}>Events</Link> ·{' '}
         <Link to="/$band/songs" params={{ band: band.slug }}>Songs</Link> ·{' '}
         <Link to="/$band/setlists" params={{ band: band.slug }}>Setlists</Link> ·{' '}
-        <Link to="/$band/search" params={{ band: band.slug }}>Search</Link> ·{' '}
-        <Link to="/$band/history" params={{ band: band.slug }}>History</Link>
+        <Link to="/$band/search" params={{ band: band.slug }}>Search</Link>
       </p>
       <Outlet />
     </main>

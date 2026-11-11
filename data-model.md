@@ -31,7 +31,7 @@ One generic trigger function on every table (except auth internals) writes to `c
 select set_config('app.user_id', $1, true);  -- true = transaction-local
 ```
 
-Each row also gets `tx_id` (`txid_current()`), so one save's rows (a setlist save writes dozens) are shown and undone together. Undo replays a save's rows backwards: inserts are deleted, deletes re-inserted, updates set back to `before`, each only if the row still equals `after` (otherwise someone changed it since and the undo is refused).
+Each row also gets `tx_id` (`txid_current()`), so one save's rows (a setlist save writes dozens) are shown together, with a before → after per field.
 
 Why a trigger and not app code: it can't be bypassed (migrations, scripts and manual fixes are logged too), and it's one function instead of a rule every developer has to remember. Archive/restore shows up as an `update` where `archived_at` changes.
 

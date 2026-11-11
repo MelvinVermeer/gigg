@@ -469,66 +469,59 @@ describe('audit trail', () => {
   })
 })
 
-describe('history & undo', () => {
+describe('history', () => {
   const latest = async (t: Awaited<ReturnType<typeof testDb>>) => (await bandOps.listChanges(t.db, t.reader, t.band, {}))[0]
-  const undoLatest = async (t: Awaited<ReturnType<typeof testDb>>) =>
-    bandOps.undo(t.db, t.member, t.band, { txId: (await latest(t)).txId })
-  const song = (t: Awaited<ReturnType<typeof testDb>>, slug: string) => bandOps.getSong(t.db, t.reader, t.band, { slug })
 
   it('describes a save in plain language, with who did it', async () => {
     const t = await testDb()
     await bandOps.updateSong(t.db, t.member, t.band, { slug: 'closer', fields: { title: 'Big Closer', key: 'A' } })
-    expect(await latest(t)).toMatchObject({ who: 'Dev Member', lines: ['Changed song “Big Closer”: bpm, key, title, duration'], canUndo: true })
+    expect(await latest(t)).toMatchObject({ who: 'Dev Member', lines: ['Changed song “Big Closer”: bpm, key, title, duration'] })
   })
 
-  it('undoes a rename, including the slug redirect', async () => {
+  it('filters to one item and its children', async () => {
     const t = await testDb()
-    await bandOps.updateSong(t.db, t.member, t.band, { slug: 'closer', fields: { title: 'Big Closer', durationSec: 300, key: 'G', bpm: 140 } })
-    expect(await undoLatest(t)).toEqual({ ok: true })
-    expect(await song(t, 'closer')).toMatchObject({ moved: false, song: { title: 'Closer' } })
-    await expect(song(t, 'big-closer')).rejects.toBeInstanceOf(NotFound)
+    const id = Object.fromEntries((await bandOps.listSongs(t.db, t.member, t.band, {})).map((s) => [s.slug, s.id]))
+    await bandOps.archiveSong(t.db, t.member, t.band, { slug: 'slow-one' })
+    await bandOps.saveSetlist(t.db, t.member, t.band, { event: 'summer-party', sets: [{ name: 'Set 1', songIds: [id.closer] }] })
+    await bandOps.saveSetlist(t.db, t.member, t.band, { event: 'summer-party', sets: [{ name: 'Set 1', songIds: [id['opening-song']] }] })
+    const of = async (item: string) => (await bandOps.listChanges(t.db, t.reader, t.band, { item })).flatMap((s) => s.lines)
+    expect(await of(id['slow-one'])).toEqual(expect.arrayContaining(['Archived song “Slow One”']))
+    expect(await of(id['slow-one'])).not.toContain('Changed setlist “Summer Party”')
+    const { event } = await bandOps.getSetlist(t.db, t.reader, t.band, { event: 'summer-party' })
+    const eventLines = await of(event.id)
+    expect(eventLines.filter((l) => l === 'Changed setlist “Summer Party”')).toHaveLength(2)
+    expect(eventLines).not.toContain('Archived song “Slow One”')
   })
 
-  it('undoes an archive, and the undo itself can be undone', async () => {
+  it('does not list contacts as changed when only the event notes change', async () => {
     const t = await testDb()
-    await bandOps.archiveSong(t.db, t.member, t.band, { slug: 'closer' })
-    expect((await latest(t)).lines).toEqual(['Archived song “Closer”'])
-    await undoLatest(t)
-    expect((await latest(t)).lines).toEqual(['Restored song “Closer”'])
-    expect(await song(t, 'closer')).toMatchObject({ song: { archivedAt: null } })
-    await undoLatest(t)
-    expect(await song(t, 'closer')).toMatchObject({ song: { archivedAt: expect.any(Date) } })
+    const created = await bandOps.createEvent(t.db, t.member, t.band, { title: 'Gig', date: '2026-12-01', contacts: [{ name: 'Sam' }] })
+    const res = await bandOps.getEvent(t.db, t.reader, t.band, { slug: created.slug })
+    if (res.moved) throw new Error('moved')
+    await bandOps.updateEvent(t.db, t.member, t.band, {
+      slug: res.event.slug,
+      fields: { title: 'Gig', date: '2026-12-01', notes: 'Bring cables', contacts: res.contacts.map((c) => ({ id: c.id })) },
+    })
+    expect((await latest(t)).lines).toEqual(['Changed event “Gig”: notes'])
   })
 
-  it('undoes a setlist save back to the previous version', async () => {
+  it('shows each change as before → after, with names instead of ids', async () => {
     const t = await testDb()
+    await bandOps.updateSong(t.db, t.member, t.band, { slug: 'closer', fields: { title: 'Big Closer', key: 'A' } })
+    expect((await latest(t)).diffs).toContainEqual({ what: 'Song “Big Closer”', field: 'title', from: 'Closer', to: 'Big Closer' })
+
     const id = Object.fromEntries((await bandOps.listSongs(t.db, t.member, t.band, {})).map((s) => [s.slug, s.id]))
     const save = (songIds: string[]) =>
       bandOps.saveSetlist(t.db, t.member, t.band, { event: 'summer-party', sets: [{ name: 'Set 1', songIds }] })
-    await save([id.closer])
-    await save([id['slow-one'], id['opening-song']])
-    expect((await latest(t)).lines).toEqual(['Changed setlist “Summer Party”'])
-    expect(await undoLatest(t)).toEqual({ ok: true })
-    const res = await bandOps.getSetlist(t.db, t.member, t.band, { event: 'summer-party' })
-    expect(res.sets.map((s) => s.songs.map((x) => x.slug))).toEqual([['closer']])
-  })
+    await save([id['big-closer']])
+    await save([id['slow-one'], id['big-closer']])
+    expect((await latest(t)).diffs).toEqual([
+      { what: 'Setlist “Summer Party”', field: 'sets', from: 'Set 1: Big Closer', to: 'Set 1: Slow One, Big Closer' },
+    ])
 
-  it('refuses when the row changed again later', async () => {
-    const t = await testDb()
-    await bandOps.archiveSong(t.db, t.member, t.band, { slug: 'closer' })
-    const first = await latest(t)
-    await bandOps.restoreSong(t.db, t.member, t.band, { slug: 'closer' })
-    expect(await bandOps.undo(t.db, t.member, t.band, { txId: first.txId })).toMatchObject({ ok: false, reason: /changed again/ })
-    expect(await song(t, 'closer')).toMatchObject({ song: { archivedAt: null } })
-  })
-
-  it('refuses when later changes depend on it', async () => {
-    const t = await testDb()
-    const created = await bandOps.createSong(t.db, t.member, t.band, { title: 'New One' })
-    const first = await latest(t)
-    await bandOps.saveSetlist(t.db, t.member, t.band, { event: 'summer-party', sets: [{ name: 'Set 1', songIds: [created.id] }] })
-    expect(await bandOps.undo(t.db, t.member, t.band, { txId: first.txId })).toMatchObject({ ok: false, reason: /depend/ })
-    expect(await song(t, 'new-one')).toMatchObject({ moved: false })
+    const created = await bandOps.createEvent(t.db, t.member, t.band, { title: 'Gig', date: '2026-12-01', contacts: [{ name: 'Sam' }] })
+    await bandOps.updateEvent(t.db, t.member, t.band, { slug: created.slug, fields: { title: 'Gig', date: '2026-12-01', contacts: [] } })
+    expect((await latest(t)).diffs).toEqual([{ what: 'Event “Gig”', field: 'contact', from: 'Sam', to: '–' }])
   })
 })
 

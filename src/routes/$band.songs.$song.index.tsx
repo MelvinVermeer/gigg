@@ -1,6 +1,7 @@
 import { Link, createFileRoute, getRouteApi, redirect, useRouter } from '@tanstack/react-router'
 import { formatDuration } from '#/lib/duration'
 import { bandOp } from '#/server/fns'
+import { HistoryLink } from '#/components/HistoryLink'
 
 export const Route = createFileRoute('/$band/songs/$song/')({
   loader: async ({ params }) => {
@@ -44,9 +45,12 @@ function Song() {
       {band.role === 'member' && (
         <p>
           {song.archivedAt ? (
-            <button type="button" onClick={() => setArchived(false)}>
-              Restore
-            </button>
+            <>
+              <button type="button" onClick={() => setArchived(false)}>
+                Restore
+              </button>{' '}
+              <HistoryLink item={song.id} />
+            </>
           ) : (
             <>
               <Link to="/$band/songs/$song/edit" params={params}>

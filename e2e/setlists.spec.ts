@@ -93,7 +93,7 @@ test.describe('member', () => {
   })
 })
 
-test.describe('standalone setlists and undo', () => {
+test.describe('standalone setlists', () => {
   test.use(asMember)
 
   test('builds a setlist outside an event and starts a new event from it', async ({ page }) => {
@@ -116,21 +116,24 @@ test.describe('standalone setlists and undo', () => {
     await expect(songsIn(page, 0)).toHaveText(['Neon Harbour', 'Closer'])
   })
 
-  test('undoes a change from the history page', async ({ page }) => {
-    const title = `Undo me ${Date.now()}`
+  test('shows an item’s history, with before → after', async ({ page }) => {
+    const title = `History me ${Date.now()}`
     await page.goto('/demo-band/songs/new')
     await page.getByLabel('Title').fill(title)
     await page.getByRole('button', { name: /Add song/ }).click()
+    await page.getByRole('link', { name: 'Edit', exact: true }).click()
+    await page.getByLabel('Key').fill('E')
+    await page.getByRole('button', { name: 'Save' }).click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
-    await page.getByRole('button', { name: 'Archive' }).click()
-    await expect(page.getByText('This song is archived.')).toBeVisible()
 
+    await page.getByRole('link', { name: 'Edit', exact: true }).click()
     await page.getByRole('link', { name: 'History' }).click()
-    const entry = page.locator('ul.history li').first()
-    await expect(entry).toContainText(`Archived song “${title}”`)
+    const entry = page.locator('ul.history > li').first()
+    await expect(entry).toContainText(`Changed song “${title}”: key`)
     await expect(entry).toContainText('Dev Member')
-    await entry.getByRole('button', { name: 'Undo' }).click()
-    await expect(page.locator('ul.history li').first()).toContainText(`Restored song “${title}”`)
+    await entry.locator('summary').click()
+    await expect(entry.locator('.diff')).toHaveText('–→E')
+    await expect(page.locator('ul.history > li')).toHaveCount(2) // added, then changed: nothing from other songs
   })
 })
 

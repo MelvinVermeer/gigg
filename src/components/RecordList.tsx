@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { HistoryLink } from '#/components/HistoryLink'
 
 export type Field = {
   name: string
@@ -82,7 +83,8 @@ export function RecordList<T extends Item>({ items, fields, detail, canEdit, onS
                   <button type="submit">Save</button>{' '}
                   <button type="button" onClick={() => onArchive(item.id, !item.archivedAt)}>
                     {item.archivedAt ? 'Restore' : 'Archive'}
-                  </button>
+                  </button>{' '}
+                  <HistoryLink item={item.id} />
                 </p>
               </form>
             ) : (

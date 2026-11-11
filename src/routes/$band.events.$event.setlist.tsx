@@ -2,6 +2,7 @@ import { Link, createFileRoute, getRouteApi } from '@tanstack/react-router'
 import { SetlistBuilder } from '#/components/SetlistBuilder'
 import { formatDate } from '#/lib/date'
 import { bandOp } from '#/server/fns'
+import { HistoryLink } from '#/components/HistoryLink'
 
 export const Route = createFileRoute('/$band/events/$event/setlist')({
   loader: ({ params }) => bandOp('getSetlist', params.band, { event: params.event }),
@@ -34,6 +35,8 @@ function Setlist() {
             </Link>
           </>
         )}
+        {' · '}
+        <HistoryLink item={data.event.id} />
       </p>
       <h1>Setlist</h1>
       <SetlistBuilder band={band.slug} target={{ event: data.event.slug }} data={data} editable={band.role === 'member'} />

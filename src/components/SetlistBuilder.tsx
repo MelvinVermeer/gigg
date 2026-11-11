@@ -35,7 +35,7 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
   const [copyFrom, setCopyFrom] = useState(data.copyFrom[0]?.id ?? '')
   const queue = useRef(Promise.resolve())
 
-  // Fresh data from the server (after a copy, or an undo elsewhere) replaces local state.
+  // Fresh data from the server (after a copy) replaces local state.
   useEffect(() => setSets(data.sets), [data.sets])
 
   /** Saves run one after another, in order. */

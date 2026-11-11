@@ -7,7 +7,7 @@ Installable PWA. Everything must be readable on a mobile phone, also offline.
 ## Principles
 
 - **Simple authorisation.** Two roles, no band admin.
-- **Archive, never delete.** Every record has `archived_at`; every change is logged (audit trail). Mistakes can always be undone, which is what makes the simple authorisation safe.
+- **Archive, never delete.** Every record has `archived_at`; every change is logged (audit trail), so it's always visible who changed what and what it was before.
 - **No band specifics in code.** gigg.band is just one instance.
 - **Easy to self-host on Vercel.** Clear guide; free tiers should be enough for a single band.
 - **No external services where avoidable** (feedback, search, etc. live in the app).
@@ -84,9 +84,9 @@ Setlist
 - **Show mode** (single person): one whole set per screen in big type, swipe to the next set, screen stays on, per-song notes visible, works offline.
 - **Stage-floor PDF export**: the key export. One page per set. Blocks are not shown as headings, only their songs.
 
-## History & undo
+## History
 
-`/<band>/history`: every save in plain language ("Archived song “Closer”", "Changed setlist “Wedding”"), who and when, newest first. Members can undo any save: its rows are put back as they were, as long as nothing changed them since (otherwise: undo the later change first). An undo is a save too, so it can be undone.
+Each edit page links to that item's history (`/<band>/history?item=<id>`): every save that touched it, in plain language ("Archived song “Closer”", "Changed setlist “Wedding”"), who and when, newest first. A save folds open to show each field before → after (setlists and blocks as their song lists). No undo.
 
 ## Files
 

@@ -1,7 +1,8 @@
 // Band data operations as plain functions: (db, userId, bandSlug, input) → result.
 // Server functions (fns.ts) are thin wrappers around these, so everything here is testable without HTTP.
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, notInArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { formatDuration } from '#/lib/duration'
 import type { Db } from './db'
 import {
   bands,
@@ -311,9 +312,15 @@ async function resolveRefs(tx: Tx, bandId: string, fields: z.output<typeof event
 }
 
 async function setEventContacts(tx: Tx, bandId: string, eventId: string, contactIds: string[]) {
-  await tx.delete(eventContacts).where(eq(eventContacts.eventId, eventId))
+  // Only touch links that changed: rewriting them all would show up in history as a contact change.
+  await tx
+    .delete(eventContacts)
+    .where(and(eq(eventContacts.eventId, eventId), contactIds.length ? notInArray(eventContacts.contactId, contactIds) : undefined))
   if (contactIds.length)
-    await tx.insert(eventContacts).values(contactIds.map((contactId) => ({ bandId, eventId, contactId })))
+    await tx
+      .insert(eventContacts)
+      .values(contactIds.map((contactId) => ({ bandId, eventId, contactId })))
+      .onConflictDoNothing()
 }
 
 const eventOps = {
@@ -892,16 +899,11 @@ const searchOps = {
   }),
 }
 
-// History & undo -------------------------------------------------------------
+// History --------------------------------------------------------------------
 
 type Change = typeof changes.$inferSelect
 type Row = Record<string, unknown>
 
-/** Tables whose changes can be undone (band data; not users, bands or memberships). */
-const undoable = new Set([
-  'songs', 'venues', 'contacts', 'events', 'event_contacts', 'setlists', 'sets', 'set_items',
-  'blocks', 'block_songs', 'slug_redirects',
-])
 const entities: Record<string, string> = {
   songs: 'song', venues: 'venue', contacts: 'contact', events: 'event', blocks: 'block', setlists: 'setlist',
 }
@@ -941,33 +943,131 @@ async function describe(tx: Tx, rows: Change[]) {
   return [...new Set(lines)]
 }
 
-class Conflict extends Error {}
+export type Diff = { what: string; field: string; from: string; to: string }
 
-/** Put one audited row back the way it was before `c`. The row must still be as `c` left it. */
-async function revert(tx: Tx, c: Change) {
-  const t = sql.identifier(c.tableName)
-  const json = (r: unknown) => sql`${JSON.stringify(r)}::jsonb`
-  const run = async (q: ReturnType<typeof sql>) => ((await tx.execute(q)) as unknown as { rows: unknown[] }).rows.length
-  let n: number
-  if (c.action === 'insert') n = await run(sql`delete from ${t} where to_jsonb(${t}) = ${json(c.after)} returning 1`)
-  else if (c.action === 'delete')
-    n = await run(sql`insert into ${t} select * from jsonb_populate_record(null::${t}, ${json(c.before)}) returning 1`)
-  else {
-    const cols = sql.join(Object.keys(c.before as Row).map((k) => sql.identifier(k)), sql`, `)
-    n = await run(sql`
-      update ${t} set (${cols}) = (select ${cols} from jsonb_populate_record(null::${t}, ${json(c.before)}))
-      where to_jsonb(${t}) = ${json(c.after)} returning 1`)
+/** Columns that are bookkeeping, not something a person changed. */
+const hidden = new Set(['id', 'band_id', 'slug', 'created_at', 'position'])
+const refs = ['song_id', 'venue_id', 'contact_id', 'event_id', 'setlist_id', 'block_id']
+
+/**
+ * Field-by-field before → after for one transaction. Ids are shown as names; set and block songs
+ * as the whole list (their saves rewrite every row, so before/after hold the full list).
+ */
+async function diff(tx: Tx, rows: Change[]): Promise<Diff[]> {
+  // Names for every id these rows mention: current rows first, then names from the rows themselves (deleted since).
+  const ids = new Set<string>()
+  for (const c of rows)
+    for (const r of [c.before, c.after] as (Row | null)[])
+      for (const k of refs) if (typeof r?.[k] === 'string') ids.add(r[k] as string)
+  const names = new Map<string, string>()
+  for (const c of rows) for (const r of [c.before, c.after] as (Row | null)[]) if (r?.id) names.set(r.id as string, String(r.title ?? r.name))
+  if (ids.size) {
+    const list = sql.join([...ids].map((i) => sql`${i}::uuid`), sql`, `)
+    const { rows: found } = (await tx.execute(sql`
+      select id::text, title as name from songs where id in (${list})
+      union all select id::text, name from venues where id in (${list})
+      union all select id::text, name from contacts where id in (${list})
+      union all select id::text, title from events where id in (${list})
+      union all select id::text, name from setlists where id in (${list})
+      union all select id::text, name from blocks where id in (${list})`)) as unknown as { rows: { id: string; name: string }[] }
+    for (const f of found) names.set(f.id, f.name)
   }
-  if (!n) throw new Conflict('It was changed again later. Undo that change first.')
+  const name = (id: unknown) => (typeof id === 'string' ? (names.get(id) ?? 'deleted') : '–')
+  const show = (k: string, v: unknown) => {
+    if (v == null || v === '' || (Array.isArray(v) && !v.length)) return '–'
+    if (refs.includes(k)) return name(v)
+    if (k === 'archived_at') return 'yes'
+    if (k === 'duration_sec') return formatDuration(v as number)
+    return Array.isArray(v) ? v.join(', ') : String(v)
+  }
+
+  const out: Diff[] = []
+  const lists = new Map<string, { what: string; field: string; before: Row[]; after: Row[] }>()
+  const list = (key: string, what: string, field: string) =>
+    lists.get(key) ?? lists.set(key, { what, field, before: [], after: [] }).get(key)!
+  const setRows = rows.filter((c) => c.tableName === 'sets')
+  const setOf = (id: unknown) => {
+    const s = setRows.map((c) => (c.before ?? c.after) as Row).find((r) => r.id === id)
+    return s && { setlist: s.setlist_id as string, name: s.name as string, position: s.position as number }
+  }
+
+  for (const c of rows) {
+    const before = c.before as Row | null
+    const after = c.after as Row | null
+    const r = (after ?? before)!
+    const entity = entities[c.tableName]
+    if (entity) {
+      const what = `${entity[0].toUpperCase()}${entity.slice(1)} “${r.title ?? r.name}”`
+      for (const k of Object.keys(r)) {
+        if (hidden.has(k)) continue
+        const from = show(k, before?.[k])
+        const to = show(k, after?.[k])
+        if (from !== to) out.push({ what, field: human(k), from, to })
+      }
+    } else if (c.tableName === 'event_contacts') {
+      // Links are written per contact (only what changed), so show each one added or removed.
+      out.push({ what: `Event “${name(r.event_id)}”`, field: 'contact', from: before ? name(before.contact_id) : '–', to: after ? name(after.contact_id) : '–' })
+    } else if (c.tableName === 'block_songs') {
+      const l = list(`bs:${r.block_id}`, `Block “${name(r.block_id)}”`, 'songs')
+      if (before) l.before.push(before)
+      if (after) l.after.push(after)
+    } else if (c.tableName === 'sets' || c.tableName === 'set_items') {
+      const setlist = c.tableName === 'sets' ? (r.setlist_id as string) : setOf(r.set_id)?.setlist
+      if (!setlist) continue
+      const l = list(`sl:${setlist}`, `Setlist “${name(setlist)}”`, 'sets')
+      if (before) l.before.push({ ...before, table: c.tableName })
+      if (after) l.after.push({ ...after, table: c.tableName })
+    }
+  }
+
+  const songsOf = (rs: Row[]) =>
+    rs
+      .sort((a, b) => (a.position as number) - (b.position as number))
+      .map((x) => name(x.song_id))
+      .join(', ') || '–'
+  const setsOf = (rs: Row[]) =>
+    rs
+      .filter((x) => x.table === 'sets')
+      .sort((a, b) => (a.position as number) - (b.position as number))
+      .map((s) => `${s.name}: ${songsOf(rs.filter((x) => x.table === 'set_items' && x.set_id === s.id))}`)
+      .join('\n') || '–'
+  for (const [key, l] of lists) {
+    const render = key.startsWith('bs:') ? songsOf : setsOf
+    const from = render(l.before)
+    const to = render(l.after)
+    if (from !== to) out.push({ what: l.what, field: l.field, from, to })
+  }
+  return out
 }
 
 const historyOps = {
-  /** The band's latest saves (one per transaction), newest first, in plain language. */
-  listChanges: bandOp('reader', z.object({}), async ({ tx, bandId }) => {
+  /**
+   * The band's latest saves (one per transaction), newest first, in plain language.
+   * With `item`: only saves that touched that row or its children (an event's contacts and
+   * setlist, a setlist's sets and their songs, a block's songs).
+   */
+  listChanges: bandOp('reader', z.object({ item: z.string().uuid().optional() }), async ({ tx, bandId }, { item }) => {
+    const parent = sql`coalesce(c.after, c.before)`
+    const touchesItem = sql`${changes.txId} in (
+      with recursive related(id) as (
+        select ${item}::text
+        union
+        select c.row_id from changes c, related r
+        where c.band_id = ${bandId}
+          and ${parent} ->> (case c.table_name when 'setlists' then 'event_id' when 'sets' then 'setlist_id' end) = r.id
+      )
+      select c.tx_id from changes c
+      where c.band_id = ${bandId} and (
+        c.row_id in (select id from related)
+        or ${parent} ->> 'event_id' in (select id from related)
+        or ${parent} ->> 'setlist_id' in (select id from related)
+        or ${parent} ->> 'set_id' in (select id from related)
+        or ${parent} ->> 'block_id' in (select id from related)
+      ))`
     const recent = await tx
       .select({ txId: changes.txId, at: sql<Date>`max(${changes.createdAt})`.mapWith(changes.createdAt) })
       .from(changes)
-      .where(eq(changes.bandId, bandId))
+      .where(and(eq(changes.bandId, bandId), item ? touchesItem : undefined))
       .groupBy(changes.txId)
       .orderBy(desc(sql`max(${changes.id})`))
       .limit(50) // ponytail: no paging yet; add "older" when bands want to dig further back.
@@ -988,35 +1088,10 @@ const historyOps = {
         at,
         who: mine[0].name || mine[0].email || 'System',
         lines,
-        canUndo: mine.every((r) => undoable.has(r.change.tableName)),
+        diffs: await diff(tx, mine.map((r) => r.change)),
       })
     }
     return result
-  }),
-
-  /** Undo one save: revert its rows newest first. The undo is itself logged, so it can be undone too. */
-  undo: bandOp('member', z.object({ txId: z.number().int() }), async ({ tx, bandId }, { txId }) => {
-    const rows = await tx
-      .select()
-      .from(changes)
-      .where(and(eq(changes.bandId, bandId), eq(changes.txId, txId)))
-      .orderBy(desc(changes.id))
-    if (!rows.length) throw new NotFound()
-    if (!rows.every((r) => undoable.has(r.tableName))) return { ok: false as const, reason: "This change can't be undone here." }
-    try {
-      // Savepoint: a failed undo leaves nothing behind and the outer transaction stays usable.
-      await tx.transaction(async (sp) => {
-        for (const c of rows) await revert(sp, c)
-      })
-      return { ok: true as const }
-    } catch (e) {
-      if (e instanceof Conflict) return { ok: false as const, reason: e.message }
-      // Foreign key / unique violations: something added later depends on this.
-      const code = (e as { cause?: { code?: string } }).cause?.code
-      if (code === '23503' || code === '23505')
-        return { ok: false as const, reason: 'Later changes depend on this one. Undo those first.' }
-      throw e
-    }
   }),
 }
 

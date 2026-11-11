@@ -1,6 +1,7 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { EventForm } from '#/components/EventForm'
 import { bandOp } from '#/server/fns'
+import { HistoryLink } from '#/components/HistoryLink'
 
 export const Route = createFileRoute('/$band/events/$event/edit')({
   loader: async ({ params }) => {
@@ -21,6 +22,9 @@ function EditEvent() {
   return (
     <>
       <h1>Edit {event.title}</h1>
+      <p>
+        <HistoryLink item={event.id} />
+      </p>
       <EventForm
         data={data}
         initial={{ ...event, contacts }}
