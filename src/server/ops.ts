@@ -1438,6 +1438,8 @@ export function listAllBands(db: Db) {
       name: bands.name,
       archivedAt: bands.archivedAt,
       members: sql<string[]>`coalesce(array_agg(${users.email} order by ${users.email}) filter (where ${users.email} is not null), '{}')`,
+      // Archived files still occupy storage, so they count.
+      fileBytes: sql<number>`coalesce((select sum(${files.sizeBytes}) from ${files} where ${files.bandId} = ${bands.id}), 0)::float8`,
     })
     .from(bands)
     .leftJoin(memberships, and(eq(memberships.bandId, bands.id), isNull(memberships.archivedAt)))

@@ -597,6 +597,13 @@ describe('files', () => {
     await expect(fileForDownload(t.db, t.reader, f.id)).resolves.toMatchObject({ blobPath: '00000000-0000-4000-8000-000000000001' })
     await expect(fileForDownload(t.db, t.outsider, f.id)).rejects.toBeInstanceOf(NotFound)
   })
+
+  it('the admin list shows the bytes stored per band', async () => {
+    const t = await testDb()
+    await bandOps.addFile(t.db, t.member, t.band, { ...upload, sizeBytes: 1000, song: 'closer' })
+    await bandOps.addFile(t.db, t.member, t.band, { ...upload, sizeBytes: 500, blobPath: '00000000-0000-4000-8000-000000000009', event: 'summer-party' })
+    expect(await listAllBands(t.db)).toMatchObject([{ slug: t.band, fileBytes: 1500 }])
+  })
 })
 
 describe('feedback', () => {

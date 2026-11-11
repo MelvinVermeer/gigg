@@ -2,6 +2,8 @@ import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { addBand, deleteBand, deleteBandPermanently, getAllBands, getFeedback } from '#/server/fns'
 
+const size = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : b < 1024 ** 3 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${(b / 1024 ** 3).toFixed(2)} GB`)
+
 export const Route = createFileRoute('/admin')({
   loader: async () => ({ bands: await getAllBands(), feedback: await getFeedback() }),
   component: Admin,
@@ -69,7 +71,7 @@ function Admin() {
                 <Link to="/$band" params={{ band: b.slug }}>
                   {b.name}
                 </Link>{' '}
-                ({b.members.join(', ') || 'no members'}){' '}
+                ({b.members.join(', ') || 'no members'}), files: {size(b.fileBytes)}{' '}
                 <button type="button" onClick={() => remove(b.slug, b.name)}>
                   Delete
                 </button>
@@ -105,7 +107,7 @@ function Admin() {
           <ul>
             {deleted.map((b) => (
               <li key={b.slug}>
-                {b.name} ({b.members.join(', ') || 'no members'}){' '}
+                {b.name} ({b.members.join(', ') || 'no members'}), files: {size(b.fileBytes)}{' '}
                 <button type="button" onClick={() => removeForever(b.slug, b.name)}>
                   Delete permanently
                 </button>
