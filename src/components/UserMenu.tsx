@@ -43,6 +43,9 @@ export function UserMenu({ email, bands, isAdmin }: Props) {
               Feedback
             </Link>
           )}
+          <Link to="/manual" onClick={close}>
+            Manual
+          </Link>
           {isAdmin && (
             <Link to="/admin" onClick={close}>
               Admin

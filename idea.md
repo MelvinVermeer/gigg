@@ -90,7 +90,7 @@ Each edit page links to that item's history (`/<band>/history?item=<id>`): every
 
 ## Files
 
-Common PDFs, recordings, lyrics, song notes, riders. Attachable to songs, events, band.
+Common PDFs, recordings, lyrics, song notes, riders. Attachable to songs and events (several each; listed on their pages, members upload and remove). Bytes live in Vercel Blob (private; a local folder in dev), served through `/api/files/<id>` to band members only. Up to 4 MB each for now (Vercel's request limit); later direct-to-Blob uploads. Band-level files not yet.
 **Public share links** per file: token-based, revocable.
 
 ## Search
@@ -108,7 +108,7 @@ Common PDFs, recordings, lyrics, song notes, riders. Attachable to songs, events
 
 ## Feedback
 
-Stored in the app. Optional push to GitHub Issues via backend API (users don't need a GitHub account).
+Anyone in a band sends feedback from the account menu (`/<band>/feedback`); the admin page lists it. Later: optional push to GitHub Issues via backend API (users don't need a GitHub account).
 
 ## Admin
 
@@ -120,7 +120,7 @@ One page per band: `/<band>/settings`, reached from the user menu (avatar with t
 
 - **You:** email, add a passkey, theme (System / Light / Dark; per device, in a cookie)
 - **The band** (members): venues and contacts. Rarely change, so they're edited here, not in the main navigation. Archived ones leave the event form's search boxes but stay on old events.
-- Later: members and invites
+- **Members** (members only): list, invite by email as member or reader (existing people get their role changed), remove. Removing archives the membership; you can't remove yourself.
 
 ## Stack
 
@@ -193,7 +193,6 @@ How to self-host on Vercel, step by step.
 
 - **Excel export (first up after MVP)**, then Numbers / CSV (setlist, repertoire, event overview)
 - **Download everything upcoming**: one tap to save all upcoming events, setlists and their songs (and later files) to the device, for offline use without visiting each page
-- Band invites by members
 - Member availability per event
 - Other PDFs (band/sound engineer setlist with key/BPM, event sheet)
 - Custom song fields per band
@@ -202,5 +201,5 @@ How to self-host on Vercel, step by step.
 - Account linking
 - Generated tech rider / stage plot / input list
 - Notifications (push / email)
-- In-app user manual, auto-updated using skills
+- Keep the in-app manual (`/manual`, a short static page) up to date automatically using skills
 - Money: fees per event, totals per year

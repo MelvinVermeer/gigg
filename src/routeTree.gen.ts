@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BandRouteImport } from './routes/$band'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ManualRouteImport } from './routes/manual'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as BandIndexRouteImport } from './routes/$band.index'
 import { Route as BandBlocksRouteImport } from './routes/$band.blocks'
@@ -57,6 +58,11 @@ const AdminRoute = AdminRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManualRoute = ManualRouteImport.update({
+  id: '/manual',
+  path: '/manual',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MeRoute = MeRouteImport.update({
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/$band': typeof BandRouteWithChildren
   '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
+  '/manual': typeof ManualRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
   '/$band/feedback': typeof BandFeedbackRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
+  '/manual': typeof ManualRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
   '/$band/feedback': typeof BandFeedbackRoute
@@ -252,6 +260,7 @@ export interface FileRoutesById {
   '/$band': typeof BandRouteWithChildren
   '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
+  '/manual': typeof ManualRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
   '/$band/feedback': typeof BandFeedbackRoute
@@ -285,6 +294,7 @@ export interface FileRouteTypes {
     | '/$band'
     | '/admin'
     | '/login'
+    | '/manual'
     | '/me'
     | '/$band/blocks'
     | '/$band/feedback'
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/login'
+    | '/manual'
     | '/me'
     | '/$band/blocks'
     | '/$band/feedback'
@@ -346,6 +357,7 @@ export interface FileRouteTypes {
     | '/$band'
     | '/admin'
     | '/login'
+    | '/manual'
     | '/me'
     | '/$band/blocks'
     | '/$band/feedback'
@@ -378,6 +390,7 @@ export interface RootRouteChildren {
   BandRoute: typeof BandRouteWithChildren
   AdminRoute: typeof AdminRoute
   LoginRoute: typeof LoginRoute
+  ManualRoute: typeof ManualRoute
   MeRoute: typeof MeRoute
   ApiFilesRoute: typeof ApiFilesRouteWithChildren
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -411,6 +424,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manual': {
+      id: '/manual'
+      path: '/manual'
+      fullPath: '/manual'
+      preLoaderRoute: typeof ManualRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/me': {
@@ -658,6 +678,7 @@ const rootRouteChildren: RootRouteChildren = {
   BandRoute: BandRouteWithChildren,
   AdminRoute: AdminRoute,
   LoginRoute: LoginRoute,
+  ManualRoute: ManualRoute,
   MeRoute: MeRoute,
   ApiFilesRoute: ApiFilesRouteWithChildren,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
