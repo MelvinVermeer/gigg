@@ -18,6 +18,7 @@ import { Route as BandIndexRouteImport } from './routes/$band.index'
 import { Route as BandBlocksRouteImport } from './routes/$band.blocks'
 import { Route as BandHistoryRouteImport } from './routes/$band.history'
 import { Route as BandSearchRouteImport } from './routes/$band.search'
+import { Route as ApiFilesRouteImport } from './routes/api/files'
 import { Route as BandEventsIndexRouteImport } from './routes/$band.events.index'
 import { Route as BandEventsNewRouteImport } from './routes/$band.events.new'
 import { Route as BandSetlistsIndexRouteImport } from './routes/$band.setlists.index'
@@ -28,6 +29,7 @@ import { Route as BandSettingsVenuesRouteImport } from './routes/$band.settings.
 import { Route as BandSongsIndexRouteImport } from './routes/$band.songs.index'
 import { Route as BandSongsNewRouteImport } from './routes/$band.songs.new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiFilesIdRouteImport } from './routes/api/files.$id'
 import { Route as BandEventsEventIndexRouteImport } from './routes/$band.events.$event.index'
 import { Route as BandEventsEventEditRouteImport } from './routes/$band.events.$event.edit'
 import { Route as BandEventsEventPrintRouteImport } from './routes/$band.events.$event.print'
@@ -81,6 +83,11 @@ const BandSearchRoute = BandSearchRouteImport.update({
   path: '/search',
   getParentRoute: () => BandRoute,
 } as any)
+const ApiFilesRoute = ApiFilesRouteImport.update({
+  id: '/api/files',
+  path: '/api/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BandEventsIndexRoute = BandEventsIndexRouteImport.update({
   id: '/events/',
   path: '/events/',
@@ -131,6 +138,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFilesIdRoute = ApiFilesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiFilesRoute,
+} as any)
 const BandEventsEventIndexRoute = BandEventsEventIndexRouteImport.update({
   id: '/events/$event/',
   path: '/events/$event/',
@@ -176,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/$band/blocks': typeof BandBlocksRoute
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
+  '/api/files': typeof ApiFilesRouteWithChildren
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
   '/$band/setlists/$setlist': typeof BandSetlistsSetlistRoute
@@ -183,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/$band/settings/venues': typeof BandSettingsVenuesRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/files/$id': typeof ApiFilesIdRoute
   '/$band/events/': typeof BandEventsIndexRoute
   '/$band/setlists/': typeof BandSetlistsIndexRoute
   '/$band/settings/': typeof BandSettingsIndexRoute
@@ -203,6 +217,7 @@ export interface FileRoutesByTo {
   '/$band/blocks': typeof BandBlocksRoute
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
+  '/api/files': typeof ApiFilesRouteWithChildren
   '/$band': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
   '/$band/setlists/$setlist': typeof BandSetlistsSetlistRoute
@@ -210,6 +225,7 @@ export interface FileRoutesByTo {
   '/$band/settings/venues': typeof BandSettingsVenuesRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/files/$id': typeof ApiFilesIdRoute
   '/$band/events': typeof BandEventsIndexRoute
   '/$band/setlists': typeof BandSetlistsIndexRoute
   '/$band/settings': typeof BandSettingsIndexRoute
@@ -232,6 +248,7 @@ export interface FileRoutesById {
   '/$band/blocks': typeof BandBlocksRoute
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
+  '/api/files': typeof ApiFilesRouteWithChildren
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
   '/$band/setlists/$setlist': typeof BandSetlistsSetlistRoute
@@ -239,6 +256,7 @@ export interface FileRoutesById {
   '/$band/settings/venues': typeof BandSettingsVenuesRoute
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/files/$id': typeof ApiFilesIdRoute
   '/$band/events/': typeof BandEventsIndexRoute
   '/$band/setlists/': typeof BandSetlistsIndexRoute
   '/$band/settings/': typeof BandSettingsIndexRoute
@@ -262,6 +280,7 @@ export interface FileRouteTypes {
     | '/$band/blocks'
     | '/$band/history'
     | '/$band/search'
+    | '/api/files'
     | '/$band/'
     | '/$band/events/new'
     | '/$band/setlists/$setlist'
@@ -269,6 +288,7 @@ export interface FileRouteTypes {
     | '/$band/settings/venues'
     | '/$band/songs/new'
     | '/api/auth/$'
+    | '/api/files/$id'
     | '/$band/events/'
     | '/$band/setlists/'
     | '/$band/settings/'
@@ -289,6 +309,7 @@ export interface FileRouteTypes {
     | '/$band/blocks'
     | '/$band/history'
     | '/$band/search'
+    | '/api/files'
     | '/$band'
     | '/$band/events/new'
     | '/$band/setlists/$setlist'
@@ -296,6 +317,7 @@ export interface FileRouteTypes {
     | '/$band/settings/venues'
     | '/$band/songs/new'
     | '/api/auth/$'
+    | '/api/files/$id'
     | '/$band/events'
     | '/$band/setlists'
     | '/$band/settings'
@@ -317,6 +339,7 @@ export interface FileRouteTypes {
     | '/$band/blocks'
     | '/$band/history'
     | '/$band/search'
+    | '/api/files'
     | '/$band/'
     | '/$band/events/new'
     | '/$band/setlists/$setlist'
@@ -324,6 +347,7 @@ export interface FileRouteTypes {
     | '/$band/settings/venues'
     | '/$band/songs/new'
     | '/api/auth/$'
+    | '/api/files/$id'
     | '/$band/events/'
     | '/$band/setlists/'
     | '/$band/settings/'
@@ -343,6 +367,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   LoginRoute: typeof LoginRoute
   MeRoute: typeof MeRoute
+  ApiFilesRoute: typeof ApiFilesRouteWithChildren
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -410,6 +435,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/$band/search'
       preLoaderRoute: typeof BandSearchRouteImport
       parentRoute: typeof BandRoute
+    }
+    '/api/files': {
+      id: '/api/files'
+      path: '/api/files'
+      fullPath: '/api/files'
+      preLoaderRoute: typeof ApiFilesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/$band/events/': {
       id: '/$band/events/'
@@ -480,6 +512,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/files/$id': {
+      id: '/api/files/$id'
+      path: '/$id'
+      fullPath: '/api/files/$id'
+      preLoaderRoute: typeof ApiFilesIdRouteImport
+      parentRoute: typeof ApiFilesRoute
     }
     '/$band/events/$event/': {
       id: '/$band/events/$event/'
@@ -581,12 +620,25 @@ const BandRouteChildren: BandRouteChildren = {
 
 const BandRouteWithChildren = BandRoute._addFileChildren(BandRouteChildren)
 
+interface ApiFilesRouteChildren {
+  ApiFilesIdRoute: typeof ApiFilesIdRoute
+}
+
+const ApiFilesRouteChildren: ApiFilesRouteChildren = {
+  ApiFilesIdRoute: ApiFilesIdRoute,
+}
+
+const ApiFilesRouteWithChildren = ApiFilesRoute._addFileChildren(
+  ApiFilesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BandRoute: BandRouteWithChildren,
   AdminRoute: AdminRoute,
   LoginRoute: LoginRoute,
   MeRoute: MeRoute,
+  ApiFilesRoute: ApiFilesRouteWithChildren,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

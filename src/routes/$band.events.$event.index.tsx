@@ -1,6 +1,7 @@
 import { Link, createFileRoute, getRouteApi, redirect, useRouter } from '@tanstack/react-router'
 import { formatDate, statusLabel } from '#/lib/date'
 import { formatDuration } from '#/lib/duration'
+import { Files } from '#/components/Files'
 import { bandOp } from '#/server/fns'
 
 export const Route = createFileRoute('/$band/events/$event/')({
@@ -15,7 +16,7 @@ export const Route = createFileRoute('/$band/events/$event/')({
 const bandRoute = getRouteApi('/$band')
 
 function Event() {
-  const { event, venue, contacts, setlist } = Route.useLoaderData()
+  const { event, venue, contacts, setlist, files } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const router = useRouter()
   const params = { band: band.slug, event: event.slug }
@@ -90,6 +91,7 @@ function Event() {
         </dd>
       </dl>
       {event.notes && <p className="notes">{event.notes}</p>}
+      <Files band={band.slug} owner={{ event: event.slug }} files={files} canEdit={band.role === 'member' && !event.archivedAt} />
       {band.role === 'member' && (
         <p>
           {event.archivedAt ? (

@@ -1,13 +1,14 @@
 import { Link, createFileRoute, getRouteApi, redirect, useRouter } from '@tanstack/react-router'
 import { formatDuration } from '#/lib/duration'
 import { bandOp } from '#/server/fns'
+import { Files } from '#/components/Files'
 import { HistoryLink } from '#/components/HistoryLink'
 
 export const Route = createFileRoute('/$band/songs/$song/')({
   loader: async ({ params }) => {
     const res = await bandOp('getSong', params.band, { slug: params.song })
     if (res.moved) throw redirect({ to: '/$band/songs/$song', params: { ...params, song: res.slug } })
-    return res.song
+    return res
   },
   component: Song,
 })
@@ -15,7 +16,7 @@ export const Route = createFileRoute('/$band/songs/$song/')({
 const bandRoute = getRouteApi('/$band')
 
 function Song() {
-  const song = Route.useLoaderData()
+  const { song, files } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const router = useRouter()
   const params = { band: band.slug, song: song.slug }
@@ -42,6 +43,7 @@ function Song() {
         <dd>{song.tags.length ? song.tags.join(', ') : '–'}</dd>
       </dl>
       {song.notes && <p className="notes">{song.notes}</p>}
+      <Files band={band.slug} owner={{ song: song.slug }} files={files} canEdit={band.role === 'member' && !song.archivedAt} />
       {band.role === 'member' && (
         <p>
           {song.archivedAt ? (

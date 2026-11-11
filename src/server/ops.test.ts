@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import { bands, changes, contacts, memberships, songs, users, venues } from './db/schema'
-import { archiveBand, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, myBands, NotFound, slugify } from './ops'
+import { archiveBand, bandOps, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, myBands, NotFound, slugify } from './ops'
 import type { BandOpName } from './ops'
 import { testDb } from './test-db'
 
@@ -570,5 +570,31 @@ describe('admin', () => {
     expect(await t.db.select().from(changes).where(eq(changes.bandId, id))).toEqual([])
     await expect(bandOps.listSongs(t.db, t.member, other.slug, {})).resolves.toHaveLength(1)
     expect(await t.db.select().from(users).where(eq(users.id, t.reader))).toHaveLength(1)
+  })
+})
+
+describe('files', () => {
+  const upload = { name: 'chart.pdf', contentType: 'application/pdf', sizeBytes: 10, blobPath: 'k1' }
+
+  it('attaches several files to a song or event, lists them, and archives one', async () => {
+    const t = await testDb()
+    const a = await bandOps.addFile(t.db, t.member, t.band, { ...upload, song: 'closer' })
+    await bandOps.addFile(t.db, t.member, t.band, { ...upload, name: 'second.pdf', blobPath: 'k2', song: 'closer' })
+    await bandOps.addFile(t.db, t.member, t.band, { ...upload, event: 'summer-party' })
+    const song = await bandOps.getSong(t.db, t.reader, t.band, { slug: 'closer' })
+    expect(song.moved === false && song.files.map((f) => f.name)).toEqual(['chart.pdf', 'second.pdf'])
+    const event = await bandOps.getEvent(t.db, t.reader, t.band, { slug: 'summer-party' })
+    expect(event.moved === false && event.files).toHaveLength(1)
+    await bandOps.archiveFile(t.db, t.member, t.band, { id: a.id })
+    const after = await bandOps.getSong(t.db, t.reader, t.band, { slug: 'closer' })
+    expect(after.moved === false && after.files).toHaveLength(1)
+    await expect(bandOps.addFile(t.db, t.member, t.band, { ...upload, song: 'closer', event: 'summer-party' })).rejects.toThrow()
+  })
+
+  it('serves a file to band members only', async () => {
+    const t = await testDb()
+    const f = await bandOps.addFile(t.db, t.member, t.band, { ...upload, song: 'closer' })
+    await expect(fileForDownload(t.db, t.reader, f.id)).resolves.toMatchObject({ blobPath: 'k1' })
+    await expect(fileForDownload(t.db, t.outsider, f.id)).rejects.toBeInstanceOf(NotFound)
   })
 })

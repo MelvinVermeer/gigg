@@ -22,3 +22,4 @@ playwright-report
 logo_handover/
 e2e/.auth
 .vercel
+.uploads

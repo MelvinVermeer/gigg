@@ -161,6 +161,66 @@ const tags = z
 
 const bySlug = z.object({ slug: z.string() })
 
+// Files --------------------------------------------------------------------
+
+/** The bytes go through the storage module (routes/api/files); these only keep the records. */
+export const maxFileNameLength = 200
+
+function filesOf(tx: Tx, owner: 'song' | 'event', ownerId: string) {
+  return tx
+    .select({ id: files.id, name: files.name, contentType: files.contentType, sizeBytes: files.sizeBytes, createdAt: files.createdAt })
+    .from(files)
+    .where(and(eq(files[owner === 'song' ? 'songId' : 'eventId'], ownerId), isNull(files.archivedAt)))
+    .orderBy(asc(files.createdAt))
+}
+
+const fileOps = {
+  /** Record an uploaded file on a song or an event (exactly one of the two slugs). */
+  addFile: bandOp(
+    'member',
+    z
+      .object({
+        song: z.string().optional(),
+        event: z.string().optional(),
+        name: z.string().trim().min(1).max(maxFileNameLength),
+        contentType: z.string().trim().min(1).max(200),
+        sizeBytes: z.number().int().min(0),
+        blobPath: z.string().min(1).max(200),
+      })
+      .refine((v) => !!v.song !== !!v.event, 'A file belongs to a song or an event'),
+    async ({ tx, bandId, userId }, { song, event, ...file }) => {
+      const owner = song
+        ? { songId: (await rowBySlug(tx, songs, bandId, song)).id }
+        : { eventId: (await rowBySlug(tx, events, bandId, event!)).id }
+      const [row] = await tx
+        .insert(files)
+        .values({ bandId, uploadedBy: userId, ...owner, ...file })
+        .returning({ id: files.id, name: files.name })
+      return row
+    },
+  ),
+
+  archiveFile: bandOp('member', z.object({ id: z.uuid() }), async ({ tx, bandId }, { id }) => {
+    const [row] = await tx
+      .update(files)
+      .set({ archivedAt: new Date() })
+      .where(and(eq(files.id, id), eq(files.bandId, bandId), isNull(files.archivedAt)))
+      .returning({ id: files.id })
+    if (!row) throw new NotFound()
+  }),
+}
+
+/** For the download route (not band-scoped): the file, if the user is in its band. */
+export async function fileForDownload(db: Db, userId: string, id: string) {
+  const [file] = await db
+    .select({ blobPath: files.blobPath, name: files.name, contentType: files.contentType })
+    .from(files)
+    .innerJoin(memberships, and(eq(memberships.bandId, files.bandId), eq(memberships.userId, userId), isNull(memberships.archivedAt)))
+    .where(and(eq(files.id, id), isNull(files.archivedAt)))
+  if (!file) throw new NotFound()
+  return file
+}
+
 // Songs --------------------------------------------------------------------
 
 const songFields = z.object({
@@ -210,7 +270,7 @@ const songOps = {
       .select()
       .from(songs)
       .where(and(eq(songs.bandId, bandId), eq(songs.slug, slug)))
-    if (song) return { moved: false as const, song }
+    if (song) return { moved: false as const, song, files: await filesOf(tx, 'song', song.id) }
     const moved = await movedSlug(tx, songs, bandId, 'song', slug)
     if (moved) return { moved: true as const, slug: moved }
     throw new NotFound()
@@ -380,7 +440,14 @@ const eventOps = {
       .innerJoin(setlists, eq(setlists.id, sets.setlistId))
       .innerJoin(songs, eq(songs.id, setItems.songId))
       .where(eq(setlists.eventId, row.event.id))
-    return { moved: false as const, event: row.event, venue: row.venue, contacts: eventContactRows, setlist }
+    return {
+      moved: false as const,
+      event: row.event,
+      venue: row.venue,
+      contacts: eventContactRows,
+      setlist,
+      files: await filesOf(tx, 'event', row.event.id),
+    }
   }),
 
   /** Everything the event form needs: venues and contacts to search, and per venue the contacts used last time. */
@@ -1107,6 +1174,7 @@ export const bandOps = {
     return { ...band, role }
   }),
   ...songOps,
+  ...fileOps,
   ...eventOps,
   ...venueContactOps,
   ...setlistOps,
