@@ -92,7 +92,7 @@ function Settings() {
           <label>
             Display name <input name="name" defaultValue={me?.name} maxLength={100} placeholder={me?.email} />
           </label>{' '}
-          <button type="submit">Save</button> <span role="status">{nameStatus}</span>
+          <button type="submit">Save</button> <span>{nameStatus}</span>
         </form>
         {passkeys.data && passkeys.data.length > 0 && (
           <ul aria-label="Your passkeys">
