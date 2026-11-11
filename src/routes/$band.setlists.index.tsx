@@ -6,11 +6,15 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { bandOp } from '#/server/fns'
 import { archivedSearch } from '#/lib/archived'
+import { Blocks } from '#/components/Blocks'
 
 export const Route = createFileRoute('/$band/setlists/')({
   validateSearch: archivedSearch,
   loaderDeps: ({ search }) => ({ archived: !!search.archived }),
-  loader: ({ params, deps }) => bandOp('listSetlists', params.band, { archived: deps.archived }),
+  loader: async ({ params, deps }) => ({
+    setlists: await bandOp('listSetlists', params.band, { archived: deps.archived }),
+    blocks: await bandOp('listBlocks', params.band, { archived: deps.archived }),
+  }),
   component: Setlists,
 })
 
@@ -18,7 +22,7 @@ const bandRoute = getRouteApi('/$band')
 
 /** Setlists not tied to an event: a standard show, a festival set. Events start from a copy. */
 function Setlists() {
-  const setlists = Route.useLoaderData()
+  const { setlists, blocks } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const navigate = useNavigate()
   const [name, setName] = useState('')
@@ -71,6 +75,9 @@ function Setlists() {
           </li>
         )}
       </ul>
+      <section className="mt-10">
+        <Blocks blocks={blocks.blocks} songs={blocks.songs} archived={!!archived} />
+      </section>
     </>
   )
 }

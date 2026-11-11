@@ -139,7 +139,7 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
             <Plus aria-hidden /> Add set
           </Button>
           <Button asChild variant="ghost">
-            <Link to="/$band/blocks" params={{ band }}>
+            <Link to="/$band/setlists" params={{ band }} hash="blocks">
               Manage blocks
             </Link>
           </Button>

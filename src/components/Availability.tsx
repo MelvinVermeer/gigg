@@ -204,6 +204,18 @@ export function Availability({ band, event, info, canAsk }: { band: string; even
   )
 }
 
+function Reopen({ band, event }: { band: string; event: string }) {
+  const { run, error } = useRun()
+  return (
+    <div>
+      <Button variant="outline" onClick={() => run(() => bandOp('reopenAvailability', band, { event }))}>
+        Reopen request
+      </Button>
+      <FormError>{error}</FormError>
+    </div>
+  )
+}
+
 /** The closed check as a row in the event's field list; clicking opens everyone's answers. */
 export function AvailabilitySummary({ band, event, info, canAsk }: { band: string; event: string; info: Info | null; canAsk: boolean }) {
   if (!info || info.open) return null
@@ -226,6 +238,7 @@ export function AvailabilitySummary({ band, event, info, canAsk }: { band: strin
               </DialogDescription>
             </DialogHeader>
             <Responses info={info} />
+            {canAsk && <Reopen band={band} event={event} />}
             {canAsk && <Ask band={band} event={event} label="New availability check" />}
           </DialogContent>
         </Dialog>

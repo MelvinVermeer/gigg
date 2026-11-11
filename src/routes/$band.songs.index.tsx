@@ -34,7 +34,7 @@ function Songs() {
             </Button>
           ) : (
             <Button asChild variant="ghost" size="sm">
-              <Link to="/$band/blocks" params={{ band: band.slug }}>
+              <Link to="/$band/setlists" params={{ band: band.slug }} hash="blocks">
                 Blocks
               </Link>
             </Button>

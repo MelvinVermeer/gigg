@@ -1122,6 +1122,7 @@ async function describe(tx: Tx, rows: Change[]) {
       const event = `event “${requestEvent(r.id)}”`
       if (c.action === 'insert') lines.push(`Asked availability for ${event}`)
       else if (after?.closed_at && !before?.closed_at) lines.push(`Closed the availability request for ${event}`)
+      else if (before?.closed_at && !after?.closed_at) lines.push(`Reopened the availability request for ${event}`)
     } else if (c.tableName === 'availability_responses') {
       if (after?.answer && (before?.answer !== after.answer || before?.note !== after.note)) answerers.push(after)
     } else if (entity) {
@@ -1430,6 +1431,19 @@ const availabilityOps = {
       .where(and(eq(availabilityRequests.eventId, event.id), isNull(availabilityRequests.closedAt)))
       .returning({ id: availabilityRequests.id })
     if (!closed) throw new NotFound()
+  }),
+
+  /** Ask again with the latest request: the same people, their answers kept, their links working again. */
+  reopenAvailability: bandOp('member', z.object({ event: z.string() }), async ({ tx, bandId }, { event: slug }) => {
+    const event = await availabilityEvent(tx, bandId, slug)
+    const [latest] = await tx
+      .select({ id: availabilityRequests.id, closedAt: availabilityRequests.closedAt })
+      .from(availabilityRequests)
+      .where(eq(availabilityRequests.eventId, event.id))
+      .orderBy(desc(availabilityRequests.createdAt))
+      .limit(1)
+    if (!latest?.closedAt) throw new NotFound()
+    await tx.update(availabilityRequests).set({ closedAt: null }).where(eq(availabilityRequests.id, latest.id))
   }),
 
   /** Answer (or change your answer to) the open request, from inside the app. */

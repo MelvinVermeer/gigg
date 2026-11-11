@@ -33,30 +33,30 @@ function Setlist() {
       <Link to="/$band/events/$event" params={params} className="text-sm text-muted-foreground hover:text-foreground">
         ← {data.event.title} · {formatWhen(data.event)}
       </Link>
-      <div className="mt-1 mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-1 mb-4 flex items-center justify-between gap-3">
         <h1 className="mb-0">Setlist</h1>
-        <div className="flex flex-wrap gap-2">
-          {data.sets.length > 0 && (
-            <>
-              <Button asChild variant="outline" size="sm">
-                <Link to="/$band/events/$event/show" params={params}>
-                  <MonitorPlay aria-hidden /> Show mode
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link to="/$band/events/$event/print" params={params}>
-                  <Printer aria-hidden /> Stage-floor PDF
-                </Link>
-              </Button>
-            </>
-          )}
-          <HistoryLink item={data.event.id} />
-          {member && (
-            <Button size="sm" variant={editing ? 'default' : 'secondary'} onClick={() => setEditing(!editing)}>
-              {editing ? 'Done' : 'Edit'}
+        {member && (
+          <Button size="sm" variant={editing ? 'default' : 'secondary'} onClick={() => setEditing(!editing)}>
+            {editing ? 'Done' : 'Edit'}
+          </Button>
+        )}
+      </div>
+      <div className="mb-6 flex flex-wrap gap-2">
+        {data.sets.length > 0 && (
+          <>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/$band/events/$event/show" params={params}>
+                <MonitorPlay aria-hidden /> Show mode
+              </Link>
             </Button>
-          )}
-        </div>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/$band/events/$event/print" params={params}>
+                <Printer aria-hidden /> Stage-floor PDF
+              </Link>
+            </Button>
+          </>
+        )}
+        {!editing && <HistoryLink item={data.event.id} />}
       </div>
       {member && editing && data.standards.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">

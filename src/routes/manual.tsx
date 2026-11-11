@@ -80,7 +80,7 @@ function Manual() {
               </Link>
             </li>
             <li>
-              <Link to="/$band/blocks" params={{ band: b.slug }} search={{ archived: true }}>
+              <Link to="/$band/setlists" params={{ band: b.slug }} search={{ archived: true }} hash="blocks">
                 Archived blocks
               </Link>
             </li>

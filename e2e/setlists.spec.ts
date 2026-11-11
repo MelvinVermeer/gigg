@@ -27,7 +27,7 @@ test.describe('member', () => {
     const ts = Date.now()
 
     // A block to reuse.
-    await page.goto('/demo-band/blocks')
+    await page.goto('/demo-band/setlists')
     await page.getByLabel('New block name').fill(`Encore ${ts}`)
     await page.getByRole('button', { name: 'Create block' }).click()
     const block = page.locator('ul.records li', { hasText: `Encore ${ts}` })

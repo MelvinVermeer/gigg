@@ -1,4 +1,4 @@
-import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
+import { createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { SetlistBuilder } from '#/components/SetlistBuilder'
 import { Button } from '#/components/ui/button'
@@ -33,10 +33,7 @@ function Setlist() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3">
-        <Link to="/$band/setlists" params={{ band: band.slug }} className="text-sm text-muted-foreground hover:text-foreground">
-          ← Setlists
-        </Link>
+      <div className="flex justify-end">
         <HistoryLink item={id} />
       </div>
       <h1 className="mt-1">

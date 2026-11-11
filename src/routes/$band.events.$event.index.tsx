@@ -28,12 +28,7 @@ function Event() {
   return (
     <>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link to="/$band/events" params={{ band: band.slug }} className="text-sm text-muted-foreground hover:text-foreground">
-            ← All events
-          </Link>
-          <h1 className="mt-1 mb-0">{event.title}</h1>
-        </div>
+        <h1 className="mb-0">{event.title}</h1>
         {band.role === 'member' && (
           <Button asChild variant="outline" size="sm">
             <Link to="/$band/events/$event/edit" params={params}>

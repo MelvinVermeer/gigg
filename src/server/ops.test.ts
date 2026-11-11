@@ -696,6 +696,22 @@ describe('availability', () => {
     await expect(bandOps.closeAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).rejects.toBeInstanceOf(Forbidden)
   })
 
+  it('reopens the latest request with its answers and links', async () => {
+    const t = await testDb()
+    const asked = await ask(t)
+    await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'summer-party', answer: 'no' })
+    await bandOps.closeAvailability(t.db, t.member, t.band, { event: 'summer-party' })
+    await expect(bandOps.reopenAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).rejects.toBeInstanceOf(Forbidden)
+    await bandOps.reopenAvailability(t.db, t.member, t.band, { event: 'summer-party' })
+    await expect(bandOps.reopenAvailability(t.db, t.member, t.band, { event: 'summer-party' })).rejects.toBeInstanceOf(NotFound)
+    const info = await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })
+    expect(info).toMatchObject({ open: true })
+    expect(info!.responses.find((r) => r.mine)).toMatchObject({ answer: 'no' })
+    await answerByToken(t.db, tokenOf(asked, 'member@example.com'), { answer: 'yes' })
+    const lines = (await bandOps.listChanges(t.db, t.reader, t.band, {})).flatMap((s) => s.lines)
+    expect(lines).toContainEqual(expect.stringMatching(/^Reopened the availability request for event/))
+  })
+
   it('allows one open request per event; closing keeps answers and allows a new request', async () => {
     const t = await testDb()
     const asked = await ask(t)

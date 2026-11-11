@@ -1,4 +1,4 @@
-import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { SongListEditor, totalDuration } from '#/components/SongListEditor'
 import type { SongRef } from '#/components/SongListEditor'
@@ -8,27 +8,18 @@ import { Field } from '#/components/Field'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { bandOp } from '#/server/fns'
-import { archivedSearch } from '#/lib/archived'
 import { HistoryLink } from '#/components/HistoryLink'
-
-export const Route = createFileRoute('/$band/blocks')({
-  validateSearch: archivedSearch,
-  loaderDeps: ({ search }) => ({ archived: !!search.archived }),
-  loader: ({ params, deps }) => bandOp('listBlocks', params.band, { archived: deps.archived }),
-  component: Blocks,
-})
 
 const bandRoute = getRouteApi('/$band')
 
 type Block = { id: string; name: string; archivedAt: Date | null; songs: SongRef[] }
 
-function Blocks() {
-  const { blocks, songs } = Route.useLoaderData()
+/** Create and edit blocks. `archived` lists the archived ones instead. */
+export function Blocks({ blocks, songs, archived, }: { blocks: Block[]; songs: SongRef[]; archived: boolean }) {
   const band = bandRoute.useLoaderData()
   const router = useRouter()
   const editable = band.role === 'member'
   const [name, setName] = useState('')
-  const { archived } = Route.useSearch()
 
   async function create(e: React.FormEvent) {
     e.preventDefault()
@@ -40,14 +31,8 @@ function Blocks() {
 
   return (
     <>
-      <h1>{archived ? 'Archived blocks' : 'Blocks'}</h1>
-      {archived ? (
-        <Button asChild variant="ghost" size="sm" className="mb-4">
-          <Link to="/$band/blocks" params={{ band: band.slug }}>
-            Back to blocks
-          </Link>
-        </Button>
-      ) : (
+      <h2 id="blocks">{archived ? 'Archived blocks' : 'Blocks'}</h2>
+      {!archived && (
         <p className="mb-6 text-muted-foreground">Reusable runs of songs, like an acoustic bit or the encore. Adding a block to a set copies its songs.</p>
       )}
       {!archived && editable && (
