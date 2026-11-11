@@ -29,6 +29,13 @@
       "when": 1794346454810,
       "tag": "0003_change_tx",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794389688987,
+      "tag": "0004_dapper_sinister_six",
+      "breakpoints": true
     }
   ]
 }

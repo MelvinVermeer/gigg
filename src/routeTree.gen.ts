@@ -21,6 +21,7 @@ import { Route as BandFeedbackRouteImport } from './routes/$band.feedback'
 import { Route as BandHistoryRouteImport } from './routes/$band.history'
 import { Route as BandSearchRouteImport } from './routes/$band.search'
 import { Route as ApiFilesRouteImport } from './routes/api/files'
+import { Route as AvailabilityTokenRouteImport } from './routes/availability.$token'
 import { Route as BandEventsIndexRouteImport } from './routes/$band.events.index'
 import { Route as BandEventsNewRouteImport } from './routes/$band.events.new'
 import { Route as BandSetlistsIndexRouteImport } from './routes/$band.setlists.index'
@@ -98,6 +99,11 @@ const BandSearchRoute = BandSearchRouteImport.update({
 const ApiFilesRoute = ApiFilesRouteImport.update({
   id: '/api/files',
   path: '/api/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AvailabilityTokenRoute = AvailabilityTokenRouteImport.update({
+  id: '/availability/$token',
+  path: '/availability/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BandEventsIndexRoute = BandEventsIndexRouteImport.update({
@@ -203,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
   '/api/files': typeof ApiFilesRouteWithChildren
+  '/availability/$token': typeof AvailabilityTokenRoute
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
   '/$band/setlists/$setlist': typeof BandSetlistsSetlistRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByTo {
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
   '/api/files': typeof ApiFilesRouteWithChildren
+  '/availability/$token': typeof AvailabilityTokenRoute
   '/$band': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
   '/$band/setlists/$setlist': typeof BandSetlistsSetlistRoute
@@ -267,6 +275,7 @@ export interface FileRoutesById {
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
   '/api/files': typeof ApiFilesRouteWithChildren
+  '/availability/$token': typeof AvailabilityTokenRoute
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
   '/$band/setlists/$setlist': typeof BandSetlistsSetlistRoute
@@ -301,6 +310,7 @@ export interface FileRouteTypes {
     | '/$band/history'
     | '/$band/search'
     | '/api/files'
+    | '/availability/$token'
     | '/$band/'
     | '/$band/events/new'
     | '/$band/setlists/$setlist'
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/$band/history'
     | '/$band/search'
     | '/api/files'
+    | '/availability/$token'
     | '/$band'
     | '/$band/events/new'
     | '/$band/setlists/$setlist'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/$band/history'
     | '/$band/search'
     | '/api/files'
+    | '/availability/$token'
     | '/$band/'
     | '/$band/events/new'
     | '/$band/setlists/$setlist'
@@ -393,6 +405,7 @@ export interface RootRouteChildren {
   ManualRoute: typeof ManualRoute
   MeRoute: typeof MeRoute
   ApiFilesRoute: typeof ApiFilesRouteWithChildren
+  AvailabilityTokenRoute: typeof AvailabilityTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -480,6 +493,13 @@ declare module '@tanstack/react-router' {
       path: '/api/files'
       fullPath: '/api/files'
       preLoaderRoute: typeof ApiFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/availability/$token': {
+      id: '/availability/$token'
+      path: '/availability/$token'
+      fullPath: '/availability/$token'
+      preLoaderRoute: typeof AvailabilityTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$band/events/': {
@@ -681,6 +701,7 @@ const rootRouteChildren: RootRouteChildren = {
   ManualRoute: ManualRoute,
   MeRoute: MeRoute,
   ApiFilesRoute: ApiFilesRouteWithChildren,
+  AvailabilityTokenRoute: AvailabilityTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

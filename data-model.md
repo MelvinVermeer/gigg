@@ -16,11 +16,13 @@ Source of truth: [`src/server/db/schema.ts`](src/server/db/schema.ts) (app table
 `accounts`, `verifications`, `passkeys`).
 
 Tables: `bands`, `memberships`, `slug_redirects`, `songs`, `venues`, `contacts`, `events`,
-`event_contacts`, `setlists`, `sets`, `set_items`, `blocks`, `block_songs`, `files`, `feedback`, `changes`.
+`event_contacts`, `setlists`, `sets`, `set_items`, `blocks`, `block_songs`, `files`, `feedback`,
+`availability_requests`, `availability_responses`, `changes`.
 
 Decisions made while building:
 - **Child tables have `band_id` too** (`sets`, `set_items`, `event_contacts`, `block_songs`), so every audit entry has a band and every query can filter on band.
 - `slug_redirects` has its own `id`; uniqueness is `(band_id, type, old_slug)` with nulls not distinct (band slugs have no band).
+- **Availability**: an event has at most one *open* `availability_requests` row (partial unique index); it stores the date asked, so a moved event shows as stale. `availability_responses` has one row per person asked (`answer` null = waiting) and a `token_hash` for the emailed link. Only the hash is stored; answering by link sets the audit user to the responder. Requests are closed, never deleted.
 - `users` comes from Better Auth; anonymisation (`anonymised_at`) is added when member removal is built.
 
 ## Audit trail: a Postgres trigger

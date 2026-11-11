@@ -13,6 +13,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
 import { users } from './auth-schema'
@@ -149,6 +150,43 @@ export const eventContacts = pgTable(
     role: text('role'), // 'promoter', 'sound', ...
   },
   (t) => [primaryKey({ columns: [t.eventId, t.contactId] })],
+)
+
+// Availability ------------------------------------------------------------
+
+export const availabilityAnswer = pgEnum('availability_answer', ['yes', 'no', 'maybe'])
+
+// "Can you make it?" for an event. `date` is the date that was asked; if the event moves, the answers are stale.
+// At most one open request per event; closing it allows a new one.
+export const availabilityRequests = pgTable(
+  'availability_requests',
+  {
+    id: id(),
+    bandId: bandId(),
+    eventId: uuid('event_id').notNull().references(() => events.id),
+    date: date('date').notNull(),
+    askedBy: uuid('asked_by').notNull().references(() => users.id),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('availability_one_open').on(t.eventId).where(sql`${t.closedAt} is null`)],
+)
+
+// One row per person asked; answer is null while waiting. The emailed link carries a random token; only its hash is stored.
+export const availabilityResponses = pgTable(
+  'availability_responses',
+  {
+    id: id(),
+    bandId: bandId(),
+    requestId: uuid('request_id').notNull().references(() => availabilityRequests.id),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    answer: availabilityAnswer('answer'),
+    note: text('note'),
+    tokenHash: text('token_hash').notNull().unique(),
+    answeredAt: timestamp('answered_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [unique().on(t.requestId, t.userId)],
 )
 
 // Setlists ----------------------------------------------------------------

@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
-import { bands, changes, contacts, memberships, songs, users, venues } from './db/schema'
-import { archiveBand, bandOps, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, slugify } from './ops'
+import { bands, changes, contacts, events, memberships, songs, users, venues } from './db/schema'
+import { answerByToken, archiveBand, availabilityByToken, bandOps, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, slugify } from './ops'
 import type { BandOpName } from './ops'
 import { testDb } from './test-db'
 
@@ -632,5 +632,70 @@ describe('members', () => {
     const t = await testDb()
     await expect(bandOps.inviteMember(t.db, t.member, t.band, { email: 'nope', role: 'reader' })).rejects.toThrow()
     await expect(bandOps.removeMember(t.db, t.member, t.band, { email: 'member@example.com' })).rejects.toThrow(/yourself/)
+  })
+})
+
+describe('availability', () => {
+  const ask = (t: Awaited<ReturnType<typeof testDb>>, emails = ['member@example.com', 'reader@example.com']) =>
+    bandOps.askAvailability(t.db, t.member, t.band, { event: 'summer-party', emails })
+  const tokenOf = (a: Awaited<ReturnType<typeof ask>>, email: string) => a.recipients.find((r) => r.email === email)!.token
+
+  it('asks people, who answer in the app or from a link, with a note', async () => {
+    const t = await testDb()
+    const asked = await ask(t)
+    expect(asked.recipients).toHaveLength(2)
+    await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'summer-party', answer: 'maybe', note: 'after 9pm' })
+    await answerByToken(t.db, tokenOf(asked, 'member@example.com'), { answer: 'yes' })
+    const info = await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })
+    expect(info).toMatchObject({ open: true, stale: false })
+    expect(info!.responses.map((r) => [r.email, r.answer, r.note, r.mine])).toEqual([
+      ['member@example.com', 'yes', null, false],
+      ['reader@example.com', 'maybe', 'after 9pm', true],
+    ])
+  })
+
+  it('only members ask or close; only people asked can answer; only band members can be asked', async () => {
+    const t = await testDb()
+    await expect(bandOps.askAvailability(t.db, t.reader, t.band, { event: 'summer-party', emails: ['member@example.com'] })).rejects.toBeInstanceOf(Forbidden)
+    await expect(ask(t, ['outsider@example.com'])).rejects.toBeInstanceOf(NotFound)
+    await ask(t, ['member@example.com'])
+    await expect(bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'summer-party', answer: 'yes' })).rejects.toBeInstanceOf(NotFound)
+    await expect(bandOps.closeAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).rejects.toBeInstanceOf(Forbidden)
+  })
+
+  it('allows one open request per event; closing keeps answers and allows a new request', async () => {
+    const t = await testDb()
+    const asked = await ask(t)
+    await expect(ask(t)).rejects.toThrow(/already/)
+    await bandOps.closeAvailability(t.db, t.member, t.band, { event: 'summer-party' })
+    expect(await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).toMatchObject({ open: false })
+    await expect(bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'summer-party', answer: 'yes' })).rejects.toBeInstanceOf(NotFound)
+    expect(await availabilityByToken(t.db, tokenOf(asked, 'member@example.com'))).toMatchObject({ closed: true })
+    await expect(answerByToken(t.db, tokenOf(asked, 'member@example.com'), { answer: 'yes' })).rejects.toThrow(/closed/)
+    await ask(t)
+    expect(await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).toMatchObject({ open: true })
+  })
+
+  it('flags answers as stale when the event moved', async () => {
+    const t = await testDb()
+    await ask(t)
+    await t.db.update(events).set({ date: '2031-01-01' }).where(eq(events.slug, 'summer-party'))
+    expect(await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).toMatchObject({ stale: true })
+  })
+
+  it('link tokens: unknown tokens fail, reading changes nothing, the audit trail names the person, left members lose access', async () => {
+    const t = await testDb()
+    const asked = await ask(t)
+    const token = tokenOf(asked, 'reader@example.com')
+    await expect(availabilityByToken(t.db, 'nope')).rejects.toBeInstanceOf(NotFound)
+    expect(await availabilityByToken(t.db, token)).toMatchObject({ answer: null, closed: false, event: 'Summer Party' })
+    expect((await bandOps.getAvailability(t.db, t.member, t.band, { event: 'summer-party' }))!.responses.every((r) => !r.answer)).toBe(true)
+    await answerByToken(t.db, token, { answer: 'no', note: 'working' })
+    const [change] = await t.db.select().from(changes).where(and(eq(changes.tableName, 'availability_responses'), eq(changes.action, 'update')))
+    expect(change.userId).toBe(t.reader)
+    await expect(answerByToken(t.db, token, { answer: 'maybe' })).resolves.not.toThrow() // changing is allowed
+    await expect(answerByToken(t.db, token, { answer: 'sure' })).rejects.toThrow()
+    await t.db.update(memberships).set({ archivedAt: new Date() }).where(eq(memberships.userId, t.reader))
+    await expect(availabilityByToken(t.db, token)).rejects.toBeInstanceOf(NotFound)
   })
 })

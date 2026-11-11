@@ -1,6 +1,7 @@
 import { Link, createFileRoute, getRouteApi, redirect, useRouter } from '@tanstack/react-router'
 import { formatDate, statusLabel } from '#/lib/date'
 import { formatDuration } from '#/lib/duration'
+import { Availability } from '#/components/Availability'
 import { Files } from '#/components/Files'
 import { bandOp } from '#/server/fns'
 
@@ -8,7 +9,7 @@ export const Route = createFileRoute('/$band/events/$event/')({
   loader: async ({ params }) => {
     const res = await bandOp('getEvent', params.band, { slug: params.event })
     if (res.moved) throw redirect({ to: '/$band/events/$event', params: { ...params, event: res.slug } })
-    return res
+    return { ...res, availability: await bandOp('getAvailability', params.band, { event: params.event }) }
   },
   component: Event,
 })
@@ -16,7 +17,7 @@ export const Route = createFileRoute('/$band/events/$event/')({
 const bandRoute = getRouteApi('/$band')
 
 function Event() {
-  const { event, venue, contacts, setlist, files } = Route.useLoaderData()
+  const { event, venue, contacts, setlist, files, availability } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const router = useRouter()
   const params = { band: band.slug, event: event.slug }
@@ -91,6 +92,7 @@ function Event() {
         </dd>
       </dl>
       {event.notes && <p className="notes">{event.notes}</p>}
+      <Availability band={band.slug} event={event.slug} info={availability} canAsk={band.role === 'member' && !event.archivedAt} />
       <Files band={band.slug} owner={{ event: event.slug }} files={files} canEdit={band.role === 'member' && !event.archivedAt} />
       {band.role === 'member' && (
         <p>

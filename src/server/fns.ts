@@ -7,7 +7,7 @@ import type { z } from 'zod'
 import { auth, isAdminEmail } from './auth'
 import { db } from './db'
 import { sendMail } from './mail'
-import { archiveBand, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, listFeedback, myBands, NotFound } from './ops'
+import { answerByToken, archiveBand, availabilityByToken, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, listFeedback, myBands, NotFound } from './ops'
 import type { BandOpName, BandOps } from './ops'
 
 const authed = createMiddleware({ type: 'function' }).server(async ({ next }) => {
@@ -116,3 +116,45 @@ export const inviteMember = createServerFn({ method: 'POST' })
     })
     return invited
   })
+
+/** Ask people whether they can make an event: record the request (ops.ts), then mail each person their one-tap links. */
+export const askAvailability = createServerFn({ method: 'POST' })
+  .middleware([authed])
+  .validator((data: { band: string; event: string; emails: string[] }) => data)
+  .handler(async ({ context, data }) => {
+    const asked = await run(context.userId, { band: data.band, op: 'askAvailability', input: { event: data.event, emails: data.emails } }, false)
+    const { band, event } = asked
+    const when = new Date(`${event.date}T00:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    for (const r of asked.recipients) {
+      const link = (answer: string) => new URL(`/availability/${r.token}?answer=${answer}`, getRequestUrl())
+      await sendMail({
+        to: r.email,
+        subject: `Can you make ${event.title} on ${when}?`,
+        text: [
+          `${band.name} is checking who can make ${event.title}${event.venue ? ` at ${event.venue}` : ''} on ${when}.`,
+          '',
+          `Yes: ${link('yes')}`,
+          `Maybe: ${link('maybe')}`,
+          `No: ${link('no')}`,
+          '',
+          'You confirm on the next page, and can change your answer until the request is closed.',
+        ].join('\n'),
+      })
+    }
+    return { sent: asked.recipients.length }
+  })
+
+// Answering from an emailed link needs no login: the token is the credential (see ops.ts).
+const gone = () => {
+  throw notFound()
+}
+
+export const getAvailabilityByToken = createServerFn({ method: 'GET' })
+  .validator((data: { token: string }) => data)
+  .handler(({ data }) => availabilityByToken(db, String(data.token)).catch((e) => (e instanceof NotFound ? gone() : Promise.reject(e))))
+
+export const answerAvailabilityByToken = createServerFn({ method: 'POST' })
+  .validator((data: { token: string; answer: string; note?: string }) => data)
+  .handler(({ data }) =>
+    answerByToken(db, String(data.token), { answer: data.answer, note: data.note }).catch((e) => (e instanceof NotFound ? gone() : Promise.reject(e))),
+  )

@@ -1,10 +1,14 @@
 // Band data operations as plain functions: (db, userId, bandSlug, input) → result.
 // Server functions (fns.ts) are thin wrappers around these, so everything here is testable without HTTP.
+import { createHash, randomBytes } from 'node:crypto'
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, notInArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { formatDuration } from '#/lib/duration'
 import type { Db } from './db'
 import {
+  availabilityAnswer,
+  availabilityRequests,
+  availabilityResponses,
   bands,
   blockSongs,
   blocks,
@@ -1217,6 +1221,174 @@ const historyOps = {
   }),
 }
 
+// Availability -------------------------------------------------------------
+
+const answerInput = z.object({ answer: z.enum(availabilityAnswer.enumValues), note: optText(500) })
+const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
+
+async function availabilityEvent(tx: Tx, bandId: string, slug: string) {
+  const [event] = await tx
+    .select({ id: events.id, title: events.title, slug: events.slug, date: events.date, venue: venues.name })
+    .from(events)
+    .leftJoin(venues, eq(venues.id, events.venueId))
+    .where(and(eq(events.bandId, bandId), eq(events.slug, slug)))
+  if (!event) throw new NotFound()
+  return event
+}
+
+const answered = (answer: 'yes' | 'no' | 'maybe', note: string | null) => ({ answer, note, answeredAt: new Date() })
+
+const availabilityOps = {
+  /** The event's latest request (open, or the last closed one) with everyone's answer; null if never asked. */
+  getAvailability: bandOp('reader', z.object({ event: z.string() }), async ({ tx, bandId, userId }, { event: slug }) => {
+    const event = await availabilityEvent(tx, bandId, slug)
+    const [request] = await tx
+      .select()
+      .from(availabilityRequests)
+      .where(eq(availabilityRequests.eventId, event.id))
+      .orderBy(desc(availabilityRequests.createdAt))
+      .limit(1)
+    if (!request) return null
+    const responses = await tx
+      .select({
+        userId: availabilityResponses.userId,
+        name: users.name,
+        email: users.email,
+        answer: availabilityResponses.answer,
+        note: availabilityResponses.note,
+      })
+      .from(availabilityResponses)
+      .innerJoin(users, eq(users.id, availabilityResponses.userId))
+      .where(eq(availabilityResponses.requestId, request.id))
+      .orderBy(asc(users.name), asc(users.email))
+    return {
+      open: !request.closedAt,
+      date: request.date,
+      stale: request.date !== event.date, // the event moved after people were asked
+      responses: responses.map(({ userId: id, ...r }) => ({ ...r, mine: id === userId })),
+    }
+  }),
+
+  /**
+   * Ask these members/readers (by email) whether they can make the event. Returns what the caller
+   * needs to mail each person their personal link; the tokens exist nowhere else (only hashes are stored).
+   */
+  askAvailability: bandOp(
+    'member',
+    z.object({ event: z.string(), emails: z.array(z.string().trim().toLowerCase()).min(1).max(100) }),
+    async ({ tx, bandId, userId }, { event: slug, emails }) => {
+      const event = await availabilityEvent(tx, bandId, slug)
+      const people = await tx
+        .select({ id: users.id, email: users.email })
+        .from(memberships)
+        .innerJoin(users, eq(users.id, memberships.userId))
+        .where(and(eq(memberships.bandId, bandId), isNull(memberships.archivedAt), inArray(users.email, emails)))
+      if (people.length !== new Set(emails).size) throw new NotFound()
+      const [open] = await tx
+        .select({ id: availabilityRequests.id })
+        .from(availabilityRequests)
+        .where(and(eq(availabilityRequests.eventId, event.id), isNull(availabilityRequests.closedAt)))
+      if (open) throw new Error('This event is already being asked. Close that request first.')
+      const [request] = await tx
+        .insert(availabilityRequests)
+        .values({ bandId, eventId: event.id, date: event.date, askedBy: userId })
+        .returning({ id: availabilityRequests.id })
+      const recipients = people.map((p) => ({ ...p, token: randomBytes(32).toString('base64url') }))
+      await tx
+        .insert(availabilityResponses)
+        .values(recipients.map((r) => ({ bandId, requestId: request.id, userId: r.id, tokenHash: sha256(r.token) })))
+      const [band] = await tx.select({ name: bands.name, slug: bands.slug }).from(bands).where(eq(bands.id, bandId))
+      return { band, event, recipients }
+    },
+  ),
+
+  /** Stop asking. The answers stay visible. */
+  closeAvailability: bandOp('member', z.object({ event: z.string() }), async ({ tx, bandId }, { event: slug }) => {
+    const event = await availabilityEvent(tx, bandId, slug)
+    const [closed] = await tx
+      .update(availabilityRequests)
+      .set({ closedAt: new Date() })
+      .where(and(eq(availabilityRequests.eventId, event.id), isNull(availabilityRequests.closedAt)))
+      .returning({ id: availabilityRequests.id })
+    if (!closed) throw new NotFound()
+  }),
+
+  /** Answer (or change your answer to) the open request, from inside the app. */
+  answerAvailability: bandOp('reader', answerInput.extend({ event: z.string() }), async ({ tx, bandId, userId }, { event: slug, answer, note }) => {
+    const event = await availabilityEvent(tx, bandId, slug)
+    const [mine] = await tx
+      .select({ id: availabilityResponses.id })
+      .from(availabilityResponses)
+      .innerJoin(availabilityRequests, eq(availabilityRequests.id, availabilityResponses.requestId))
+      .where(and(eq(availabilityRequests.eventId, event.id), isNull(availabilityRequests.closedAt), eq(availabilityResponses.userId, userId)))
+    if (!mine) throw new NotFound()
+    await tx.update(availabilityResponses).set(answered(answer, note)).where(eq(availabilityResponses.id, mine.id))
+  }),
+}
+
+/** The response behind an emailed link, if the person is still in the band. */
+async function responseByToken(tx: Tx, token: string) {
+  const [row] = await tx
+    .select({
+      id: availabilityResponses.id,
+      userId: availabilityResponses.userId,
+      answer: availabilityResponses.answer,
+      note: availabilityResponses.note,
+      name: users.name,
+      closed: availabilityRequests.closedAt,
+      date: availabilityRequests.date,
+      eventDate: events.date,
+      eventTitle: events.title,
+      venue: venues.name,
+      bandName: bands.name,
+    })
+    .from(availabilityResponses)
+    .innerJoin(availabilityRequests, eq(availabilityRequests.id, availabilityResponses.requestId))
+    .innerJoin(events, eq(events.id, availabilityRequests.eventId))
+    .leftJoin(venues, eq(venues.id, events.venueId))
+    .innerJoin(bands, eq(bands.id, availabilityRequests.bandId))
+    .innerJoin(users, eq(users.id, availabilityResponses.userId))
+    .innerJoin(
+      memberships,
+      and(eq(memberships.bandId, availabilityRequests.bandId), eq(memberships.userId, availabilityResponses.userId), isNull(memberships.archivedAt)),
+    )
+    .where(and(eq(availabilityResponses.tokenHash, sha256(token)), isNull(bands.archivedAt)))
+  if (!row) throw new NotFound()
+  return row
+}
+
+/**
+ * Link-based answering: no login, the token is the credential. It reaches exactly one answer.
+ * Reading never changes anything (mail scanners prefetch links); only answerByToken writes.
+ */
+export function availabilityByToken(db: Db, token: string) {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`set transaction read only`)
+    const r = await responseByToken(tx, token)
+    return {
+      band: r.bandName,
+      name: r.name,
+      event: r.eventTitle,
+      venue: r.venue,
+      date: r.date,
+      stale: r.date !== r.eventDate,
+      closed: !!r.closed,
+      answer: r.answer,
+      note: r.note,
+    }
+  })
+}
+
+export async function answerByToken(db: Db, token: string, rawInput: unknown) {
+  const input = answerInput.parse(rawInput)
+  return db.transaction(async (tx) => {
+    const r = await responseByToken(tx, token)
+    if (r.closed) throw new Error('This request is closed')
+    await tx.execute(sql`select set_config('app.user_id', ${r.userId}, true)`) // the audit trail shows who answered
+    await tx.update(availabilityResponses).set(answered(input.answer, input.note)).where(eq(availabilityResponses.id, r.id))
+  })
+}
+
 // All band operations ------------------------------------------------------
 
 /** Every band-scoped operation. The authorisation tests run all of them, so add new ones here. */
@@ -1237,6 +1409,7 @@ export const bandOps = {
   ...setlistOps,
   ...searchOps,
   ...historyOps,
+  ...availabilityOps,
 }
 
 export type BandOps = typeof bandOps
@@ -1328,7 +1501,7 @@ export async function deleteBandForever(db: Db, slug: string) {
       .where(and(eq(bands.slug, slug), isNotNull(bands.archivedAt)))
     if (!band) throw new NotFound()
     // Children before parents (foreign keys).
-    for (const table of [files, feedback, setItems, sets, setlists, blockSongs, blocks, eventContacts, events, contacts, venues, songs, slugRedirects, memberships])
+    for (const table of [availabilityResponses, availabilityRequests, files, feedback, setItems, sets, setlists, blockSongs, blocks, eventContacts, events, contacts, venues, songs, slugRedirects, memberships])
       await tx.delete(table).where(eq(table.bandId, band.id))
     await tx.delete(slugRedirects).where(and(eq(slugRedirects.type, 'band'), eq(slugRedirects.entityId, band.id)))
     await tx.delete(bands).where(eq(bands.id, band.id))
