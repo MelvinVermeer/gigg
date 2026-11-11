@@ -7,14 +7,14 @@ test.describe('user menu', () => {
 
   test('shows the email, the band and settings', async ({ page }) => {
     await page.goto('/')
-    const avatar = page.getByRole('button', { name: 'Account menu for reader@example.com' })
-    await expect(avatar).toHaveText('R')
+    const avatar = page.getByRole('button', { name: 'Account menu for Dev Reader' })
+    await expect(avatar).toHaveText('D')
     await expect(page.getByRole('link', { name: 'Sign in' })).toHaveCount(0)
 
     await avatar.click()
     const menu = page.locator('#user-menu')
     await expect(menu).toBeVisible()
-    await expect(menu).toContainText('reader@example.com')
+    await expect(menu).toContainText('Dev Reader')
     await expect(menu.getByRole('button', { name: 'Log out' })).toBeVisible()
 
     await page.keyboard.press('Escape')
@@ -29,7 +29,7 @@ test.describe('user menu', () => {
     await menu.getByRole('link', { name: 'Settings' }).click()
     await expect(page).toHaveURL(/\/demo-band\/settings$/)
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Settings')
-    await expect(page.getByText('Signed in as reader@example.com')).toBeVisible()
+    await expect(page.getByText('Signed in as Dev Reader')).toBeVisible()
   })
 })
 

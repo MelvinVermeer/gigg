@@ -8,7 +8,7 @@ const labels = { yes: 'Yes', maybe: 'Maybe', no: 'No' } as const
 /** "Can you make it?" on the event page: members ask people, everyone asked answers, all see the answers. */
 export function Availability({ band, event, info, canAsk }: { band: string; event: string; info: Info; canAsk: boolean }) {
   const router = useRouter()
-  const [people, setPeople] = useState<{ email: string; role: string }[] | null>(null)
+  const [people, setPeople] = useState<{ email: string; name: string; role: string }[] | null>(null)
   const [picked, setPicked] = useState<Set<string>>(new Set()) // nobody is preselected
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
@@ -136,7 +136,7 @@ export function Availability({ band, event, info, canAsk }: { band: string; even
                     setPicked(next)
                   }}
                 />{' '}
-                {p.email} ({p.role})
+                {p.name || p.email} ({p.role})
               </label>
             ))}
           </fieldset>

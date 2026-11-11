@@ -665,7 +665,7 @@ describe('availability', () => {
     const lines = saves.flatMap((s) => s.lines)
     expect(lines.slice(0, 3)).toEqual([
       expect.stringMatching(/^Closed the availability request for event/),
-      expect.stringMatching(/^“reader@example.com” answered maybe for event/),
+      expect.stringMatching(/^“Dev Reader” answered maybe for event/),
       expect.stringMatching(/^Asked availability for event/),
     ])
     expect(saves.flatMap((s) => s.diffs).some((d) => d.field === 'note' && d.to === 'after 9pm')).toBe(true)

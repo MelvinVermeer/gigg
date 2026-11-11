@@ -65,6 +65,15 @@ function Settings() {
     await router.invalidate()
   }
 
+  const [nameStatus, setNameStatus] = useState('')
+
+  async function saveName(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const res = await authClient.updateUser({ name: String(new FormData(e.currentTarget).get('name')).trim() })
+    setNameStatus(res.error ? (res.error.message ?? 'Could not save') : 'Saved')
+    await router.invalidate()
+  }
+
   function pick(t: Theme) {
     setTheme(t)
     setThemeState(t)
@@ -77,8 +86,14 @@ function Settings() {
       <section>
         <h2>You</h2>
         <p>
-          Signed in as <strong>{me?.email}</strong>
+          Signed in as <strong>{me?.name || me?.email}</strong>
         </p>
+        <form onSubmit={saveName}>
+          <label>
+            Display name <input name="name" defaultValue={me?.name} maxLength={100} placeholder={me?.email} />
+          </label>{' '}
+          <button type="submit">Save</button> <span role="status">{nameStatus}</span>
+        </form>
         {passkeys.data && passkeys.data.length > 0 && (
           <ul aria-label="Your passkeys">
             {passkeys.data.map((p) => (
@@ -124,7 +139,7 @@ function Settings() {
           <ul aria-label="Members">
             {members.map((m) => (
               <li key={m.email}>
-                {m.email} ({m.role}){' '}
+                {m.name || m.email} ({m.role}){' '}
                 {m.email !== me?.email && (
                   <button type="button" onClick={() => removeMember(m.email)}>
                     Remove

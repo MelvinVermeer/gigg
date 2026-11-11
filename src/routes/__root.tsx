@@ -85,7 +85,7 @@ function RootLayout() {
           <img className="logo-on-dark" src={lockup} alt="Gigg" height={32} width={97} />
         </Link>
         {searchBand && <HeaderSearch band={searchBand} />}
-        {me ? <UserMenu email={me.email} bands={me.bands} isAdmin={me.isAdmin} /> : <Link to="/login">Sign in</Link>}
+        {me ? <UserMenu name={me.name || me.email} bands={me.bands} isAdmin={me.isAdmin} /> : <Link to="/login">Sign in</Link>}
       </header>
       {me && <PasskeyPrompt />}
       <Outlet />

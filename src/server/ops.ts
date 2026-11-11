@@ -240,7 +240,7 @@ const feedbackOps = {
 const memberOps = {
   listMembers: bandOp('member', z.object({}), ({ tx, bandId }) =>
     tx
-      .select({ email: users.email, role: memberships.role })
+      .select({ email: users.email, name: users.name, role: memberships.role })
       .from(memberships)
       .innerJoin(users, eq(users.id, memberships.userId))
       .where(and(eq(memberships.bandId, bandId), isNull(memberships.archivedAt)))
@@ -255,7 +255,7 @@ const memberOps = {
     'member',
     z.object({ email: z.string().trim().toLowerCase().email().max(200), role: z.enum(role.enumValues) }),
     async ({ tx, bandId }, { email, role }) => {
-      await tx.insert(users).values({ name: email.split('@')[0], email }).onConflictDoNothing()
+      await tx.insert(users).values({ name: '', email }).onConflictDoNothing()
       const [user] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email))
       await tx
         .insert(memberships)
@@ -1089,8 +1089,8 @@ async function describe(tx: Tx, rows: Change[]) {
   }
   if (people.length || answerers.length) {
     const wanted = [...people.map((p) => p.userId), ...answerers.map((a) => a.user_id as string)]
-    const found = await tx.select({ id: users.id, email: users.email }).from(users).where(inArray(users.id, wanted))
-    const email = (id: string) => found.find((u) => u.id === id)?.email ?? 'someone'
+    const found = await tx.select({ id: users.id, email: users.email, name: users.name }).from(users).where(inArray(users.id, wanted))
+    const email = (id: string) => found.find((u) => u.id === id)?.name || found.find((u) => u.id === id)?.email || 'someone'
     for (const { userId, before, after } of people) {
       const who = `“${email(userId)}”`
       if (!after) lines.push(`Removed member ${who}`)
@@ -1137,7 +1137,7 @@ async function diff(tx: Tx, rows: Change[]): Promise<Diff[]> {
       union all select id::text, title from events where id in (${list})
       union all select id::text, name from setlists where id in (${list})
       union all select id::text, name from blocks where id in (${list})
-      union all select id::text, email from users where id in (${list})`)) as unknown as { rows: { id: string; name: string }[] }
+      union all select id::text, coalesce(nullif(name, ''), email) from users where id in (${list})`)) as unknown as { rows: { id: string; name: string }[] }
     for (const f of found) names.set(f.id, f.name)
   }
   const name = (id: unknown) => (typeof id === 'string' ? (names.get(id) ?? 'deleted') : '–')
@@ -1507,7 +1507,7 @@ export function listAllBands(db: Db) {
 
 export function listFeedback(db: Db) {
   return db
-    .select({ id: feedback.id, body: feedback.body, createdAt: feedback.createdAt, email: users.email, band: bands.name })
+    .select({ id: feedback.id, body: feedback.body, createdAt: feedback.createdAt, email: users.email, name: users.name, band: bands.name })
     .from(feedback)
     .innerJoin(users, eq(users.id, feedback.userId))
     .leftJoin(bands, eq(bands.id, feedback.bandId))
@@ -1531,7 +1531,7 @@ export async function createBand(db: Db, rawInput: z.input<typeof newBand>) {
     }
     const [band] = await tx.insert(bands).values({ slug, name }).returning()
     // Invitation only: having a users row is what lets them sign in (auth.ts).
-    await tx.insert(users).values({ name: email.split('@')[0], email }).onConflictDoNothing()
+    await tx.insert(users).values({ name: '', email }).onConflictDoNothing()
     const [user] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email))
     await tx.insert(memberships).values({ bandId: band.id, userId: user.id, role: 'member' })
     return { slug: band.slug, name: band.name }

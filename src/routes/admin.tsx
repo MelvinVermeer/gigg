@@ -89,7 +89,7 @@ function Admin() {
           <ul aria-label="Feedback">
             {feedback.map((f) => (
               <li key={f.id}>
-                <strong>{f.email}</strong>
+                <strong>{f.name || f.email}</strong>
                 {f.band && <> in {f.band}</>}, {new Date(f.createdAt).toLocaleDateString()}
                 <p className="notes">{f.body}</p>
               </li>

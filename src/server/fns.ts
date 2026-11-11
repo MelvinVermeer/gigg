@@ -20,7 +20,7 @@ const authed = createMiddleware({ type: 'function' }).server(async ({ next }) =>
 export const getMe = createServerFn({ method: 'GET' }).handler(async () => {
   const session = await auth.api.getSession({ headers: getRequestHeaders() })
   if (!session) return null
-  return { email: session.user.email, isAdmin: isAdminEmail(session.user.email), bands: await myBands(db, session.user.id) }
+  return { email: session.user.email, name: session.user.name, isAdmin: isAdminEmail(session.user.email), bands: await myBands(db, session.user.id) }
 })
 
 // Instance admin (ADMIN_EMAILS). Others get a 404, like outsiders of a band.
