@@ -597,3 +597,16 @@ ul.history ul.diffs li {
 .passkey-prompt::backdrop {
   background: rgb(0 0 0 / 0.4);
 }
+
+/* Header search: fills the space between logo and user menu. */
+.site-header {
+  gap: 1rem;
+}
+.header-search {
+  flex: 1;
+  max-width: 20rem;
+}
+.header-search input {
+  width: 100%;
+  font-size: 1rem;
+}

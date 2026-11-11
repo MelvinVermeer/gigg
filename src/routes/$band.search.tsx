@@ -1,5 +1,4 @@
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { bandOp } from '#/server/fns'
 import type { SearchResult } from '#/server/ops'
 
@@ -35,29 +34,11 @@ function Search() {
   const results = Route.useLoaderData()
   const { q = '' } = Route.useSearch()
   const { band } = Route.useParams()
-  const navigate = useNavigate({ from: Route.fullPath })
-  const [text, setText] = useState(q)
-
-  // Search as you type: update ?q= shortly after the last keystroke (replace, so Back skips keystrokes).
-  useEffect(() => {
-    if (text.trim() === q) return
-    const t = setTimeout(() => navigate({ search: text.trim() ? { q: text.trim() } : {}, replace: true }), 200)
-    return () => clearTimeout(t)
-  }, [text, q, navigate])
 
   return (
     <>
       <h1>Search</h1>
-      <form role="search" onSubmit={(e) => e.preventDefault()}>
-        <input
-          type="search"
-          aria-label="Search songs, events, venues and contacts"
-          placeholder="Songs, events, venues, contacts"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          autoFocus
-        />
-      </form>
+      {!q && <p>Type in the search box above.</p>}
       {q && !results.length && <p>Nothing found for “{q}”.</p>}
       {groups.map(({ type, title }) => {
         const hits = results.filter((r) => r.type === type)

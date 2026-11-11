@@ -1,8 +1,9 @@
-import { HeadContent, Link, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
+import { HeadContent, Link, Outlet, Scripts, createRootRoute, useParams } from '@tanstack/react-router'
 
 import lockup from '../assets/gigg-lockup.svg'
 import lockupInk from '../assets/gigg-lockup-ink.svg'
 import { useEffect, useState } from 'react'
+import { HeaderSearch } from '#/components/HeaderSearch'
 import { PasskeyPrompt } from '#/components/PasskeyPrompt'
 import { UserMenu } from '#/components/UserMenu'
 import { themeScript } from '#/lib/theme'
@@ -68,6 +69,8 @@ function useOnline() {
 function RootLayout() {
   const me = Route.useLoaderData()
   const online = useOnline()
+  // Search is per band: the band you're in, otherwise your first band.
+  const searchBand = useParams({ strict: false }).band ?? me?.bands[0]?.slug
   return (
     <>
       {!online && (
@@ -81,6 +84,7 @@ function RootLayout() {
           <img className="logo-on-light" src={lockupInk} alt="Gigg" height={32} width={97} />
           <img className="logo-on-dark" src={lockup} alt="Gigg" height={32} width={97} />
         </Link>
+        {searchBand && <HeaderSearch band={searchBand} />}
         {me ? <UserMenu email={me.email} bands={me.bands} isAdmin={me.isAdmin} /> : <Link to="/login">Sign in</Link>}
       </header>
       {me && <PasskeyPrompt />}
