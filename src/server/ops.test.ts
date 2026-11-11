@@ -608,3 +608,29 @@ describe('feedback', () => {
     expect(await listFeedback(t.db)).toMatchObject([{ body: 'Love it', email: 'reader@example.com', band: expect.any(String) }])
   })
 })
+
+describe('members', () => {
+  it('a member invites, changes a role, and removes; a removed person loses access and can be re-invited', async () => {
+    const t = await testDb()
+    const invited = await bandOps.inviteMember(t.db, t.member, t.band, { email: ' New@Example.com ', role: 'reader' })
+    expect(invited).toMatchObject({ email: 'new@example.com', role: 'reader' })
+    const [{ id }] = await t.db.select({ id: users.id }).from(users).where(eq(users.email, 'new@example.com'))
+    await expect(bandOps.listSongs(t.db, id, t.band, {})).resolves.toBeTruthy()
+    await expect(bandOps.createSong(t.db, id, t.band, { title: 'X' })).rejects.toBeInstanceOf(Forbidden)
+
+    await bandOps.inviteMember(t.db, t.member, t.band, { email: 'new@example.com', role: 'member' })
+    await expect(bandOps.createSong(t.db, id, t.band, { title: 'X' })).resolves.toBeTruthy()
+    expect((await bandOps.listMembers(t.db, t.member, t.band, {})).find((m) => m.email === 'new@example.com')?.role).toBe('member')
+
+    await bandOps.removeMember(t.db, t.member, t.band, { email: 'new@example.com' })
+    await expect(bandOps.listSongs(t.db, id, t.band, {})).rejects.toBeInstanceOf(Forbidden)
+    await bandOps.inviteMember(t.db, t.member, t.band, { email: 'new@example.com', role: 'reader' })
+    await expect(bandOps.listSongs(t.db, id, t.band, {})).resolves.toBeTruthy()
+  })
+
+  it('refuses bad emails and removing yourself', async () => {
+    const t = await testDb()
+    await expect(bandOps.inviteMember(t.db, t.member, t.band, { email: 'nope', role: 'reader' })).rejects.toThrow()
+    await expect(bandOps.removeMember(t.db, t.member, t.band, { email: 'member@example.com' })).rejects.toThrow(/yourself/)
+  })
+})

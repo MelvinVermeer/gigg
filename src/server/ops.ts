@@ -17,6 +17,7 @@ import {
   files,
   memberships,
   paymentStatus,
+  role,
   setItems,
   setlists,
   sets,
@@ -227,6 +228,51 @@ const feedbackOps = {
   /** Anyone in the band, readers included, can send feedback to the instance admin. */
   sendFeedback: bandOp('reader', z.object({ body: z.string().trim().min(1).max(5000) }), async ({ tx, bandId, userId }, { body }) => {
     await tx.insert(feedback).values({ bandId, userId, body })
+  }),
+}
+
+// Members ------------------------------------------------------------------
+
+const memberOps = {
+  listMembers: bandOp('member', z.object({}), ({ tx, bandId }) =>
+    tx
+      .select({ email: users.email, role: memberships.role })
+      .from(memberships)
+      .innerJoin(users, eq(users.id, memberships.userId))
+      .where(and(eq(memberships.bandId, bandId), isNull(memberships.archivedAt)))
+      .orderBy(asc(users.email)),
+  ),
+
+  /**
+   * Add someone by email as reader or member (invitation only: this creates their account).
+   * Inviting someone already in the band changes their role. The caller sends the mail (fns.ts).
+   */
+  inviteMember: bandOp(
+    'member',
+    z.object({ email: z.string().trim().toLowerCase().email().max(200), role: z.enum(role.enumValues) }),
+    async ({ tx, bandId }, { email, role }) => {
+      await tx.insert(users).values({ name: email.split('@')[0], email }).onConflictDoNothing()
+      const [user] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email))
+      await tx
+        .insert(memberships)
+        .values({ bandId, userId: user.id, role })
+        .onConflictDoUpdate({ target: [memberships.bandId, memberships.userId], set: { role, archivedAt: null } })
+      const [band] = await tx.select({ name: bands.name }).from(bands).where(eq(bands.id, bandId))
+      return { email, role, bandName: band.name }
+    },
+  ),
+
+  /** Archive the membership; they can be invited again. You can't remove yourself, so a band is never left empty. */
+  removeMember: bandOp('member', z.object({ email: z.string().trim().toLowerCase() }), async ({ tx, bandId, userId }, { email }) => {
+    const [user] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email))
+    if (!user) throw new NotFound()
+    if (user.id === userId) throw new Error('You cannot remove yourself')
+    const [row] = await tx
+      .update(memberships)
+      .set({ archivedAt: new Date() })
+      .where(and(eq(memberships.bandId, bandId), eq(memberships.userId, user.id), isNull(memberships.archivedAt)))
+      .returning({ userId: memberships.userId })
+    if (!row) throw new NotFound()
   }),
 }
 
@@ -1185,6 +1231,7 @@ export const bandOps = {
   ...songOps,
   ...fileOps,
   ...feedbackOps,
+  ...memberOps,
   ...eventOps,
   ...venueContactOps,
   ...setlistOps,

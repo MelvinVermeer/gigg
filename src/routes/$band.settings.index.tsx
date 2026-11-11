@@ -1,11 +1,16 @@
-import { Link, createFileRoute, getRouteApi } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 import { deviceName } from '#/lib/device-name'
+import { bandOp, inviteMember } from '#/server/fns'
 import { currentTheme, setTheme } from '#/lib/theme'
 import type { Theme } from '#/lib/theme'
 
-export const Route = createFileRoute('/$band/settings/')({ component: Settings })
+export const Route = createFileRoute('/$band/settings/')({
+  // Readers can't list members.
+  loader: async ({ params }) => ({ members: (await bandOp('getBand', params.band, {})).role === 'member' ? await bandOp('listMembers', params.band, {}) : [] }),
+  component: Settings,
+})
 
 const rootRoute = getRouteApi('__root__')
 const bandRoute = getRouteApi('/$band')
@@ -16,6 +21,8 @@ const themes: { value: Theme; label: string }[] = [
 ]
 
 function Settings() {
+  const { members } = Route.useLoaderData()
+  const router = useRouter()
   const me = rootRoute.useLoaderData()
   const band = bandRoute.useLoaderData()
   const [theme, setThemeState] = useState<Theme>('system')
@@ -33,6 +40,29 @@ function Settings() {
     const res = await authClient.passkey.deletePasskey({ id })
     setStatus(res.error ? (res.error.message ?? 'Could not delete passkey') : 'Passkey deleted')
     passkeys.refetch()
+  }
+
+  const [inviteStatus, setInviteStatus] = useState('')
+
+  async function invite(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const form = e.currentTarget
+    const data = new FormData(form)
+    setInviteStatus('')
+    try {
+      await inviteMember({ data: { band: band.slug, email: String(data.get('email')), role: String(data.get('role')) } })
+      form.reset()
+      setInviteStatus(`Invited ${data.get('email')}`)
+      await router.invalidate()
+    } catch (err) {
+      setInviteStatus(err instanceof Error ? err.message : 'Could not invite')
+    }
+  }
+
+  async function removeMember(email: string) {
+    if (!confirm(`Remove ${email} from ${band.name}?`)) return
+    await bandOp('removeMember', band.slug, { email })
+    await router.invalidate()
   }
 
   function pick(t: Theme) {
@@ -90,6 +120,33 @@ function Settings() {
               Contacts
             </Link>
           </p>
+          <h3>Members</h3>
+          <ul aria-label="Members">
+            {members.map((m) => (
+              <li key={m.email}>
+                {m.email} ({m.role}){' '}
+                {m.email !== me?.email && (
+                  <button type="button" onClick={() => removeMember(m.email)}>
+                    Remove
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <form onSubmit={invite}>
+            <label>
+              Invite by email <input name="email" type="email" required maxLength={200} />
+            </label>{' '}
+            <label>
+              Role{' '}
+              <select name="role">
+                <option value="member">Member (can edit)</option>
+                <option value="reader">Reader (view only)</option>
+              </select>
+            </label>{' '}
+            <button type="submit">Invite</button>
+          </form>
+          {inviteStatus && <p role="status">{inviteStatus}</p>}
         </section>
       )}
     </>

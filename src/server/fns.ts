@@ -102,3 +102,17 @@ export const deleteBandPermanently = createServerFn({ method: 'POST' })
   .middleware([admin])
   .validator((data: { slug: string }) => data)
   .handler(({ data }) => deleteBandForever(db, String(data.slug)))
+
+/** Invite by email: add the membership (ops.ts checks the caller is a member), then mail them. */
+export const inviteMember = createServerFn({ method: 'POST' })
+  .middleware([authed])
+  .validator((data: { band: string; email: string; role: string }) => data)
+  .handler(async ({ context, data }) => {
+    const invited = await run(context.userId, { band: data.band, op: 'inviteMember', input: { email: data.email, role: data.role } }, false)
+    await sendMail({
+      to: invited.email,
+      subject: `You've been added to ${invited.bandName} on Gigg`,
+      text: `You're now ${invited.role === 'member' ? 'a member' : 'a reader'} of ${invited.bandName} on Gigg: gigs, setlists and riders for bands.\n\nSign in with ${invited.email}: ${new URL('/login', getRequestUrl())}`,
+    })
+    return invited
+  })

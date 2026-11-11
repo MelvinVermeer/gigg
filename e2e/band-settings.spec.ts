@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { asMember, asReader } from './helpers'
+import { asMember, asReader, signIn } from './helpers'
 
 test.describe('member', () => {
   test.use(asMember)
@@ -22,6 +22,28 @@ test.describe('member', () => {
     await page.goto('/demo-band/events/summer-party')
     await expect(page.locator('.fields')).toContainText(address)
   })
+})
+
+test('a member invites someone, who signs in and sees the band, then is removed', async ({ browser }) => {
+  const member = await (await browser.newContext(asMember)).newPage()
+  const email = `invited-${Date.now()}@example.com`
+  await member.goto('/demo-band/settings')
+  await member.getByLabel('Invite by email').fill(email)
+  await member.getByLabel('Role').selectOption('reader')
+  await member.getByRole('button', { name: 'Invite' }).click()
+  const row = member.getByRole('listitem').filter({ hasText: email })
+  await expect(row).toContainText('reader')
+
+  const guest = await (await browser.newContext()).newPage()
+  await signIn(guest, email)
+  await expect(guest.getByRole('main').getByText('Demo Band')).toBeVisible()
+  await guest.goto('/demo-band/settings')
+  await expect(guest.getByLabel('Invite by email')).toHaveCount(0)
+
+  member.once('dialog', (d) => d.accept())
+  await row.getByRole('button', { name: 'Remove' }).click()
+  await expect(row).toHaveCount(0)
+  expect((await guest.request.get('/demo-band/songs')).status()).toBe(404)
 })
 
 test.describe('theme', () => {
