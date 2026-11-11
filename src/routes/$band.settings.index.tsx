@@ -188,7 +188,7 @@ function Settings() {
             <Input aria-label="Your calendar link" readOnly value={feedUrl} onFocus={(e) => e.currentTarget.select()} />
             <div className="flex flex-wrap gap-2">
               <Button asChild>
-                <a href={`https://calendar.google.com/calendar/render?cid=${encodeURIComponent(feedUrl)}`} target="_blank" rel="noreferrer">
+                <a href={`https://www.google.com/calendar/render?cid=${webcal}`} target="_blank" rel="noreferrer">
                   Add to Google Calendar
                 </a>
               </Button>
