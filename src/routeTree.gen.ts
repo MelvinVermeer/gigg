@@ -33,6 +33,7 @@ import { Route as BandSongsIndexRouteImport } from './routes/$band.songs.index'
 import { Route as BandSongsNewRouteImport } from './routes/$band.songs.new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiFilesIdRouteImport } from './routes/api/files.$id'
+import { Route as ApiFilesUploadRouteImport } from './routes/api/files.upload'
 import { Route as BandEventsEventIndexRouteImport } from './routes/$band.events.$event.index'
 import { Route as BandEventsEventEditRouteImport } from './routes/$band.events.$event.edit'
 import { Route as BandEventsEventPrintRouteImport } from './routes/$band.events.$event.print'
@@ -161,6 +162,11 @@ const ApiFilesIdRoute = ApiFilesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiFilesRoute,
 } as any)
+const ApiFilesUploadRoute = ApiFilesUploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
+  getParentRoute: () => ApiFilesRoute,
+} as any)
 const BandEventsEventIndexRoute = BandEventsEventIndexRouteImport.update({
   id: '/events/$event/',
   path: '/events/$event/',
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$id': typeof ApiFilesIdRoute
+  '/api/files/upload': typeof ApiFilesUploadRoute
   '/$band/events/': typeof BandEventsIndexRoute
   '/$band/setlists/': typeof BandSetlistsIndexRoute
   '/$band/settings/': typeof BandSettingsIndexRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByTo {
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$id': typeof ApiFilesIdRoute
+  '/api/files/upload': typeof ApiFilesUploadRoute
   '/$band/events': typeof BandEventsIndexRoute
   '/$band/setlists': typeof BandSetlistsIndexRoute
   '/$band/settings': typeof BandSettingsIndexRoute
@@ -284,6 +292,7 @@ export interface FileRoutesById {
   '/$band/songs/new': typeof BandSongsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/files/$id': typeof ApiFilesIdRoute
+  '/api/files/upload': typeof ApiFilesUploadRoute
   '/$band/events/': typeof BandEventsIndexRoute
   '/$band/setlists/': typeof BandSetlistsIndexRoute
   '/$band/settings/': typeof BandSettingsIndexRoute
@@ -319,6 +328,7 @@ export interface FileRouteTypes {
     | '/$band/songs/new'
     | '/api/auth/$'
     | '/api/files/$id'
+    | '/api/files/upload'
     | '/$band/events/'
     | '/$band/setlists/'
     | '/$band/settings/'
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/$band/songs/new'
     | '/api/auth/$'
     | '/api/files/$id'
+    | '/api/files/upload'
     | '/$band/events'
     | '/$band/setlists'
     | '/$band/settings'
@@ -384,6 +395,7 @@ export interface FileRouteTypes {
     | '/$band/songs/new'
     | '/api/auth/$'
     | '/api/files/$id'
+    | '/api/files/upload'
     | '/$band/events/'
     | '/$band/setlists/'
     | '/$band/settings/'
@@ -579,6 +591,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiFilesIdRouteImport
       parentRoute: typeof ApiFilesRoute
     }
+    '/api/files/upload': {
+      id: '/api/files/upload'
+      path: '/upload'
+      fullPath: '/api/files/upload'
+      preLoaderRoute: typeof ApiFilesUploadRouteImport
+      parentRoute: typeof ApiFilesRoute
+    }
     '/$band/events/$event/': {
       id: '/$band/events/$event/'
       path: '/events/$event'
@@ -683,10 +702,12 @@ const BandRouteWithChildren = BandRoute._addFileChildren(BandRouteChildren)
 
 interface ApiFilesRouteChildren {
   ApiFilesIdRoute: typeof ApiFilesIdRoute
+  ApiFilesUploadRoute: typeof ApiFilesUploadRoute
 }
 
 const ApiFilesRouteChildren: ApiFilesRouteChildren = {
   ApiFilesIdRoute: ApiFilesIdRoute,
+  ApiFilesUploadRoute: ApiFilesUploadRoute,
 }
 
 const ApiFilesRouteWithChildren = ApiFilesRoute._addFileChildren(

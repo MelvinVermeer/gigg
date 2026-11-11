@@ -26,6 +26,18 @@ test.describe('member', () => {
   })
 })
 
+test.describe('big file', () => {
+  test.use(asMember)
+
+  test('uploads a file over the old 4 MB limit', async ({ page }) => {
+    await page.goto('/demo-band/songs/closer')
+    const name = `big-${Date.now()}.bin`
+    await page.getByLabel('Add files').setInputFiles({ name, mimeType: 'application/octet-stream', buffer: Buffer.alloc(6 * 1024 * 1024, 1) })
+    await expect(page.getByRole('link', { name, exact: true })).toBeVisible()
+    await expect(page.getByRole('listitem').filter({ hasText: name })).toContainText('6.0 MB')
+  })
+})
+
 test.describe('reader', () => {
   test.use(asReader)
 

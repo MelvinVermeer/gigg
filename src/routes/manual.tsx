@@ -11,7 +11,7 @@ function Manual() {
       <h2>Songs</h2>
       <p>
         Your repertoire: title, duration, key, BPM, tuning, notes and tags. Attach lyrics, charts or recordings as files on the
-        song page (up to 4 MB each).
+        song page (up to 100 MB each).
       </p>
 
       <h2>Events</h2>

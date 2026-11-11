@@ -2,34 +2,57 @@ import { createFileRoute } from '@tanstack/react-router'
 import { auth } from '#/server/auth'
 import { db } from '#/server/db'
 import { bandOps, Forbidden, NotFound } from '#/server/ops'
-import { maxUploadBytes, putFile } from '#/server/storage'
+import { blobInfo, directUploads, isFileKey, maxUploadBytes, putLocalFile } from '#/server/storage'
 
-/** Upload one file to a song or event: multipart with band, song | event, file. */
+const mb = maxUploadBytes / 1024 / 1024
+
 export const Route = createFileRoute('/api/files')({
   server: {
     handlers: {
+      /** How the browser should upload: straight to Blob, or through us (local mode). */
+      GET: () => Response.json({ direct: directUploads, maxBytes: maxUploadBytes }),
+
+      /**
+       * Record an uploaded file on a song or event.
+       * - JSON { band, song | event, key, name }: the browser already uploaded to Blob (blob mode).
+       * - multipart { band, song | event, file }: local mode, the bytes come with the request.
+       */
       POST: async ({ request }) => {
         const session = await auth.api.getSession({ headers: request.headers })
         if (!session) return new Response('Sign in first', { status: 401 })
-        const form = await request.formData()
-        const file = form.get('file')
-        const band = String(form.get('band') ?? '')
-        if (!(file instanceof File) || !file.size) return new Response('No file', { status: 400 })
-        if (file.size > maxUploadBytes) return new Response(`Files can be up to ${maxUploadBytes / 1024 / 1024} MB`, { status: 413 })
-        const owner = { song: form.get('song') ?? undefined, event: form.get('event') ?? undefined }
-        const blobPath = crypto.randomUUID()
+        const userId = session.user.id
         try {
+          if (request.headers.get('content-type')?.includes('application/json')) {
+            const { band, song, event, key, name } = await request.json()
+            if (!directUploads || !isFileKey(String(key))) return new Response('Bad request', { status: 400 })
+            if ((await bandOps.getBand(db, userId, String(band), {})).role !== 'member') throw new Forbidden()
+            const info = await blobInfo(key)
+            if (!info) return new Response('Upload not found', { status: 400 })
+            return Response.json(
+              await bandOps.addFile(db, userId, band, { song, event, name, contentType: info.contentType, sizeBytes: info.size, blobPath: key }),
+            )
+          }
+
+          if (directUploads) return new Response('Use direct uploads', { status: 400 })
+          const form = await request.formData()
+          const file = form.get('file')
+          const band = String(form.get('band') ?? '')
+          if (!(file instanceof File) || !file.size) return new Response('No file', { status: 400 })
+          if (file.size > maxUploadBytes) return new Response(`Files can be up to ${mb} MB`, { status: 413 })
           // Members only, and the owner must exist, before any bytes are stored.
-          if ((await bandOps.getBand(db, session.user.id, band, {})).role !== 'member') throw new Forbidden()
-          await putFile(blobPath, file, file.type || 'application/octet-stream')
-          const row = await bandOps.addFile(db, session.user.id, band, {
-            ...owner,
-            name: file.name,
-            contentType: file.type || 'application/octet-stream',
-            sizeBytes: file.size,
-            blobPath,
-          })
-          return Response.json(row)
+          if ((await bandOps.getBand(db, userId, band, {})).role !== 'member') throw new Forbidden()
+          const key = crypto.randomUUID()
+          await putLocalFile(key, file)
+          return Response.json(
+            await bandOps.addFile(db, userId, band, {
+              song: form.get('song') ?? undefined,
+              event: form.get('event') ?? undefined,
+              name: file.name,
+              contentType: file.type || 'application/octet-stream',
+              sizeBytes: file.size,
+              blobPath: key,
+          }),
+          )
         } catch (e) {
           if (e instanceof Forbidden || e instanceof NotFound) return new Response('Not found', { status: 404 })
           throw e

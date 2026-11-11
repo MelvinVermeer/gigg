@@ -189,8 +189,8 @@ const fileOps = {
         event: z.string().optional(),
         name: z.string().trim().min(1).max(maxFileNameLength),
         contentType: z.string().trim().min(1).max(200),
-        sizeBytes: z.number().int().min(0),
-        blobPath: z.string().min(1).max(200),
+        sizeBytes: z.number().int().min(0).max(100 * 1024 * 1024),
+        blobPath: z.string().regex(/^[0-9a-f-]{36}$/),
       })
       .refine((v) => !!v.song !== !!v.event, 'A file belongs to a song or an event'),
     async ({ tx, bandId, userId }, { song, event, ...file }) => {

@@ -574,12 +574,12 @@ describe('admin', () => {
 })
 
 describe('files', () => {
-  const upload = { name: 'chart.pdf', contentType: 'application/pdf', sizeBytes: 10, blobPath: 'k1' }
+  const upload = { name: 'chart.pdf', contentType: 'application/pdf', sizeBytes: 10, blobPath: '00000000-0000-4000-8000-000000000001' }
 
   it('attaches several files to a song or event, lists them, and archives one', async () => {
     const t = await testDb()
     const a = await bandOps.addFile(t.db, t.member, t.band, { ...upload, song: 'closer' })
-    await bandOps.addFile(t.db, t.member, t.band, { ...upload, name: 'second.pdf', blobPath: 'k2', song: 'closer' })
+    await bandOps.addFile(t.db, t.member, t.band, { ...upload, name: 'second.pdf', blobPath: '00000000-0000-4000-8000-000000000002', song: 'closer' })
     await bandOps.addFile(t.db, t.member, t.band, { ...upload, event: 'summer-party' })
     const song = await bandOps.getSong(t.db, t.reader, t.band, { slug: 'closer' })
     expect(song.moved === false && song.files.map((f) => f.name)).toEqual(['chart.pdf', 'second.pdf'])
@@ -594,7 +594,7 @@ describe('files', () => {
   it('serves a file to band members only', async () => {
     const t = await testDb()
     const f = await bandOps.addFile(t.db, t.member, t.band, { ...upload, song: 'closer' })
-    await expect(fileForDownload(t.db, t.reader, f.id)).resolves.toMatchObject({ blobPath: 'k1' })
+    await expect(fileForDownload(t.db, t.reader, f.id)).resolves.toMatchObject({ blobPath: '00000000-0000-4000-8000-000000000001' })
     await expect(fileForDownload(t.db, t.outsider, f.id)).rejects.toBeInstanceOf(NotFound)
   })
 })
