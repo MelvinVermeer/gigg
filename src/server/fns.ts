@@ -2,11 +2,12 @@
 // function (runBandOp), so authorisation lives in exactly one place: bandOp() in ops.ts.
 import { notFound, redirect } from '@tanstack/react-router'
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
+import { getRequestHeaders, getRequestUrl } from '@tanstack/react-start/server'
 import type { z } from 'zod'
 import { auth, isAdminEmail } from './auth'
 import { db } from './db'
-import { archiveBand, bandOps, createBand, Forbidden, listAllBands, myBands, NotFound } from './ops'
+import { sendMail } from './mail'
+import { archiveBand, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, myBands, NotFound } from './ops'
 import type { BandOpName, BandOps } from './ops'
 
 const authed = createMiddleware({ type: 'function' }).server(async ({ next }) => {
@@ -37,7 +38,16 @@ export const getAllBands = createServerFn({ method: 'GET' })
 export const addBand = createServerFn({ method: 'POST' })
   .middleware([admin])
   .validator((data: { name: string; email: string }) => data)
-  .handler(({ data }) => createBand(db, data))
+  .handler(async ({ data }) => {
+    const band = await createBand(db, data)
+    const email = data.email.trim().toLowerCase()
+    await sendMail({
+      to: email,
+      subject: `You've been added to ${band.name} on Gigg`,
+      text: `You're now a member of ${band.name} on Gigg: gigs, setlists and riders for bands.\n\nSign in with ${email}: ${new URL('/login', getRequestUrl())}`,
+    })
+    return band
+  })
 
 export const deleteBand = createServerFn({ method: 'POST' })
   .middleware([admin])
@@ -83,3 +93,8 @@ type Output<K extends BandOpName> = Awaited<ReturnType<BandOps[K]>>
 export function bandOp<K extends BandOpName>(op: K, band: string, input: Input<K>): Promise<Output<K>> {
   return (isRead(op) ? runBandRead : runBandOp)({ data: { band, op, input } }) as Promise<Output<K>>
 }
+
+export const deleteBandPermanently = createServerFn({ method: 'POST' })
+  .middleware([admin])
+  .validator((data: { slug: string }) => data)
+  .handler(({ data }) => deleteBandForever(db, String(data.slug)))

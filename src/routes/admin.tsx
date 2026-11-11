@@ -1,6 +1,6 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
-import { addBand, deleteBand, getAllBands } from '#/server/fns'
+import { addBand, deleteBand, deleteBandPermanently, getAllBands } from '#/server/fns'
 
 export const Route = createFileRoute('/admin')({
   loader: () => getAllBands(),
@@ -23,6 +23,7 @@ function Admin() {
       await router.invalidate()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add the band')
+      await router.invalidate() // the band may exist even if the invite mail failed
     }
   }
 
@@ -31,6 +32,15 @@ function Admin() {
     await deleteBand({ data: { slug } })
     await router.invalidate()
   }
+
+  async function removeForever(slug: string, name: string) {
+    if (prompt(`This erases all of ${name}'s songs, gigs, setlists and history. Type the band name to confirm.`) !== name) return
+    await deleteBandPermanently({ data: { slug } })
+    await router.invalidate()
+  }
+
+  const active = bands.filter((b) => !b.archivedAt)
+  const deleted = bands.filter((b) => b.archivedAt)
 
   return (
     <main>
@@ -52,9 +62,9 @@ function Admin() {
 
       <section>
         <h2>Bands</h2>
-        {bands.length ? (
+        {active.length ? (
           <ul>
-            {bands.map((b) => (
+            {active.map((b) => (
               <li key={b.slug}>
                 <Link to="/$band" params={{ band: b.slug }}>
                   {b.name}
@@ -70,6 +80,23 @@ function Admin() {
           <p>No bands yet.</p>
         )}
       </section>
+
+      {deleted.length > 0 && (
+        <section>
+          <h2>Deleted bands</h2>
+          <p>Hidden from everyone, but their data is still stored.</p>
+          <ul>
+            {deleted.map((b) => (
+              <li key={b.slug}>
+                {b.name} ({b.members.join(', ') || 'no members'}){' '}
+                <button type="button" onClick={() => removeForever(b.slug, b.name)}>
+                  Delete permanently
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
   )
 }

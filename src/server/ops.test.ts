@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import { bands, changes, contacts, memberships, songs, users, venues } from './db/schema'
-import { archiveBand, bandOps, createBand, Forbidden, listAllBands, myBands, NotFound, slugify } from './ops'
+import { archiveBand, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, myBands, NotFound, slugify } from './ops'
 import type { BandOpName } from './ops'
 import { testDb } from './test-db'
 
@@ -561,7 +561,21 @@ describe('admin', () => {
     const t = await testDb()
     await archiveBand(t.db, t.band)
     await expect(bandOps.listSongs(t.db, t.member, t.band, {})).rejects.toBeInstanceOf(Forbidden)
-    expect(await listAllBands(t.db)).toEqual([])
+    expect(await listAllBands(t.db)).toMatchObject([{ slug: t.band, archivedAt: expect.any(Date) }])
     await expect(archiveBand(t.db, t.band)).rejects.toBeInstanceOf(NotFound)
+  })
+
+  it('deletes an archived band permanently, history included, keeping other bands and users', async () => {
+    const t = await testDb()
+    const other = await createBand(t.db, { name: 'Other', email: 'member@example.com' })
+    await bandOps.createSong(t.db, t.member, other.slug, { title: 'Keep me' })
+    await expect(deleteBandForever(t.db, t.band)).rejects.toBeInstanceOf(NotFound) // not archived yet
+    const [{ id }] = await t.db.select({ id: bands.id }).from(bands).where(eq(bands.slug, t.band))
+    await archiveBand(t.db, t.band)
+    await deleteBandForever(t.db, t.band)
+    expect((await listAllBands(t.db)).map((b) => b.slug)).toEqual([other.slug])
+    expect(await t.db.select().from(changes).where(eq(changes.bandId, id))).toEqual([])
+    await expect(bandOps.listSongs(t.db, t.member, other.slug, {})).resolves.toHaveLength(1)
+    expect(await t.db.select().from(users).where(eq(users.id, t.reader))).toHaveLength(1)
   })
 })

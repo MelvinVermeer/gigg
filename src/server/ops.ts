@@ -12,6 +12,8 @@ import {
   contacts,
   eventContacts,
   events,
+  feedback,
+  files,
   memberships,
   paymentStatus,
   setItems,
@@ -1061,14 +1063,14 @@ export function listAllBands(db: Db) {
     .select({
       slug: bands.slug,
       name: bands.name,
+      archivedAt: bands.archivedAt,
       members: sql<string[]>`coalesce(array_agg(${users.email} order by ${users.email}) filter (where ${users.email} is not null), '{}')`,
     })
     .from(bands)
     .leftJoin(memberships, and(eq(memberships.bandId, bands.id), isNull(memberships.archivedAt)))
     .leftJoin(users, eq(users.id, memberships.userId))
-    .where(isNull(bands.archivedAt))
     .groupBy(bands.id)
-    .orderBy(asc(bands.name))
+    .orderBy(sql`${bands.archivedAt} is not null`, asc(bands.name))
 }
 
 const newBand = z.object({ name: z.string().trim().min(1).max(200), email: z.string().trim().toLowerCase().email().max(200) })
@@ -1103,4 +1105,24 @@ export async function archiveBand(db: Db, slug: string) {
     .where(and(eq(bands.slug, slug), isNull(bands.archivedAt)))
     .returning({ id: bands.id })
   if (!band) throw new NotFound()
+}
+
+/**
+ * Hard delete, only after archiveBand: every row of the band, including its history.
+ * Users stay (they may be in other bands).
+ */
+export async function deleteBandForever(db: Db, slug: string) {
+  await db.transaction(async (tx) => {
+    const [band] = await tx
+      .select({ id: bands.id })
+      .from(bands)
+      .where(and(eq(bands.slug, slug), isNotNull(bands.archivedAt)))
+    if (!band) throw new NotFound()
+    // Children before parents (foreign keys).
+    for (const table of [files, feedback, setItems, sets, setlists, blockSongs, blocks, eventContacts, events, contacts, venues, songs, slugRedirects, memberships])
+      await tx.delete(table).where(eq(table.bandId, band.id))
+    await tx.delete(slugRedirects).where(and(eq(slugRedirects.type, 'band'), eq(slugRedirects.entityId, band.id)))
+    await tx.delete(bands).where(eq(bands.id, band.id))
+    await tx.delete(changes).where(eq(changes.bandId, band.id)) // last: the deletes above were logged too
+  })
 }
