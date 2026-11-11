@@ -1,5 +1,8 @@
 import { Link, useRouter } from '@tanstack/react-router'
+import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
 import { formatDuration } from '#/lib/duration'
 import { withLabels } from '#/lib/labels'
 import { bandOp } from '#/server/fns'
@@ -57,49 +60,49 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
   }
 
   return (
-    <>
+    <div className="grid gap-3">
       {songs.length ? (
-        <ol className="song-list">
+        <ol className="song-list divide-y">
           {songs.map((s, i) => (
-            <li key={`${s.id}-${i}`}>
-              <span className="title">
-                <Link to="/$band/songs/$song" params={{ band, song: s.slug }}>
+            <li key={`${s.id}-${i}`} className="grid grid-cols-[1.75rem_1fr_2.5rem_3.25rem_auto] items-center gap-1 py-1.5 text-sm">
+              <span className="text-muted-foreground tabular-nums">{i + 1}.</span>
+              <span className="title font-medium [overflow-wrap:anywhere]">
+                <Link to="/$band/songs/$song" params={{ band, song: s.slug }} className="underline-offset-4 hover:underline">
                   {s.title}
                 </Link>
               </span>
-              <span className="key">{s.key}</span>
-              <span className="duration">{formatDuration(s.durationSec)}</span>
-              {editable && (
-                <span className="actions">
-                  <button type="button" aria-label={`Move ${s.title} up`} disabled={i === 0} onClick={() => move(i, -1)}>
-                    ↑
-                  </button>
-                  <button
-                    type="button"
+              <span className="text-muted-foreground">{s.key}</span>
+              <span className="text-muted-foreground tabular-nums">{formatDuration(s.durationSec)}</span>
+              {editable ? (
+                <span className="flex gap-0.5">
+                  <Button variant="ghost" size="icon-sm" aria-label={`Move ${s.title} up`} disabled={i === 0} onClick={() => move(i, -1)}>
+                    <ArrowUp />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     aria-label={`Move ${s.title} down`}
                     disabled={i === songs.length - 1}
                     onClick={() => move(i, 1)}
                   >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${s.title}`}
-                    onClick={() => onChange(songs.filter((_, j) => j !== i))}
-                  >
-                    ×
-                  </button>
+                    <ArrowDown />
+                  </Button>
+                  <Button variant="ghost" size="icon-sm" aria-label={`Remove ${s.title}`} onClick={() => onChange(songs.filter((_, j) => j !== i))}>
+                    <X />
+                  </Button>
                 </span>
+              ) : (
+                <span />
               )}
             </li>
           ))}
         </ol>
       ) : (
-        <p className="empty">No songs yet.</p>
+        <p className="text-sm text-muted-foreground">No songs yet.</p>
       )}
       {editable && (
-        <span className="row add-song">
-          <input
+        <span className="add-song flex gap-2">
+          <Input
             aria-label={`Add song to ${label}`}
             list={listId}
             value={text}
@@ -113,9 +116,9 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
             placeholder={blocks.length ? 'Search a song or block' : 'Search a song'}
             autoComplete="off"
           />
-          <button type="button" onClick={add}>
-            {pickedBlock ? 'Add block' : 'Add song'}
-          </button>
+          <Button type="button" variant="outline" onClick={add}>
+            <Plus aria-hidden /> {pickedBlock ? 'Add block' : 'Add song'}
+          </Button>
           <datalist id={listId}>
             {blocks.map((b) => (
               <option key={b.id} value={blockLabel(b)} />
@@ -126,6 +129,6 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
           </datalist>
         </span>
       )}
-    </>
+    </div>
   )
 }

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { HeaderSearch } from '#/components/HeaderSearch'
 import { PasskeyPrompt } from '#/components/PasskeyPrompt'
 import { UserMenu } from '#/components/UserMenu'
+import { Button } from '#/components/ui/button'
 import { themeScript } from '#/lib/theme'
 import { getMe } from '#/server/fns'
 import appCss from '../styles.css?url'
@@ -74,18 +75,28 @@ function RootLayout() {
   return (
     <>
       {!online && (
-        <p className="offline" role="status">
+        <p className="bg-stage px-4 py-1.5 text-center text-sm font-medium text-ink" role="status">
           Offline: showing saved data. Changes can't be saved.
         </p>
       )}
-      <header className="site-header">
-        <Link to="/" aria-label="Gigg home">
+      <header className="site-header sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
+        <div className="mx-auto flex h-14 w-full max-w-3xl items-center gap-4 px-4">
+        <Link to="/" aria-label="Gigg home" className="shrink-0">
           {/* CSS shows the one matching the theme (handover: no yellow wordmark on light). */}
           <img className="logo-on-light" src={lockupInk} alt="Gigg" height={32} width={97} />
           <img className="logo-on-dark" src={lockup} alt="Gigg" height={32} width={97} />
         </Link>
         {searchBand && <HeaderSearch band={searchBand} />}
-        {me ? <UserMenu name={me.name || me.email} bands={me.bands} isAdmin={me.isAdmin} /> : <Link to="/login">Sign in</Link>}
+        <div className="ml-auto">
+          {me ? (
+            <UserMenu name={me.name || me.email} bands={me.bands} isAdmin={me.isAdmin} />
+          ) : (
+            <Button asChild variant="outline" size="sm">
+              <Link to="/login">Sign in</Link>
+            </Button>
+          )}
+        </div>
+        </div>
       </header>
       {me && <PasskeyPrompt />}
       <Outlet />

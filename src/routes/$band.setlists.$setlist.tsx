@@ -1,6 +1,9 @@
 import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { SetlistBuilder } from '#/components/SetlistBuilder'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Separator } from '#/components/ui/separator'
 import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
 
@@ -30,27 +33,39 @@ function Setlist() {
 
   return (
     <>
-      <p>
-        <Link to="/$band/setlists" params={{ band: band.slug }}>
+      <div className="flex items-center justify-between gap-3">
+        <Link to="/$band/setlists" params={{ band: band.slug }} className="text-sm text-muted-foreground hover:text-foreground">
           ← Setlists
-        </Link>{' '}
-        · <HistoryLink item={id} />
-      </p>
-      <h1>
+        </Link>
+        <HistoryLink item={id} />
+      </div>
+      <h1 className="mt-1">
         {editable ? (
-          <input aria-label="Setlist name" className="title-input" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} onBlur={rename} />
+          <Input
+            aria-label="Setlist name"
+            className="title-input h-10 text-2xl font-semibold md:text-2xl"
+            value={name}
+            maxLength={60}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={rename}
+          />
         ) : (
           data.setlist.name
         )}
       </h1>
-      {data.setlist.archivedAt && <p role="status">This setlist is archived.</p>}
+      {data.setlist.archivedAt && (
+        <p role="status" className="mb-4 rounded-md bg-muted px-3 py-2 text-sm">
+          This setlist is archived.
+        </p>
+      )}
       <SetlistBuilder band={band.slug} target={{ setlist: id }} data={data} editable={editable && !data.setlist.archivedAt} />
       {editable && (
-        <p>
-          <button type="button" onClick={() => setArchived(!data.setlist.archivedAt)}>
+        <>
+          <Separator className="my-8" />
+          <Button variant="outline" onClick={() => setArchived(!data.setlist.archivedAt)}>
             {data.setlist.archivedAt ? 'Restore' : 'Archive'}
-          </button>
-        </p>
+          </Button>
+        </>
       )}
     </>
   )

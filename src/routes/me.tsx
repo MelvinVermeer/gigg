@@ -13,20 +13,20 @@ export const Route = createFileRoute('/me')({
 function MyBands() {
   const bands = Route.useLoaderData()
   return (
-    <main>
+    <main className="mx-auto w-full max-w-3xl px-4 pt-8 pb-16">
       <h1>My bands</h1>
       {bands.length ? (
-        <ul>
+        <ul className="divide-y rounded-xl border bg-card">
           {bands.map((b) => (
-            <li key={b.slug}>
-              <Link to="/$band" params={{ band: b.slug }}>
+            <li key={b.slug} className="relative px-4 py-3 font-medium hover:bg-muted/50">
+              <Link to="/$band" params={{ band: b.slug }} className="after:absolute after:inset-0">
                 {b.name}
               </Link>
             </li>
           ))}
         </ul>
       ) : (
-        <p>You're not in a band yet.</p>
+        <p className="text-muted-foreground">You're not in a band yet.</p>
       )}
     </main>
   )

@@ -1,6 +1,9 @@
 import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { formatDate, statusLabel } from '#/lib/date'
+import { Plus } from 'lucide-react'
+import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
 import { bandOp } from '#/server/fns'
 
 type When = 'upcoming' | 'past' | 'archived'
@@ -35,46 +38,55 @@ function Events() {
 
   return (
     <>
-      <h1>{headings[when]}</h1>
-      <p>
-        {band.role === 'member' && (
-          <>
-            <Link to="/$band/events/new" params={params}>
-              Add event
-            </Link>{' '}
-            ·{' '}
-          </>
-        )}
-        {when === 'upcoming' ? (
-          <>
-            <Link to="/$band/events" params={params} search={{ when: 'past' }}>
-              Past events
-            </Link>
-          </>
-        ) : (
-          <Link to="/$band/events" params={params}>
-            Upcoming events
-          </Link>
-        )}
-      </p>
-      {events.length ? (
-        <ul className="events">
-          {events.map((e) => (
-            <li key={e.slug}>
-              <span className="date">{formatDate(e.date)}</span>
-              <Link to="/$band/events/$event" params={{ ...params, event: e.slug }}>
-                {e.title}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="mb-0">{headings[when]}</h1>
+        <div className="flex gap-2">
+          {when === 'upcoming' ? (
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/$band/events" params={params} search={{ when: 'past' }}>
+                Past events
               </Link>
-              {e.venue && <span className="venue">{e.venue}</span>}
-              <span className="status">
-                {statusLabel(e.bookingStatus)}
-                {e.paymentStatus !== 'open' && ` · ${statusLabel(e.paymentStatus)}`}
+            </Button>
+          ) : (
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/$band/events" params={params}>
+                Upcoming events
+              </Link>
+            </Button>
+          )}
+          {band.role === 'member' && (
+            <Button asChild size="sm">
+              <Link to="/$band/events/new" params={params}>
+                <Plus aria-hidden /> Add event
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
+      {events.length ? (
+        <ul className="events divide-y rounded-xl border bg-card">
+          {events.map((e) => (
+            <li key={e.slug} className="relative flex items-center gap-4 px-4 py-3 hover:bg-muted/50">
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-4">
+              <span className="date shrink-0 text-sm text-muted-foreground tabular-nums sm:w-32">{formatDate(e.date)}</span>
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <Link to="/$band/events/$event" params={{ ...params, event: e.slug }} className="truncate font-medium after:absolute after:inset-0">
+                  {e.title}
+                </Link>
+                {e.venue && <span className="venue truncate text-sm text-muted-foreground">{e.venue}</span>}
+              </span>
+              </span>
+              <span className="status flex shrink-0 gap-1">
+                <Badge variant={e.bookingStatus === 'confirmed' ? 'default' : 'outline'}>{statusLabel(e.bookingStatus)}</Badge>
+                {e.paymentStatus !== 'open' && <Badge variant="secondary">{statusLabel(e.paymentStatus)}</Badge>}
               </span>
             </li>
           ))}
         </ul>
       ) : (
-        <p>{when === 'upcoming' ? 'No upcoming events.' : `No ${when} events.`}</p>
+        <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
+          {when === 'upcoming' ? 'No upcoming events.' : `No ${when} events.`}
+        </p>
       )}
     </>
   )

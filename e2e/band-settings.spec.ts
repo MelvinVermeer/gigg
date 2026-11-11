@@ -8,7 +8,7 @@ test.describe('member', () => {
     const address = `Harbour Road ${Date.now()}`
     await page.goto('/demo-band')
     await page.getByRole('button', { name: /Account menu/ }).click()
-    await page.getByRole('link', { name: 'Settings' }).click()
+    await page.getByRole('menuitem', { name: 'Settings' }).click()
     await page.getByRole('link', { name: 'Venues' }).click()
 
     // Only the address: other tests rely on the venue's name.

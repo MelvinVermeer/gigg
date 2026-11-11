@@ -12,21 +12,21 @@ test.describe('user menu', () => {
     await expect(page.getByRole('link', { name: 'Sign in' })).toHaveCount(0)
 
     await avatar.click()
-    const menu = page.locator('#user-menu')
+    const menu = page.getByRole('menu')
     await expect(menu).toBeVisible()
     await expect(menu).toContainText('Dev Reader')
-    await expect(menu.getByRole('button', { name: 'Log out' })).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: 'Log out' })).toBeVisible()
 
     await page.keyboard.press('Escape')
     await expect(menu).toBeHidden()
 
     await avatar.click()
-    await menu.getByRole('link', { name: 'Demo Band' }).click()
+    await menu.getByRole('menuitem', { name: 'Demo Band' }).click()
     await expect(page).toHaveURL(/\/demo-band\/events$/)
     await expect(menu).toBeHidden()
 
     await avatar.click()
-    await menu.getByRole('link', { name: 'Settings' }).click()
+    await menu.getByRole('menuitem', { name: 'Settings' }).click()
     await expect(page).toHaveURL(/\/demo-band\/settings$/)
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Settings')
     await expect(page.getByText('Signed in as Dev Reader')).toBeVisible()

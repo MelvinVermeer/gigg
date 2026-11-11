@@ -30,7 +30,7 @@ test('sign in with an email link, add a passkey, sign back in with it', async ({
 
   // Log out via the user menu: back home, menu replaced by "Sign in".
   await page.getByRole('button', { name: /Account menu/ }).click()
-  await page.getByRole('button', { name: 'Log out' }).click()
+  await page.getByRole('menuitem', { name: 'Log out' }).click()
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole('button', { name: /Account menu/ })).toHaveCount(0)
 
@@ -41,7 +41,7 @@ test('sign in with an email link, add a passkey, sign back in with it', async ({
 
   // The passkey is listed in settings and can be deleted.
   await page.getByRole('button', { name: /Account menu/ }).click()
-  await page.getByRole('link', { name: 'Settings' }).click()
+  await page.getByRole('menuitem', { name: 'Settings' }).click()
   const list = page.getByRole('list', { name: 'Your passkeys' })
   await expect(list.getByRole('listitem')).toHaveCount(1)
   await expect(list.getByRole('listitem')).toContainText(/Chrome on \w+, added/)

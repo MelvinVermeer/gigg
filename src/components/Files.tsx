@@ -1,6 +1,10 @@
 import { useRouter } from '@tanstack/react-router'
 import { upload as uploadToBlob } from '@vercel/blob/client'
+import { FileText, Upload, X } from 'lucide-react'
 import { useState } from 'react'
+import { FormError } from '#/components/Field'
+import { Button } from '#/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { bandOp } from '#/server/fns'
 
 type FileRow = { id: string; name: string; sizeBytes: number; contentType: string }
@@ -77,33 +81,50 @@ export function Files({ band, owner, files, canEdit }: Props) {
 
   if (!files.length && !canEdit) return null
   return (
-    <section>
-      <h2>Files</h2>
-      {files.length > 0 ? (
-        <ul aria-label="Files">
-          {files.map((f) => (
-            <li key={f.id}>
-              <a href={`/api/files/${f.id}`}>{f.name}</a> ({size(f.sizeBytes)}){' '}
-              {canEdit && (
-                <button type="button" onClick={() => remove(f)}>
-                  Remove
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>No files yet.</p>
-      )}
-      {canEdit && (
-        <p>
-          <label>
-            Add files <input type="file" multiple onChange={upload} disabled={!!busy} />
-          </label>
-        </p>
-      )}
-      {busy && <p role="status">{busy}</p>}
-      {error && <p role="alert">{error}</p>}
-    </section>
+    <Card aria-labelledby="files" role="region" className="mt-6">
+      <CardHeader>
+        <CardTitle id="files" role="heading" aria-level={2}>
+          Files
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        {files.length > 0 ? (
+          <ul aria-label="Files" className="divide-y">
+            {files.map((f) => (
+              <li key={f.id} className="flex items-center gap-2 py-2 text-sm">
+                <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                <a href={`/api/files/${f.id}`} className="truncate font-medium underline-offset-4 hover:underline">
+                  {f.name}
+                </a>
+                <span className="shrink-0 text-muted-foreground">({size(f.sizeBytes)})</span>
+                {canEdit && (
+                  <Button variant="ghost" size="xs" className="ml-auto" onClick={() => remove(f)}>
+                    <X aria-hidden /> Remove
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">No files yet.</p>
+        )}
+        {canEdit && (
+          <div>
+            <Button asChild variant="outline" size="sm" className="has-[:disabled]:opacity-50">
+              <label>
+                <Upload aria-hidden /> Add files
+                <input type="file" multiple onChange={upload} disabled={!!busy} className="sr-only" />
+              </label>
+            </Button>
+          </div>
+        )}
+        {busy && (
+          <p role="status" className="text-sm text-muted-foreground">
+            {busy}
+          </p>
+        )}
+        <FormError>{error}</FormError>
+      </CardContent>
+    </Card>
   )
 }

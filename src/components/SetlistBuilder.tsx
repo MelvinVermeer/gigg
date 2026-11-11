@@ -1,5 +1,11 @@
 import { Link, useRouter } from '@tanstack/react-router'
+import { Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
+import { cn } from '#/lib/utils'
 import { SongListEditor, totalDuration } from '#/components/SongListEditor'
 import type { SongRef } from '#/components/SongListEditor'
 import { formatDate } from '#/lib/date'
@@ -62,49 +68,48 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
   const total = totalDuration(sets.flatMap((s) => s.songs))
 
   return (
-    <>
-      <p className="setlist-meta">
+    <div className="grid gap-4">
+      <p className="setlist-meta flex items-center gap-3 text-sm text-muted-foreground">
         {sets.flatMap((s) => s.songs).length} songs · {formatDuration(total) || '0:00'}
         {status && (
-          <span role="status" className={`save-status ${status}`}>
+          <Badge role="status" variant={status === 'error' ? 'destructive' : 'secondary'} className={cn('save-status', status)}>
             {{ saving: 'Saving…', saved: 'Saved', error: 'Not saved, try again' }[status]}
-          </span>
+          </Badge>
         )}
       </p>
 
       {sets.length === 0 &&
         (editable ? (
-          <div className="stack">
-            <p>
-              <button type="button" onClick={() => persist([{ name: 'Set 1', songs: [] }])}>
-                Start an empty setlist
-              </button>
-            </p>
+          <div className="grid gap-3 rounded-xl border border-dashed p-6">
+            <div>
+              <Button onClick={() => persist([{ name: 'Set 1', songs: [] }])}>Start an empty setlist</Button>
+            </div>
             {data.copyFrom.length > 0 && (
-              <p className="row">
-                <select aria-label="Copy setlist from" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>
+              <div className="flex flex-wrap gap-2">
+                <NativeSelect aria-label="Copy setlist from" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)} className="min-w-0 flex-1">
                   {data.copyFrom.map((s) => (
-                    <option key={s.id} value={s.id}>
+                    <NativeSelectOption key={s.id} value={s.id}>
                       {copyLabel(s)}
-                    </option>
+                    </NativeSelectOption>
                   ))}
-                </select>
-                <button type="button" onClick={copy}>
+                </NativeSelect>
+                <Button variant="outline" onClick={copy}>
                   Copy that setlist
-                </button>
-              </p>
+                </Button>
+              </div>
             )}
           </div>
         ) : (
-          <p>No setlist yet.</p>
+          <p className="text-muted-foreground">No setlist yet.</p>
         ))}
 
       {sets.map((set, i) => (
-        <section key={i} className="set">
-          <h2>
+        <section key={i} className="set rounded-xl border bg-card p-4">
+          <h2 className="flex items-center gap-3">
             {editable ? (
-              <input
+              <Input
                 aria-label={`Name of set ${i + 1}`}
+                className="h-8 max-w-[70%] text-base font-semibold md:text-base"
                 value={set.name}
                 maxLength={60}
                 onChange={(e) => setSets(updateSet(i, { name: e.target.value }))}
@@ -112,8 +117,8 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
               />
             ) : (
               set.name
-            )}{' '}
-            <small>{formatDuration(totalDuration(set.songs)) || '0:00'}</small>
+            )}
+            <small className="text-sm font-normal text-muted-foreground tabular-nums">{formatDuration(totalDuration(set.songs)) || '0:00'}</small>
           </h2>
           <SongListEditor
             band={band}
@@ -129,13 +134,17 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
       ))}
 
       {editable && sets.length > 0 && (
-        <p>
-          <button type="button" onClick={() => persist([...sets, { name: `Set ${sets.length + 1}`, songs: [] }])}>
-            Add set
-          </button>{' '}
-          · <Link to="/$band/blocks" params={{ band }}>Manage blocks</Link>
-        </p>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => persist([...sets, { name: `Set ${sets.length + 1}`, songs: [] }])}>
+            <Plus aria-hidden /> Add set
+          </Button>
+          <Button asChild variant="ghost">
+            <Link to="/$band/blocks" params={{ band }}>
+              Manage blocks
+            </Link>
+          </Button>
+        </div>
       )}
-    </>
+    </div>
   )
 }

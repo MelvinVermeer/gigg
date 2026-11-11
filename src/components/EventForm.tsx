@@ -1,4 +1,11 @@
+import { X } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
+import { Field, FormError } from '#/components/Field'
+import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from '#/components/ui/native-select'
+import { Textarea } from '#/components/ui/textarea'
 import { withLabels } from '#/lib/labels'
 import type { EventFields } from '#/server/ops'
 
@@ -97,68 +104,72 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
   }
 
   return (
-    <form className="stack" onSubmit={submit}>
-      <label>
-        Title
-        <input name="title" required maxLength={200} defaultValue={initial.title ?? ''} />
-      </label>
-      <label>
-        Date
-        <input name="date" type="date" required defaultValue={initial.date ?? ''} />
-      </label>
+    <form className="grid gap-5" onSubmit={submit}>
+      <Field label="Title">
+        <Input name="title" required maxLength={200} defaultValue={initial.title ?? ''} />
+      </Field>
+      <Field label="Date">
+        <Input name="date" type="date" required defaultValue={initial.date ?? ''} />
+      </Field>
 
-      <label>
-        Venue
-        <input
+      <Field label="Venue">
+        <Input
           list={`${ids}-venues`}
           value={venueText}
           onChange={(e) => setVenueText(e.target.value)}
           placeholder="Search or type a new venue"
           autoComplete="off"
         />
-      </label>
+      </Field>
       <datalist id={`${ids}-venues`}>
         {venues.map((v) => (
           <option key={v.id} value={v.label} />
         ))}
       </datalist>
       {isNewVenue && (
-        <label className="indent">
-          New venue · address <small>(optional)</small>
-          <input value={venueAddress} onChange={(e) => setVenueAddress(e.target.value)} maxLength={500} />
-        </label>
+        <Field label="New venue · address" hint="(optional)" className="border-l-2 pl-4">
+          <Input value={venueAddress} onChange={(e) => setVenueAddress(e.target.value)} maxLength={500} />
+        </Field>
       )}
 
-      <fieldset className="stack">
-        <legend>Contacts</legend>
+      <fieldset className="grid gap-3 rounded-lg border p-4">
+        <legend className="px-1 text-sm font-medium">Contacts</legend>
         {suggested.length > 0 && (
-          <p className="suggestion">
+          <p className="suggestion flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             Last time at {venue!.name}: {suggested.map((id) => contactById(id).label).join(', ')}{' '}
-            <button type="button" onClick={() => suggested.forEach((id) => addContact(contactById(id).label))}>
+            <Button type="button" size="xs" variant="secondary" onClick={() => suggested.forEach((id) => addContact(contactById(id).label))}>
               Add
-            </button>
+            </Button>
           </p>
         )}
         {picked.length > 0 && (
-          <ul className="picked">
+          <ul className="grid gap-2">
             {picked.map((c) => (
-              <li key={c.key}>
-                <span>
-                  {c.name} {!c.id && <small>(new)</small>}
+              <li key={c.key} className="grid gap-2">
+                <span className="flex items-center gap-2">
+                  <span className="font-medium">{c.name}</span>
+                  {!c.id && <Badge variant="secondary">new</Badge>}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="ml-auto"
+                    aria-label={`Remove ${c.name}`}
+                    onClick={() => setPicked((p) => p.filter((x) => x.key !== c.key))}
+                  >
+                    <X />
+                  </Button>
                 </span>
-                <button type="button" aria-label={`Remove ${c.name}`} onClick={() => setPicked((p) => p.filter((x) => x.key !== c.key))}>
-                  ×
-                </button>
                 {!c.id && (
-                  <span className="row">
-                    <input
+                  <span className="grid grid-cols-2 gap-2">
+                    <Input
                       aria-label={`Email for ${c.name}`}
                       placeholder="Email (optional)"
                       type="email"
                       value={c.email ?? ''}
                       onChange={(e) => update(c.key, { email: e.target.value })}
                     />
-                    <input
+                    <Input
                       aria-label={`Phone for ${c.name}`}
                       placeholder="Phone (optional)"
                       type="tel"
@@ -171,8 +182,8 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
             ))}
           </ul>
         )}
-        <span className="row">
-          <input
+        <span className="flex gap-2">
+          <Input
             aria-label="Add contact"
             list={`${ids}-contacts`}
             value={contactText}
@@ -186,9 +197,9 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
             placeholder="Search or type a new contact"
             autoComplete="off"
           />
-          <button type="button" onClick={() => addContact(contactText)}>
+          <Button type="button" variant="outline" onClick={() => addContact(contactText)}>
             Add contact
-          </button>
+          </Button>
         </span>
         <datalist id={`${ids}-contacts`}>
           {contacts.map((c) => (
@@ -197,64 +208,59 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
         </datalist>
       </fieldset>
 
-      <div className="row">
-        <label>
-          Booking
-          <select name="bookingStatus" defaultValue={initial.bookingStatus ?? 'lead'}>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Booking">
+          <NativeSelect name="bookingStatus" defaultValue={initial.bookingStatus ?? 'lead'} className="w-full">
             {bookingStatuses.map((s) => (
-              <option key={s} value={s}>
+              <NativeSelectOption key={s} value={s}>
                 {cap(s)}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
-        </label>
-        <label>
-          Payment
-          <select name="paymentStatus" defaultValue={initial.paymentStatus ?? 'open'}>
+          </NativeSelect>
+        </Field>
+        <Field label="Payment">
+          <NativeSelect name="paymentStatus" defaultValue={initial.paymentStatus ?? 'open'} className="w-full">
             {paymentStatuses.map((s) => (
-              <option key={s} value={s}>
+              <NativeSelectOption key={s} value={s}>
                 {cap(s)}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
-        </label>
+          </NativeSelect>
+        </Field>
       </div>
-      <label>
-        Notes <small>(times, load-in, parking, …)</small>
-        <textarea name="notes" rows={6} maxLength={10_000} defaultValue={initial.notes ?? ''} />
-      </label>
-      <label>
-        Tags <small>(comma separated)</small>
-        <input name="tags" defaultValue={(initial.tags ?? []).join(', ')} />
-      </label>
+      <Field label="Notes" hint="(times, load-in, parking, …)">
+        <Textarea name="notes" rows={6} maxLength={10_000} defaultValue={initial.notes ?? ''} />
+      </Field>
+      <Field label="Tags" hint="(comma separated)">
+        <Input name="tags" defaultValue={(initial.tags ?? []).join(', ')} />
+      </Field>
       {pickSetlist && data.setlists.length > 0 && (
-        <label>
-          Setlist
-          <select name="setlist" defaultValue="">
-            <option value="">Empty</option>
-            <optgroup label="Standard (use as is)">
+        <Field label="Setlist">
+          <NativeSelect name="setlist" defaultValue="" className="w-full">
+            <NativeSelectOption value="">Empty</NativeSelectOption>
+            <NativeSelectOptGroup label="Standard (use as is)">
               {data.setlists.map((s) => (
-                <option key={s.id} value={`standard:${s.id}`}>
+                <NativeSelectOption key={s.id} value={`standard:${s.id}`}>
                   {s.name}
-                </option>
+                </NativeSelectOption>
               ))}
-            </optgroup>
-            <optgroup label="Custom (start as a copy)">
+            </NativeSelectOptGroup>
+            <NativeSelectOptGroup label="Custom (start as a copy)">
               {data.setlists.map((s) => (
-                <option key={s.id} value={`custom:${s.id}`}>
+                <NativeSelectOption key={s.id} value={`custom:${s.id}`}>
                   {s.name}
-                </option>
+                </NativeSelectOption>
               ))}
-            </optgroup>
-          </select>
-        </label>
+            </NativeSelectOptGroup>
+          </NativeSelect>
+        </Field>
       )}
-      {error && <p role="alert">{error}</p>}
-      <p>
-        <button type="submit" disabled={busy}>
+      <FormError>{error}</FormError>
+      <div>
+        <Button type="submit" disabled={busy}>
           {submitLabel}
-        </button>
-      </p>
+        </Button>
+      </div>
     </form>
   )
 }

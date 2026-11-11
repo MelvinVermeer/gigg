@@ -1,21 +1,25 @@
 import { Link, useParams } from '@tanstack/react-router'
-import { useRef, useState } from 'react'
+import { BookOpen, Check, LogOut, MessageSquare, Settings, Shield } from 'lucide-react'
+import { Avatar, AvatarFallback } from '#/components/ui/avatar'
+import { Button } from '#/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '#/components/ui/dropdown-menu'
 import { authClient } from '#/lib/auth-client'
 
 type Props = { name: string; bands: { slug: string; name: string }[]; isAdmin: boolean }
 
-/** Avatar button + menu. Native popover: closes on outside click and Escape, no library. */
+/** Avatar button + account menu. */
 export function UserMenu({ name, bands, isAdmin }: Props) {
-  const menu = useRef<HTMLDivElement>(null)
-  const close = () => menu.current?.hidePopover()
   // Settings live per band: the band you're in, otherwise your first band.
   const settingsBand = useParams({ strict: false }).band ?? bands[0]?.slug
-  const current = bands.find((b) => b.slug === settingsBand) ?? bands[0]
-  const others = bands.filter((b) => b !== current)
-  const [switching, setSwitching] = useState(false)
 
   async function logOut() {
-    close()
     await authClient.signOut()
     // The offline cache holds band data too (public/sw.js).
     for (const key of (await globalThis.caches?.keys()) ?? []) await caches.delete(key)
@@ -24,59 +28,61 @@ export function UserMenu({ name, bands, isAdmin }: Props) {
   }
 
   return (
-    <>
-      <button type="button" className="avatar" popoverTarget="user-menu" aria-label={`Account menu for ${name}`}>
-        {name[0].toUpperCase()}
-      </button>
-      <div id="user-menu" ref={menu} popover="auto" className="user-menu">
-        <p className="email">{name}</p>
-        <nav aria-label="Account">
-          {current && (
-            <span className="current-band">
-              <Link to="/$band" params={{ band: current.slug }} onClick={close}>
-                {current.name}
-              </Link>
-              {others.length > 0 && (
-                <button
-                  type="button"
-                  aria-label="Switch band"
-                  aria-expanded={switching}
-                  onClick={() => setSwitching(!switching)}
-                >
-                  ⇄
-                </button>
-              )}
-            </span>
-          )}
-          {switching &&
-            others.map((b) => (
-              <Link key={b.slug} to="/$band" params={{ band: b.slug }} onClick={close}>
-                {b.name}
-              </Link>
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="rounded-full" aria-label={`Account menu for ${name}`}>
+          <Avatar className="size-9">
+            <AvatarFallback className="bg-stage font-bold text-ink">{name[0].toUpperCase()}</AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent id="user-menu" align="end" className="w-60">
+        <DropdownMenuLabel className="truncate font-normal text-muted-foreground">{name}</DropdownMenuLabel>
+        {bands.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            {bands.map((b) => (
+              <DropdownMenuItem key={b.slug} asChild>
+                <Link to="/$band" params={{ band: b.slug }}>
+                  <span className="flex-1">{b.name}</span>
+                  {b.slug === settingsBand && <Check aria-hidden />}
+                </Link>
+              </DropdownMenuItem>
             ))}
-          {settingsBand && (
-            <Link to="/$band/settings" params={{ band: settingsBand }} onClick={close}>
-              Settings
-            </Link>
-          )}
-          {settingsBand && (
-            <Link to="/$band/feedback" params={{ band: settingsBand }} onClick={close}>
-              Feedback
-            </Link>
-          )}
-          <Link to="/manual" onClick={close}>
-            Manual
+          </>
+        )}
+        <DropdownMenuSeparator />
+        {settingsBand && (
+          <>
+            <DropdownMenuItem asChild>
+              <Link to="/$band/settings" params={{ band: settingsBand }}>
+                <Settings aria-hidden /> Settings
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/$band/feedback" params={{ band: settingsBand }}>
+                <MessageSquare aria-hidden /> Feedback
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
+        <DropdownMenuItem asChild>
+          <Link to="/manual">
+            <BookOpen aria-hidden /> Manual
           </Link>
-          {isAdmin && (
-            <Link to="/admin" onClick={close}>
-              Admin
+        </DropdownMenuItem>
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link to="/admin">
+              <Shield aria-hidden /> Admin
             </Link>
-          )}
-          <button type="button" onClick={logOut}>
-            Log out
-          </button>
-        </nav>
-      </div>
-    </>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={logOut}>
+          <LogOut aria-hidden /> Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

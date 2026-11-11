@@ -3,6 +3,7 @@ import { defineConfig } from 'vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 
 import viteReact from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 
 const config = defineConfig({
@@ -13,6 +14,7 @@ const config = defineConfig({
   plugins: [
     // PGlite loads its .wasm/.data files from its own package dir, so ship it unbundled.
     nitro({ traceDeps: ['@electric-sql/pglite*'] }),
+    tailwindcss(),
     tanstackStart(),
     viteReact(),
   ],

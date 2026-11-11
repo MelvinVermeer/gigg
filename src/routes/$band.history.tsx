@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { ChevronDown } from 'lucide-react'
 import { bandOp } from '#/server/fns'
 
 export const Route = createFileRoute('/$band/history')({
@@ -20,29 +21,34 @@ function History() {
   return (
     <>
       <h1>History</h1>
-      <p>Every change{item && ' to this item'}, newest first.</p>
-      {!saves.length && <p>No changes yet.</p>}
-      <ul className="history">
+      <p className="mb-6 text-muted-foreground">Every change{item && ' to this item'}, newest first.</p>
+      {!saves.length && <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">No changes yet.</p>}
+      <ul className="history divide-y rounded-xl border bg-card empty:hidden">
         {saves.map((s) => (
-          <li key={s.txId}>
-            <small>
+          <li key={s.txId} className="grid gap-1 px-4 py-3">
+            <small className="text-xs text-muted-foreground">
               {when(s.at)} · {s.who}
             </small>
-            <details>
-              <summary>
-                {s.lines.map((line, i) => (
-                  <span key={i}>{line}</span>
-                ))}
+            <details className="group">
+              <summary className="flex items-start gap-2">
+                <span className="grid flex-1 text-sm">
+                  {s.lines.map((line, i) => (
+                    <span key={i}>{line}</span>
+                  ))}
+                </span>
+                <ChevronDown aria-hidden className="mt-0.5 size-4 text-muted-foreground transition-transform group-open:rotate-180" />
               </summary>
-              <ul className="diffs">
+              <ul className="diffs mt-2 grid gap-2 border-l-2 pl-4">
                 {s.diffs.map((d, i) => (
-                  <li key={i}>
-                    <small>
+                  <li key={i} className="grid gap-1">
+                    <small className="text-xs text-muted-foreground">
                       {d.what} · {d.field}
                     </small>
-                    <div className="diff">
-                      <span>{d.from}</span>
-                      <span aria-label="changed to">→</span>
+                    <div className="diff grid gap-1 text-sm whitespace-pre-line [overflow-wrap:anywhere] sm:grid-cols-[1fr_auto_1fr] sm:gap-2">
+                      <span className="text-muted-foreground line-through decoration-muted-foreground/50">{d.from}</span>
+                      <span aria-label="changed to" className="text-muted-foreground">
+                        →
+                      </span>
                       <span>{d.to}</span>
                     </div>
                   </li>

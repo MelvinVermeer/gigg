@@ -2,6 +2,9 @@ import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-r
 import { useState } from 'react'
 import { SetlistBuilder } from '#/components/SetlistBuilder'
 import { formatDate } from '#/lib/date'
+import { MonitorPlay, Printer } from 'lucide-react'
+import { Button } from '#/components/ui/button'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
 
@@ -27,59 +30,60 @@ function Setlist() {
 
   return (
     <>
-      <p>
-        <Link to="/$band/events/$event" params={params}>
-          ← {data.event.title}
-        </Link>{' '}
-        · {formatDate(data.event.date)}
-        {data.sets.length > 0 && (
-          <>
-            {' · '}
-            <Link to="/$band/events/$event/show" params={params}>
-              Show mode
-            </Link>
-            {' · '}
-            <Link to="/$band/events/$event/print" params={params}>
-              Stage-floor PDF
-            </Link>
-          </>
-        )}
-        {' · '}
-        <HistoryLink item={data.event.id} />
-      </p>
-      <h1>Setlist</h1>
-      {member && (
-        <p>
-          <button type="button" onClick={() => setEditing(!editing)}>
-            {editing ? 'Done' : 'Edit'}
-          </button>
-        </p>
-      )}
+      <Link to="/$band/events/$event" params={params} className="text-sm text-muted-foreground hover:text-foreground">
+        ← {data.event.title} · {formatDate(data.event.date)}
+      </Link>
+      <div className="mt-1 mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="mb-0">Setlist</h1>
+        <div className="flex flex-wrap gap-2">
+          {data.sets.length > 0 && (
+            <>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/$band/events/$event/show" params={params}>
+                  <MonitorPlay aria-hidden /> Show mode
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/$band/events/$event/print" params={params}>
+                  <Printer aria-hidden /> Stage-floor PDF
+                </Link>
+              </Button>
+            </>
+          )}
+          <HistoryLink item={data.event.id} />
+          {member && (
+            <Button size="sm" variant={editing ? 'default' : 'secondary'} onClick={() => setEditing(!editing)}>
+              {editing ? 'Done' : 'Edit'}
+            </Button>
+          )}
+        </div>
+      </div>
       {member && editing && data.standards.length > 0 && (
-        <p className="row">
-          <select
+        <div className="mb-4 flex flex-wrap gap-2">
+          <NativeSelect
             aria-label="Standard setlist"
             value={data.standard?.id ?? ''}
             onChange={(e) => e.target.value && run('useStandardSetlist', { setlist: e.target.value })}
+            className="min-w-0 flex-1"
           >
-            {!data.standard && <option value="">Custom setlist</option>}
+            {!data.standard && <NativeSelectOption value="">Custom setlist</NativeSelectOption>}
             {data.standards.map((s) => (
-              <option key={s.id} value={s.id}>
+              <NativeSelectOption key={s.id} value={s.id}>
                 {s.name}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
           {data.standard && (
-            <button type="button" onClick={() => run('useCustomSetlist', {})}>
+            <Button variant="outline" onClick={() => run('useCustomSetlist', {})}>
               Customize
-            </button>
+            </Button>
           )}
-        </p>
+        </div>
       )}
       {data.standard && (
-        <p>
+        <p className="mb-4 rounded-md bg-muted px-3 py-2 text-sm">
           Using the standard setlist{' '}
-          <Link to="/$band/setlists/$setlist" params={{ band: band.slug, setlist: data.standard.id }}>
+          <Link to="/$band/setlists/$setlist" params={{ band: band.slug, setlist: data.standard.id }} className="font-medium underline">
             {data.standard.name}
           </Link>
           . Changes there show up here.

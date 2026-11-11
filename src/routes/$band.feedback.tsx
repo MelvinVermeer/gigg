@@ -1,5 +1,8 @@
 import { createFileRoute, getRouteApi } from '@tanstack/react-router'
 import { useState } from 'react'
+import { Field, FormError } from '#/components/Field'
+import { Button } from '#/components/ui/button'
+import { Textarea } from '#/components/ui/textarea'
 import { bandOp } from '#/server/fns'
 
 export const Route = createFileRoute('/$band/feedback')({ component: Feedback })
@@ -27,19 +30,21 @@ function Feedback() {
   return (
     <>
       <h1>Feedback</h1>
-      <p>Something broken, confusing or missing? Tell us. It goes to whoever runs this Gigg.</p>
-      <form onSubmit={send} onChange={() => setSent(false)}>
-        <p>
-          <label>
-            Your feedback
-            <br />
-            <textarea name="body" required rows={6} maxLength={5000} style={{ width: '100%' }} />
-          </label>
-        </p>
-        <button type="submit">Send feedback</button>
+      <p className="mb-6 text-muted-foreground">Something broken, confusing or missing? Tell us. It goes to whoever runs this Gigg.</p>
+      <form onSubmit={send} onChange={() => setSent(false)} className="grid gap-4">
+        <Field label="Your feedback">
+          <Textarea name="body" required rows={6} maxLength={5000} />
+        </Field>
+        <div>
+          <Button type="submit">Send feedback</Button>
+        </div>
       </form>
-      {sent && <p role="status">Thanks, we got it.</p>}
-      {error && <p role="alert">{error}</p>}
+      {sent && (
+        <p role="status" className="mt-4 text-sm text-muted-foreground">
+          Thanks, we got it.
+        </p>
+      )}
+      <FormError>{error}</FormError>
     </>
   )
 }

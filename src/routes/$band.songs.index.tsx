@@ -1,5 +1,8 @@
 import { Link, createFileRoute, getRouteApi } from '@tanstack/react-router'
 import { formatDuration } from '#/lib/duration'
+import { Plus } from 'lucide-react'
+import { Button } from '#/components/ui/button'
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '#/components/ui/table'
 import { bandOp } from '#/server/fns'
 
 export const Route = createFileRoute('/$band/songs/')({
@@ -20,62 +23,69 @@ function Songs() {
 
   return (
     <>
-      <h1>{archived ? 'Archived songs' : 'Songs'}</h1>
-      <p>
-        {!archived && band.role === 'member' && (
-          <>
-            <Link to="/$band/songs/new" params={{ band: band.slug }}>
-              Add song
-            </Link>{' '}
-            ·{' '}
-          </>
-        )}
-        {archived ? (
-          <Link to="/$band/songs" params={{ band: band.slug }}>
-            Back to songs
-          </Link>
-        ) : (
-          <>
-            <Link to="/$band/blocks" params={{ band: band.slug }}>
-              Blocks
-            </Link>
-          </>
-        )}
-      </p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="mb-0">{archived ? 'Archived songs' : 'Songs'}</h1>
+        <div className="flex gap-2">
+          {archived ? (
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/$band/songs" params={{ band: band.slug }}>
+                Back to songs
+              </Link>
+            </Button>
+          ) : (
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/$band/blocks" params={{ band: band.slug }}>
+                Blocks
+              </Link>
+            </Button>
+          )}
+          {!archived && band.role === 'member' && (
+            <Button asChild size="sm">
+              <Link to="/$band/songs/new" params={{ band: band.slug }}>
+                <Plus aria-hidden /> Add song
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
       {songs.length ? (
-        <table className="songs">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Key</th>
-              <th>Duration</th>
-            </tr>
-          </thead>
-          <tbody>
-            {songs.map((s) => (
-              <tr key={s.slug}>
-                <td>
-                  <Link to="/$band/songs/$song" params={{ band: band.slug, song: s.slug }}>
-                    {s.title}
-                  </Link>
-                </td>
-                <td>{s.key}</td>
-                <td>{formatDuration(s.durationSec)}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td>
-                {songs.length} {songs.length === 1 ? 'song' : 'songs'}
-              </td>
-              <td />
-              <td>{formatDuration(total)}</td>
-            </tr>
-          </tfoot>
-        </table>
+        <div className="rounded-xl border bg-card">
+          <Table className="songs">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-4">Title</TableHead>
+                <TableHead>Key</TableHead>
+                <TableHead className="pr-4 text-right">Duration</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {songs.map((s) => (
+                <TableRow key={s.slug}>
+                  <TableCell className="pl-4 font-medium">
+                    <Link to="/$band/songs/$song" params={{ band: band.slug, song: s.slug }} className="hover:underline">
+                      {s.title}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{s.key}</TableCell>
+                  <TableCell className="pr-4 text-right text-muted-foreground tabular-nums">{formatDuration(s.durationSec)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell className="pl-4">
+                  {songs.length} {songs.length === 1 ? 'song' : 'songs'}
+                </TableCell>
+                <TableCell />
+                <TableCell className="pr-4 text-right tabular-nums">{formatDuration(total)}</TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </div>
       ) : (
-        <p>{archived ? 'No archived songs.' : 'No songs yet.'}</p>
+        <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
+          {archived ? 'No archived songs.' : 'No songs yet.'}
+        </p>
       )}
     </>
   )

@@ -38,25 +38,29 @@ function Search() {
   return (
     <>
       <h1>Search</h1>
-      {!q && <p>Type in the search box above.</p>}
-      {q && !results.length && <p>Nothing found for “{q}”.</p>}
-      {groups.map(({ type, title }) => {
-        const hits = results.filter((r) => r.type === type)
-        if (!hits.length) return null
-        return (
-          <section key={type}>
-            <h2>{title}</h2>
-            <ul className="results">
-              {hits.map((r) => (
-                <li key={r.ref}>
-                  <ResultLink band={band} r={r} />
-                  {r.detail && <small> · {r.detail}</small>}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )
-      })}
+      {!q && <p className="text-muted-foreground">Type in the search box above.</p>}
+      {q && !results.length && <p className="text-muted-foreground">Nothing found for “{q}”.</p>}
+      <div className="grid gap-6">
+        {groups.map(({ type, title }) => {
+          const hits = results.filter((r) => r.type === type)
+          if (!hits.length) return null
+          return (
+            <section key={type}>
+              <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
+              <ul className="results divide-y rounded-xl border bg-card">
+                {hits.map((r) => (
+                  <li key={r.ref} className="px-4 py-2.5 text-sm">
+                    <span className="font-medium">
+                      <ResultLink band={band} r={r} />
+                    </span>
+                    {r.detail && <span className="text-muted-foreground"> · {r.detail}</span>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )
+        })}
+      </div>
     </>
   )
 }

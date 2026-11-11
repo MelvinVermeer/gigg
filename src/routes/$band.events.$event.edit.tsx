@@ -2,6 +2,8 @@ import { createFileRoute, redirect, useNavigate, useRouter } from '@tanstack/rea
 import { EventForm } from '#/components/EventForm'
 import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
+import { Button } from '#/components/ui/button'
+import { Separator } from '#/components/ui/separator'
 
 export const Route = createFileRoute('/$band/events/$event/edit')({
   loader: async ({ params }) => {
@@ -29,11 +31,15 @@ function EditEvent() {
 
   return (
     <>
-      <h1>Edit {event.title}</h1>
-      {event.archivedAt && <p role="status">This event is archived.</p>}
-      <p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="mb-0">Edit {event.title}</h1>
         <HistoryLink item={event.id} />
-      </p>
+      </div>
+      {event.archivedAt && (
+        <p role="status" className="mb-4 rounded-md bg-muted px-3 py-2 text-sm">
+          This event is archived.
+        </p>
+      )}
       <EventForm
         data={data}
         initial={{ ...event, contacts }}
@@ -43,11 +49,10 @@ function EditEvent() {
           await navigate({ to: '/$band/events/$event', params: { band, event: saved.slug } })
         }}
       />
-      <p>
-        <button type="button" onClick={() => setArchived(!event.archivedAt)}>
-          {event.archivedAt ? 'Restore' : 'Archive'}
-        </button>
-      </p>
+      <Separator className="my-8" />
+      <Button variant="outline" onClick={() => setArchived(!event.archivedAt)}>
+        {event.archivedAt ? 'Restore' : 'Archive'}
+      </Button>
     </>
   )
 }

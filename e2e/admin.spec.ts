@@ -4,7 +4,7 @@ import { asReader, lastLinkFor, signIn } from './helpers'
 test('admin adds a band, its first member is invited, then the band is deleted for good', async ({ page, browser }) => {
   await signIn(page, 'admin@example.com') // the admin in local mode (auth.ts)
   await page.getByRole('button', { name: /Account menu/ }).click()
-  await page.locator('#user-menu').getByRole('link', { name: 'Admin' }).click()
+  await page.getByRole('menuitem', { name: 'Admin' }).click()
 
   await expect(page.getByRole('heading', { name: 'Feedback' })).toBeVisible()
 

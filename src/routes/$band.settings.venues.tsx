@@ -1,4 +1,5 @@
 import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
+import { Button } from '#/components/ui/button'
 import { RecordList } from '#/components/RecordList'
 import type { Field } from '#/components/RecordList'
 import { bandOp } from '#/server/fns'
@@ -29,11 +30,11 @@ function Venues() {
     <>
       <h1>{archived ? 'Archived venues' : 'Venues'}</h1>
       {archived && (
-        <p>
+        <Button asChild variant="ghost" size="sm" className="mb-4">
           <Link to="/$band/settings/venues" params={{ band: band.slug }}>
             Back to venues
           </Link>
-        </p>
+        </Button>
       )}
       <RecordList
         items={venues}

@@ -7,7 +7,7 @@ test.describe('reader', () => {
   test('opens the manual from the account menu', async ({ page }) => {
     await page.goto('/demo-band')
     await page.getByRole('button', { name: /Account menu/ }).click()
-    await page.getByRole('link', { name: 'Manual' }).click()
+    await page.getByRole('menuitem', { name: 'Manual' }).click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Manual')
   })
 })

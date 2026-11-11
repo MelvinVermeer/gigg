@@ -1,5 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
+import { KeyRound, Mail } from 'lucide-react'
+import { Field, FormError } from '#/components/Field'
+import { Button } from '#/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
+import { Input } from '#/components/ui/input'
+import { Separator } from '#/components/ui/separator'
 import { authClient } from '#/lib/auth-client'
 
 export const Route = createFileRoute('/login')({ component: Login })
@@ -24,24 +30,38 @@ function Login() {
   }
 
   return (
-    <main>
-      <h1>Sign in</h1>
-      {sent ? (
-        <p role="status">Check your email for a sign-in link.</p>
-      ) : (
-        <form onSubmit={sendLink}>
-          <label>
-            Email <input name="email" type="email" autoComplete="username webauthn" required />
-          </label>{' '}
-          <button type="submit">Email me a link</button>
-        </form>
-      )}
-      <p>
-        <button type="button" onClick={withPasskey}>
-          Sign in with a passkey
-        </button>
-      </p>
-      {error && <p role="alert">{error}</p>}
+    <main className="mx-auto w-full max-w-sm px-4 pt-16 pb-16">
+      <Card>
+        <CardHeader>
+          <CardTitle role="heading" aria-level={1} className="text-xl">
+            Sign in
+          </CardTitle>
+          <CardDescription>We'll email you a link, or use a passkey.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          {sent ? (
+            <p role="status" className="rounded-md bg-muted px-3 py-2 text-sm">
+              Check your email for a sign-in link.
+            </p>
+          ) : (
+            <form onSubmit={sendLink} className="grid gap-3">
+              <Field label="Email">
+                <Input name="email" type="email" autoComplete="username webauthn" required />
+              </Field>
+              <Button type="submit">
+                <Mail aria-hidden /> Email me a link
+              </Button>
+            </form>
+          )}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <Separator className="flex-1" /> or <Separator className="flex-1" />
+          </div>
+          <Button variant="outline" onClick={withPasskey}>
+            <KeyRound aria-hidden /> Sign in with a passkey
+          </Button>
+          <FormError>{error}</FormError>
+        </CardContent>
+      </Card>
     </main>
   )
 }

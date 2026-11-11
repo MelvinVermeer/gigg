@@ -1,5 +1,9 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
+import { Field, FormError } from '#/components/Field'
+import { Button } from '#/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
+import { Input } from '#/components/ui/input'
 import { addBand, deleteBand, deleteBandPermanently, getAllBands, getFeedback } from '#/server/fns'
 
 const size = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : b < 1024 ** 3 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${(b / 1024 ** 3).toFixed(2)} GB`)
@@ -45,77 +49,115 @@ function Admin() {
   const deleted = bands.filter((b) => b.archivedAt)
 
   return (
-    <main>
+    <main className="mx-auto w-full max-w-3xl px-4 pt-8 pb-16">
       <h1>Admin</h1>
+      <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle role="heading" aria-level={2}>
+              Add a band
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <form onSubmit={add} className="flex flex-wrap items-end gap-2">
+              <Field label="Band name" className="min-w-40 flex-1">
+                <Input name="name" required maxLength={200} />
+              </Field>
+              <Field label="First member's email" className="min-w-48 flex-1">
+                <Input name="email" type="email" required maxLength={200} />
+              </Field>
+              <Button type="submit">Add band</Button>
+            </form>
+            <FormError>{error}</FormError>
+          </CardContent>
+        </Card>
 
-      <section>
-        <h2>Add a band</h2>
-        <form onSubmit={add}>
-          <label>
-            Band name <input name="name" required maxLength={200} />
-          </label>{' '}
-          <label>
-            First member's email <input name="email" type="email" required maxLength={200} />
-          </label>{' '}
-          <button type="submit">Add band</button>
-        </form>
-        {error && <p role="alert">{error}</p>}
-      </section>
+        <Card>
+          <CardHeader>
+            <CardTitle role="heading" aria-level={2}>
+              Bands
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {active.length ? (
+              <ul className="divide-y rounded-lg border">
+                {active.map((b) => (
+                  <li key={b.slug} className="flex items-center gap-3 px-3 py-2 text-sm">
+                    <span className="grid flex-1 gap-0.5">
+                      <Link to="/$band" params={{ band: b.slug }} className="font-medium hover:underline">
+                        {b.name}
+                      </Link>
+                      <span className="text-muted-foreground">
+                        ({b.members.join(', ') || 'no members'}), files: {size(b.fileBytes)}
+                      </span>
+                    </span>
+                    <Button variant="ghost" size="xs" className="text-destructive" onClick={() => remove(b.slug, b.name)}>
+                      Delete
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No bands yet.</p>
+            )}
+          </CardContent>
+        </Card>
 
-      <section>
-        <h2>Bands</h2>
-        {active.length ? (
-          <ul>
-            {active.map((b) => (
-              <li key={b.slug}>
-                <Link to="/$band" params={{ band: b.slug }}>
-                  {b.name}
-                </Link>{' '}
-                ({b.members.join(', ') || 'no members'}), files: {size(b.fileBytes)}{' '}
-                <button type="button" onClick={() => remove(b.slug, b.name)}>
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>No bands yet.</p>
+        <Card>
+          <CardHeader>
+            <CardTitle role="heading" aria-level={2}>
+              Feedback
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {feedback.length ? (
+              <ul aria-label="Feedback" className="divide-y rounded-lg border">
+                {feedback.map((f) => (
+                  <li key={f.id} className="grid gap-1 px-3 py-2 text-sm">
+                    <span>
+                      <strong>{f.name || f.email}</strong>
+                      <span className="text-muted-foreground">
+                        {f.band && <> in {f.band}</>}, {new Date(f.createdAt).toLocaleDateString()}
+                      </span>
+                    </span>
+                    <p className="notes whitespace-pre-wrap">{f.body}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No feedback yet.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {deleted.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle role="heading" aria-level={2}>
+                Deleted bands
+              </CardTitle>
+              <CardDescription>Hidden from everyone, but their data is still stored.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="divide-y rounded-lg border">
+                {deleted.map((b) => (
+                  <li key={b.slug} className="flex items-center gap-3 px-3 py-2 text-sm">
+                    <span className="flex-1">
+                      {b.name}{' '}
+                      <span className="text-muted-foreground">
+                        ({b.members.join(', ') || 'no members'}), files: {size(b.fileBytes)}
+                      </span>
+                    </span>
+                    <Button variant="destructive" size="xs" onClick={() => removeForever(b.slug, b.name)}>
+                      Delete permanently
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
         )}
-      </section>
-
-      <section>
-        <h2>Feedback</h2>
-        {feedback.length ? (
-          <ul aria-label="Feedback">
-            {feedback.map((f) => (
-              <li key={f.id}>
-                <strong>{f.name || f.email}</strong>
-                {f.band && <> in {f.band}</>}, {new Date(f.createdAt).toLocaleDateString()}
-                <p className="notes">{f.body}</p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>No feedback yet.</p>
-        )}
-      </section>
-
-      {deleted.length > 0 && (
-        <section>
-          <h2>Deleted bands</h2>
-          <p>Hidden from everyone, but their data is still stored.</p>
-          <ul>
-            {deleted.map((b) => (
-              <li key={b.slug}>
-                {b.name} ({b.members.join(', ') || 'no members'}), files: {size(b.fileBytes)}{' '}
-                <button type="button" onClick={() => removeForever(b.slug, b.name)}>
-                  Delete permanently
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      </div>
     </main>
   )
 }

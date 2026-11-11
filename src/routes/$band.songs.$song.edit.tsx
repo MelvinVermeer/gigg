@@ -2,6 +2,8 @@ import { createFileRoute, redirect, useNavigate, useRouter } from '@tanstack/rea
 import { SongForm } from '#/components/SongForm'
 import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
+import { Button } from '#/components/ui/button'
+import { Separator } from '#/components/ui/separator'
 
 export const Route = createFileRoute('/$band/songs/$song/edit')({
   loader: async ({ params }) => {
@@ -26,11 +28,15 @@ function EditSong() {
 
   return (
     <>
-      <h1>Edit {song.title}</h1>
-      {song.archivedAt && <p role="status">This song is archived.</p>}
-      <p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="mb-0">Edit {song.title}</h1>
         <HistoryLink item={song.id} />
-      </p>
+      </div>
+      {song.archivedAt && (
+        <p role="status" className="mb-4 rounded-md bg-muted px-3 py-2 text-sm">
+          This song is archived.
+        </p>
+      )}
       <SongForm
         initial={song}
         submitLabel="Save"
@@ -39,11 +45,10 @@ function EditSong() {
           await navigate({ to: '/$band/songs/$song', params: { band, song: saved.slug } })
         }}
       />
-      <p>
-        <button type="button" onClick={() => setArchived(!song.archivedAt)}>
-          {song.archivedAt ? 'Restore' : 'Archive'}
-        </button>
-      </p>
+      <Separator className="my-8" />
+      <Button variant="outline" onClick={() => setArchived(!song.archivedAt)}>
+        {song.archivedAt ? 'Restore' : 'Archive'}
+      </Button>
     </>
   )
 }
