@@ -37,7 +37,7 @@ test('sign in with an email link, add a passkey, sign back in with it', async ({
   await page.getByRole('link', { name: 'Sign in' }).click()
   await page.getByRole('button', { name: 'Sign in with a passkey' }).click()
   await expect(page).toHaveURL(/\/demo-band\/events$/)
-  await expect(page.getByRole('button', { name: 'Account menu for member@example.com' })).toHaveText('M')
+  await expect(page.getByRole('button', { name: 'Account menu for Dev Member' })).toHaveText('D')
 
   // The passkey is listed in settings and can be deleted.
   await page.getByRole('button', { name: /Account menu/ }).click()
