@@ -18,7 +18,10 @@ function Setlist() {
   const data = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const router = useRouter()
-  const editable = band.role === 'member'
+  const member = band.role === 'member'
+  // A new, empty setlist opens ready to build.
+  const [editing, setEditing] = useState(data.sets.length === 0)
+  const editable = member && editing
   const [name, setName] = useState(data.setlist.name)
   const id = data.setlist.id
 
@@ -33,23 +36,32 @@ function Setlist() {
 
   return (
     <>
-      <div className="flex justify-end">
-        <HistoryLink item={id} />
-      </div>
-      <h1 className="mt-1">
-        {editable ? (
-          <Input
-            aria-label="Setlist name"
-            className="title-input h-10 text-2xl font-semibold md:text-2xl"
-            value={name}
-            maxLength={60}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={rename}
-          />
-        ) : (
-          data.setlist.name
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h1 className="mb-0 min-w-0 flex-1">
+          {editable ? (
+            <Input
+              aria-label="Setlist name"
+              className="title-input h-10 text-2xl font-semibold md:text-2xl"
+              value={name}
+              maxLength={60}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={rename}
+            />
+          ) : (
+            name
+          )}
+        </h1>
+        {member && (
+          <Button size="sm" variant={editing ? 'default' : 'secondary'} onClick={() => setEditing(!editing)}>
+            {editing ? 'Done' : 'Edit'}
+          </Button>
         )}
-      </h1>
+      </div>
+      {!editing && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          <HistoryLink item={id} />
+        </div>
+      )}
       {data.setlist.archivedAt && (
         <p role="status" className="mb-4 rounded-md bg-muted px-3 py-2 text-sm">
           This setlist is archived.

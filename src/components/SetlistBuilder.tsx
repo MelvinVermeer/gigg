@@ -1,4 +1,4 @@
-import { Link, useRouter } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Badge } from '#/components/ui/badge'
@@ -137,11 +137,6 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => persist([...sets, { name: `Set ${sets.length + 1}`, songs: [] }])}>
             <Plus aria-hidden /> Add set
-          </Button>
-          <Button asChild variant="ghost">
-            <Link to="/$band/setlists" params={{ band }} hash="blocks">
-              Manage blocks
-            </Link>
           </Button>
         </div>
       )}

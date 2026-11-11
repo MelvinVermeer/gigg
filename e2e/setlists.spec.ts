@@ -108,6 +108,11 @@ test.describe('standalone setlists', () => {
     await addSong(page, 'Set 1', 'Neon Harbour')
     await addSong(page, 'Set 1', 'Closer')
     await expect(page.getByRole('status')).toHaveText('Saved')
+    await page.getByRole('button', { name: 'Done' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Festival ${ts}`)
+    await expect(page.getByLabel(/Add song to/)).toHaveCount(0)
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeVisible() // a filled setlist opens to view
 
     await page.goto('/demo-band/events/new')
     await page.getByLabel('Title').fill(`From template ${ts}`)
