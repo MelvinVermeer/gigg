@@ -12,13 +12,17 @@ export async function lastLinkFor(email: string) {
   return mails.at(-1)!.text.match(/https?:\/\/\S+/)![0]
 }
 
-/** Sign in with an email link. Seeded users: member@example.com, reader@example.com. */
-export async function signIn(page: Page, email: string) {
+/**
+ * Sign in with an email link. Seeded users: member@example.com, reader@example.com.
+ * Users without a passkey then get the passkey prompt: 'later' dismisses it, 'keep' leaves it open.
+ */
+export async function signIn(page: Page, email: string, prompt: 'later' | 'keep' = 'later') {
   await page.goto('/login')
   await page.getByLabel('Email').fill(email)
   await page.getByRole('button', { name: 'Email me a link' }).click()
   await expect(page.getByRole('status')).toContainText('Check your email')
   await page.goto(await lastLinkFor(email))
+  if (prompt === 'later') await page.getByRole('button', { name: "I'll configure later via settings" }).click()
 }
 
 /** Saved sessions from auth.setup.ts. */

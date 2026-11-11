@@ -21,13 +21,12 @@ test('sign in with an email link, add a passkey, sign back in with it', async ({
     },
   })
 
-  await signIn(page, 'member@example.com')
+  // First email-link sign-in: the prompt offers a passkey.
+  await signIn(page, 'member@example.com', 'keep')
   await expect(page).toHaveURL(/\/demo-band\/events$/)
-
-  await page.getByRole('button', { name: /Account menu/ }).click()
-  await page.getByRole('link', { name: 'Settings' }).click()
-  await page.getByRole('button', { name: 'Add a passkey' }).click()
-  await expect(page.getByRole('status')).toHaveText('Passkey added')
+  const prompt = page.getByRole('dialog', { name: 'Sign in faster next time' })
+  await prompt.getByRole('button', { name: 'Add passkey' }).click()
+  await expect(prompt).toBeHidden()
 
   // Log out via the user menu: back home, menu replaced by "Sign in".
   await page.getByRole('button', { name: /Account menu/ }).click()

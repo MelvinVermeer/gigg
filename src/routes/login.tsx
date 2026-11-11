@@ -11,7 +11,7 @@ function Login() {
   async function sendLink(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const email = String(new FormData(e.currentTarget).get('email'))
-    const { error } = await authClient.signIn.magicLink({ email, callbackURL: '/me' })
+    const { error } = await authClient.signIn.magicLink({ email, callbackURL: '/me?passkey=suggest' })
     if (error) setError(error.message ?? 'Something went wrong')
     else setSent(true)
   }

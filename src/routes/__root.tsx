@@ -3,6 +3,7 @@ import { HeadContent, Link, Outlet, Scripts, createRootRoute } from '@tanstack/r
 import lockup from '../assets/gigg-lockup.svg'
 import lockupInk from '../assets/gigg-lockup-ink.svg'
 import { useEffect, useState } from 'react'
+import { PasskeyPrompt } from '#/components/PasskeyPrompt'
 import { UserMenu } from '#/components/UserMenu'
 import { themeScript } from '#/lib/theme'
 import { getMe } from '#/server/fns'
@@ -82,6 +83,7 @@ function RootLayout() {
         </Link>
         {me ? <UserMenu email={me.email} bands={me.bands} isAdmin={me.isAdmin} /> : <Link to="/login">Sign in</Link>}
       </header>
+      {me && <PasskeyPrompt />}
       <Outlet />
     </>
   )

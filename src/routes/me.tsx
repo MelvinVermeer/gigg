@@ -4,7 +4,7 @@ import { getMyBands } from '#/server/fns'
 export const Route = createFileRoute('/me')({
   loader: async () => {
     const bands = await getMyBands()
-    if (bands.length === 1) throw redirect({ to: '/$band', params: { band: bands[0].slug } })
+    if (bands.length === 1) throw redirect({ to: '/$band', params: { band: bands[0].slug }, search: true })
     return bands
   },
   component: MyBands,
