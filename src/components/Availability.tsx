@@ -11,11 +11,13 @@ export function Availability({ band, event, info, canAsk }: { band: string; even
   const [people, setPeople] = useState<{ email: string; role: string }[] | null>(null)
   const [picked, setPicked] = useState<Set<string>>(new Set()) // nobody is preselected
   const [error, setError] = useState('')
+  const [editing, setEditing] = useState(false)
 
   const run = async (go: () => Promise<unknown>) => {
     try {
       await go()
       setPeople(null)
+      setEditing(false)
       setPicked(new Set())
       setError('')
       await router.invalidate()
@@ -23,8 +25,6 @@ export function Availability({ band, event, info, canAsk }: { band: string; even
       setError(e instanceof Error ? e.message : 'Something went wrong')
     }
   }
-  const answer = (a: keyof typeof labels, note: string | null) =>
-    run(() => bandOp('answerAvailability', band, { event, answer: a, note }))
   const mine = info?.responses.find((r) => r.mine)
 
   return (
@@ -44,18 +44,52 @@ export function Availability({ band, event, info, canAsk }: { band: string; even
               <li key={r.email}>
                 {r.name || r.email}: {r.answer ? labels[r.answer] : 'waiting'}
                 {r.note && <> · “{r.note}”</>}
+                {r.mine && info.open && r.answer && !editing && (
+                  <>
+                    {' '}
+                    <button type="button" onClick={() => setEditing(true)}>
+                      Edit
+                    </button>
+                  </>
+                )}
               </li>
             ))}
           </ul>
-          {info.open && mine && (
-            <p>
-              Your answer:{' '}
-              {(Object.keys(labels) as (keyof typeof labels)[]).map((a) => (
-                <button key={a} type="button" aria-pressed={mine.answer === a} onClick={() => answer(a, mine.note)}>
-                  {labels[a]}
-                </button>
-              ))}
-            </p>
+          {info.open && mine && (!mine.answer || editing) && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const f = new FormData(e.currentTarget)
+                run(() =>
+                  bandOp('answerAvailability', band, {
+                    event,
+                    answer: f.get('answer') as keyof typeof labels,
+                    note: String(f.get('note') ?? '').trim() || null,
+                  }),
+                )
+              }}
+            >
+              <fieldset>
+                <legend>Your answer</legend>
+                {(Object.keys(labels) as (keyof typeof labels)[]).map((a) => (
+                  <label key={a}>
+                    <input type="radio" name="answer" value={a} defaultChecked={mine.answer === a} required /> {labels[a]}
+                  </label>
+                ))}
+              </fieldset>
+              <label>
+                Note <input name="note" defaultValue={mine.note ?? ''} maxLength={500} />
+              </label>{' '}
+              <button type="submit">Save</button>
+              {editing && (
+                <>
+                  {' '}
+                  <button type="button" onClick={() => setEditing(false)}>
+                    Cancel
+                  </button>
+                </>
+              )}
+            </form>
           )}
           {info.open && canAsk && (
             <p>

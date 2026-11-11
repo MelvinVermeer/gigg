@@ -1041,12 +1041,14 @@ async function describe(tx: Tx, rows: Change[]) {
   const setlistIds = new Set<string>()
   const blockIds = new Set<string>()
   const eventIds = new Set<string>()
+  const people: { userId: string; before: Row | null; after: Row | null }[] = []
   for (const c of rows) {
     const before = c.before as Row | null
     const after = c.after as Row | null
     const r = (after ?? before)!
     const entity = entities[c.tableName]
-    if (entity) {
+    if (c.tableName === 'memberships') people.push({ userId: r.user_id as string, before, after })
+    else if (entity) {
       const name = `${entity} “${r.title ?? r.name}”`
       if (c.action === 'insert') lines.push(`Added ${name}`)
       else if (c.action === 'delete') lines.push(`Removed ${name}`)
@@ -1058,6 +1060,17 @@ async function describe(tx: Tx, rows: Change[]) {
     } else if (c.tableName === 'sets') setlistIds.add(r.setlist_id as string)
     else if (c.tableName === 'block_songs') blockIds.add(r.block_id as string)
     else if (c.tableName === 'event_contacts') eventIds.add(r.event_id as string)
+  }
+  if (people.length) {
+    const found = await tx.select({ id: users.id, email: users.email }).from(users).where(inArray(users.id, people.map((p) => p.userId)))
+    const email = (id: string) => found.find((u) => u.id === id)?.email ?? 'someone'
+    for (const { userId, before, after } of people) {
+      const who = `“${email(userId)}”`
+      if (!after) lines.push(`Removed member ${who}`)
+      else if (!before || (before.archived_at && !after.archived_at)) lines.push(`Added ${after.role} ${who}`)
+      else if (after.archived_at && !before.archived_at) lines.push(`Removed member ${who}`)
+      else if (before.role !== after.role) lines.push(`Changed ${who} from ${before.role} to ${after.role}`)
+    }
   }
   const names = async (table: typeof setlists | typeof blocks, ids: Set<string>) =>
     ids.size ? (await tx.select({ name: table.name }).from(table).where(inArray(table.id, [...ids]))).map((x) => x.name) : []
@@ -1073,7 +1086,7 @@ export type Diff = { what: string; field: string; from: string; to: string }
 
 /** Columns that are bookkeeping, not something a person changed. */
 const hidden = new Set(['id', 'band_id', 'slug', 'created_at', 'position'])
-const refs = ['song_id', 'venue_id', 'contact_id', 'event_id', 'setlist_id', 'block_id']
+const refs = ['song_id', 'venue_id', 'contact_id', 'event_id', 'setlist_id', 'block_id', 'user_id']
 
 /**
  * Field-by-field before → after for one transaction. Ids are shown as names; set and block songs
@@ -1095,7 +1108,8 @@ async function diff(tx: Tx, rows: Change[]): Promise<Diff[]> {
       union all select id::text, name from contacts where id in (${list})
       union all select id::text, title from events where id in (${list})
       union all select id::text, name from setlists where id in (${list})
-      union all select id::text, name from blocks where id in (${list})`)) as unknown as { rows: { id: string; name: string }[] }
+      union all select id::text, name from blocks where id in (${list})
+      union all select id::text, email from users where id in (${list})`)) as unknown as { rows: { id: string; name: string }[] }
     for (const f of found) names.set(f.id, f.name)
   }
   const name = (id: unknown) => (typeof id === 'string' ? (names.get(id) ?? 'deleted') : '–')
@@ -1126,6 +1140,13 @@ async function diff(tx: Tx, rows: Change[]): Promise<Diff[]> {
       const what = `${entity[0].toUpperCase()}${entity.slice(1)} “${r.title ?? r.name}”`
       for (const k of Object.keys(r)) {
         if (hidden.has(k)) continue
+        const from = show(k, before?.[k])
+        const to = show(k, after?.[k])
+        if (from !== to) out.push({ what, field: human(k), from, to })
+      }
+    } else if (c.tableName === 'memberships') {
+      const what = `Member “${name(r.user_id)}”`
+      for (const k of ['role', 'archived_at']) {
         const from = show(k, before?.[k])
         const to = show(k, after?.[k])
         if (from !== to) out.push({ what, field: human(k), from, to })
