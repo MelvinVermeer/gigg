@@ -6,6 +6,8 @@ test('admin adds a band, its first member is invited, then the band is deleted f
   await page.getByRole('button', { name: /Account menu/ }).click()
   await page.locator('#user-menu').getByRole('link', { name: 'Admin' }).click()
 
+  await expect(page.getByRole('heading', { name: 'Feedback' })).toBeVisible()
+
   const name = `Band ${Date.now()}`
   const email = `first-${Date.now()}@example.com`
   await page.getByLabel('Band name').fill(name)

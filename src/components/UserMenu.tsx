@@ -38,6 +38,11 @@ export function UserMenu({ email, bands, isAdmin }: Props) {
               Settings
             </Link>
           )}
+          {settingsBand && (
+            <Link to="/$band/feedback" params={{ band: settingsBand }} onClick={close}>
+              Feedback
+            </Link>
+          )}
           {isAdmin && (
             <Link to="/admin" onClick={close}>
               Admin

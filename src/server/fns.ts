@@ -7,7 +7,7 @@ import type { z } from 'zod'
 import { auth, isAdminEmail } from './auth'
 import { db } from './db'
 import { sendMail } from './mail'
-import { archiveBand, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, myBands, NotFound } from './ops'
+import { archiveBand, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, listFeedback, myBands, NotFound } from './ops'
 import type { BandOpName, BandOps } from './ops'
 
 const authed = createMiddleware({ type: 'function' }).server(async ({ next }) => {
@@ -34,6 +34,10 @@ const admin = createMiddleware({ type: 'function' }).server(async ({ next }) => 
 export const getAllBands = createServerFn({ method: 'GET' })
   .middleware([admin])
   .handler(() => listAllBands(db))
+
+export const getFeedback = createServerFn({ method: 'GET' })
+  .middleware([admin])
+  .handler(() => listFeedback(db))
 
 export const addBand = createServerFn({ method: 'POST' })
   .middleware([admin])

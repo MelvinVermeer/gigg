@@ -221,6 +221,15 @@ export async function fileForDownload(db: Db, userId: string, id: string) {
   return file
 }
 
+// Feedback -----------------------------------------------------------------
+
+const feedbackOps = {
+  /** Anyone in the band, readers included, can send feedback to the instance admin. */
+  sendFeedback: bandOp('reader', z.object({ body: z.string().trim().min(1).max(5000) }), async ({ tx, bandId, userId }, { body }) => {
+    await tx.insert(feedback).values({ bandId, userId, body })
+  }),
+}
+
 // Songs --------------------------------------------------------------------
 
 const songFields = z.object({
@@ -1175,6 +1184,7 @@ export const bandOps = {
   }),
   ...songOps,
   ...fileOps,
+  ...feedbackOps,
   ...eventOps,
   ...venueContactOps,
   ...setlistOps,
@@ -1214,6 +1224,15 @@ export function listAllBands(db: Db) {
     .leftJoin(users, eq(users.id, memberships.userId))
     .groupBy(bands.id)
     .orderBy(sql`${bands.archivedAt} is not null`, asc(bands.name))
+}
+
+export function listFeedback(db: Db) {
+  return db
+    .select({ id: feedback.id, body: feedback.body, createdAt: feedback.createdAt, email: users.email, band: bands.name })
+    .from(feedback)
+    .innerJoin(users, eq(users.id, feedback.userId))
+    .leftJoin(bands, eq(bands.id, feedback.bandId))
+    .orderBy(desc(feedback.createdAt))
 }
 
 const newBand = z.object({ name: z.string().trim().min(1).max(200), email: z.string().trim().toLowerCase().email().max(200) })

@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as BandIndexRouteImport } from './routes/$band.index'
 import { Route as BandBlocksRouteImport } from './routes/$band.blocks'
+import { Route as BandFeedbackRouteImport } from './routes/$band.feedback'
 import { Route as BandHistoryRouteImport } from './routes/$band.history'
 import { Route as BandSearchRouteImport } from './routes/$band.search'
 import { Route as ApiFilesRouteImport } from './routes/api/files'
@@ -71,6 +72,11 @@ const BandIndexRoute = BandIndexRouteImport.update({
 const BandBlocksRoute = BandBlocksRouteImport.update({
   id: '/blocks',
   path: '/blocks',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandFeedbackRoute = BandFeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
   getParentRoute: () => BandRoute,
 } as any)
 const BandHistoryRoute = BandHistoryRouteImport.update({
@@ -186,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
+  '/$band/feedback': typeof BandFeedbackRoute
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
   '/api/files': typeof ApiFilesRouteWithChildren
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
+  '/$band/feedback': typeof BandFeedbackRoute
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
   '/api/files': typeof ApiFilesRouteWithChildren
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/$band/blocks': typeof BandBlocksRoute
+  '/$band/feedback': typeof BandFeedbackRoute
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
   '/api/files': typeof ApiFilesRouteWithChildren
@@ -278,6 +287,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/$band/blocks'
+    | '/$band/feedback'
     | '/$band/history'
     | '/$band/search'
     | '/api/files'
@@ -307,6 +317,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/$band/blocks'
+    | '/$band/feedback'
     | '/$band/history'
     | '/$band/search'
     | '/api/files'
@@ -337,6 +348,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/$band/blocks'
+    | '/$band/feedback'
     | '/$band/history'
     | '/$band/search'
     | '/api/files'
@@ -420,6 +432,13 @@ declare module '@tanstack/react-router' {
       path: '/blocks'
       fullPath: '/$band/blocks'
       preLoaderRoute: typeof BandBlocksRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/feedback': {
+      id: '/$band/feedback'
+      path: '/feedback'
+      fullPath: '/$band/feedback'
+      preLoaderRoute: typeof BandFeedbackRouteImport
       parentRoute: typeof BandRoute
     }
     '/$band/history': {
@@ -574,6 +593,7 @@ declare module '@tanstack/react-router' {
 
 interface BandRouteChildren {
   BandBlocksRoute: typeof BandBlocksRoute
+  BandFeedbackRoute: typeof BandFeedbackRoute
   BandHistoryRoute: typeof BandHistoryRoute
   BandSearchRoute: typeof BandSearchRoute
   BandIndexRoute: typeof BandIndexRoute
@@ -597,6 +617,7 @@ interface BandRouteChildren {
 
 const BandRouteChildren: BandRouteChildren = {
   BandBlocksRoute: BandBlocksRoute,
+  BandFeedbackRoute: BandFeedbackRoute,
   BandHistoryRoute: BandHistoryRoute,
   BandSearchRoute: BandSearchRoute,
   BandIndexRoute: BandIndexRoute,

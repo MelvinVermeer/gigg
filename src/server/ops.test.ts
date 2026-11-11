@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import { bands, changes, contacts, memberships, songs, users, venues } from './db/schema'
-import { archiveBand, bandOps, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, myBands, NotFound, slugify } from './ops'
+import { archiveBand, bandOps, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, slugify } from './ops'
 import type { BandOpName } from './ops'
 import { testDb } from './test-db'
 
@@ -596,5 +596,15 @@ describe('files', () => {
     const f = await bandOps.addFile(t.db, t.member, t.band, { ...upload, song: 'closer' })
     await expect(fileForDownload(t.db, t.reader, f.id)).resolves.toMatchObject({ blobPath: 'k1' })
     await expect(fileForDownload(t.db, t.outsider, f.id)).rejects.toBeInstanceOf(NotFound)
+  })
+})
+
+describe('feedback', () => {
+  it('lets any band user send feedback; the admin overview lists it', async () => {
+    const t = await testDb()
+    await bandOps.sendFeedback(t.db, t.reader, t.band, { body: ' Love it ' })
+    await expect(bandOps.sendFeedback(t.db, t.reader, t.band, { body: '  ' })).rejects.toThrow()
+    await expect(bandOps.sendFeedback(t.db, t.outsider, t.band, { body: 'hi' })).rejects.toBeInstanceOf(Forbidden)
+    expect(await listFeedback(t.db)).toMatchObject([{ body: 'Love it', email: 'reader@example.com', band: expect.any(String) }])
   })
 })

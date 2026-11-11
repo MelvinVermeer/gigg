@@ -1,14 +1,14 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
-import { addBand, deleteBand, deleteBandPermanently, getAllBands } from '#/server/fns'
+import { addBand, deleteBand, deleteBandPermanently, getAllBands, getFeedback } from '#/server/fns'
 
 export const Route = createFileRoute('/admin')({
-  loader: () => getAllBands(),
+  loader: async () => ({ bands: await getAllBands(), feedback: await getFeedback() }),
   component: Admin,
 })
 
 function Admin() {
-  const bands = Route.useLoaderData()
+  const { bands, feedback } = Route.useLoaderData()
   const router = useRouter()
   const [error, setError] = useState('')
 
@@ -78,6 +78,23 @@ function Admin() {
           </ul>
         ) : (
           <p>No bands yet.</p>
+        )}
+      </section>
+
+      <section>
+        <h2>Feedback</h2>
+        {feedback.length ? (
+          <ul aria-label="Feedback">
+            {feedback.map((f) => (
+              <li key={f.id}>
+                <strong>{f.email}</strong>
+                {f.band && <> in {f.band}</>}, {new Date(f.createdAt).toLocaleDateString()}
+                <p className="notes">{f.body}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No feedback yet.</p>
         )}
       </section>
 
