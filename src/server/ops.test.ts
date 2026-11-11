@@ -656,6 +656,21 @@ describe('availability', () => {
     bandOps.askAvailability(t.db, t.member, t.band, { event: 'summer-party', emails })
   const tokenOf = (a: Awaited<ReturnType<typeof ask>>, email: string) => a.recipients.find((r) => r.email === email)!.token
 
+  it('shows asking, answering and closing in the history', async () => {
+    const t = await testDb()
+    await ask(t)
+    await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'summer-party', answer: 'maybe', note: 'after 9pm' })
+    await bandOps.closeAvailability(t.db, t.member, t.band, { event: 'summer-party' })
+    const saves = await bandOps.listChanges(t.db, t.reader, t.band, {})
+    const lines = saves.flatMap((s) => s.lines)
+    expect(lines.slice(0, 3)).toEqual([
+      expect.stringMatching(/^Closed the availability request for event/),
+      expect.stringMatching(/^“reader@example.com” answered maybe for event/),
+      expect.stringMatching(/^Asked availability for event/),
+    ])
+    expect(saves.flatMap((s) => s.diffs).some((d) => d.field === 'note' && d.to === 'after 9pm')).toBe(true)
+  })
+
   it('asks people, who answer in the app or from a link, with a note', async () => {
     const t = await testDb()
     const asked = await ask(t)

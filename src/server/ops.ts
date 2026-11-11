@@ -1035,6 +1035,24 @@ const entities: Record<string, string> = {
 }
 const human = (column: string) => column.replace(/_(id|sec)$/, '').replaceAll('_', ' ')
 
+/** Event title per availability request, for history lines. */
+async function requestEvents(tx: Tx, rows: Change[]) {
+  const ids = new Set<string>()
+  for (const c of rows) {
+    const r = (c.after ?? c.before) as Row
+    if (c.tableName === 'availability_requests') ids.add(r.id as string)
+    else if (c.tableName === 'availability_responses') ids.add(r.request_id as string)
+  }
+  const found = ids.size
+    ? await tx
+        .select({ id: availabilityRequests.id, title: events.title })
+        .from(availabilityRequests)
+        .innerJoin(events, eq(events.id, availabilityRequests.eventId))
+        .where(inArray(availabilityRequests.id, [...ids]))
+    : []
+  return (id: unknown) => found.find((f) => f.id === id)?.title ?? 'deleted'
+}
+
 /** Plain-language lines for one transaction's changes. Child rows are summed up by their parent. */
 async function describe(tx: Tx, rows: Change[]) {
   const lines: string[] = []
@@ -1042,13 +1060,21 @@ async function describe(tx: Tx, rows: Change[]) {
   const blockIds = new Set<string>()
   const eventIds = new Set<string>()
   const people: { userId: string; before: Row | null; after: Row | null }[] = []
+  const requestEvent = await requestEvents(tx, rows)
+  const answerers: Row[] = [] // response rows that got an answer, named below with the members
   for (const c of rows) {
     const before = c.before as Row | null
     const after = c.after as Row | null
     const r = (after ?? before)!
     const entity = entities[c.tableName]
     if (c.tableName === 'memberships') people.push({ userId: r.user_id as string, before, after })
-    else if (entity) {
+    else if (c.tableName === 'availability_requests') {
+      const event = `event “${requestEvent(r.id)}”`
+      if (c.action === 'insert') lines.push(`Asked availability for ${event}`)
+      else if (after?.closed_at && !before?.closed_at) lines.push(`Closed the availability request for ${event}`)
+    } else if (c.tableName === 'availability_responses') {
+      if (after?.answer && (before?.answer !== after.answer || before?.note !== after.note)) answerers.push(after)
+    } else if (entity) {
       const name = `${entity} “${r.title ?? r.name}”`
       if (c.action === 'insert') lines.push(`Added ${name}`)
       else if (c.action === 'delete') lines.push(`Removed ${name}`)
@@ -1061,8 +1087,9 @@ async function describe(tx: Tx, rows: Change[]) {
     else if (c.tableName === 'block_songs') blockIds.add(r.block_id as string)
     else if (c.tableName === 'event_contacts') eventIds.add(r.event_id as string)
   }
-  if (people.length) {
-    const found = await tx.select({ id: users.id, email: users.email }).from(users).where(inArray(users.id, people.map((p) => p.userId)))
+  if (people.length || answerers.length) {
+    const wanted = [...people.map((p) => p.userId), ...answerers.map((a) => a.user_id as string)]
+    const found = await tx.select({ id: users.id, email: users.email }).from(users).where(inArray(users.id, wanted))
     const email = (id: string) => found.find((u) => u.id === id)?.email ?? 'someone'
     for (const { userId, before, after } of people) {
       const who = `“${email(userId)}”`
@@ -1071,6 +1098,7 @@ async function describe(tx: Tx, rows: Change[]) {
       else if (after.archived_at && !before.archived_at) lines.push(`Removed member ${who}`)
       else if (before.role !== after.role) lines.push(`Changed ${who} from ${before.role} to ${after.role}`)
     }
+    for (const a of answerers) lines.push(`“${email(a.user_id as string)}” answered ${a.answer} for event “${requestEvent(a.request_id)}”`)
   }
   const names = async (table: typeof setlists | typeof blocks, ids: Set<string>) =>
     ids.size ? (await tx.select({ name: table.name }).from(table).where(inArray(table.id, [...ids]))).map((x) => x.name) : []
@@ -1113,6 +1141,7 @@ async function diff(tx: Tx, rows: Change[]): Promise<Diff[]> {
     for (const f of found) names.set(f.id, f.name)
   }
   const name = (id: unknown) => (typeof id === 'string' ? (names.get(id) ?? 'deleted') : '–')
+  const requestEvent = await requestEvents(tx, rows)
   const show = (k: string, v: unknown) => {
     if (v == null || v === '' || (Array.isArray(v) && !v.length)) return '–'
     if (refs.includes(k)) return name(v)
@@ -1150,6 +1179,13 @@ async function diff(tx: Tx, rows: Change[]): Promise<Diff[]> {
         const from = show(k, before?.[k])
         const to = show(k, after?.[k])
         if (from !== to) out.push({ what, field: human(k), from, to })
+      }
+    } else if (c.tableName === 'availability_responses' && after) {
+      const what = `Availability of “${name(r.user_id)}” for event “${requestEvent(r.request_id)}”`
+      for (const k of ['answer', 'note']) {
+        const from = show(k, before?.[k])
+        const to = show(k, after[k])
+        if (from !== to) out.push({ what, field: k, from, to })
       }
     } else if (c.tableName === 'event_contacts') {
       // Links are written per contact (only what changed), so show each one added or removed.
