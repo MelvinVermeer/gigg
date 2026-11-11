@@ -49,10 +49,6 @@ function Events() {
           <>
             <Link to="/$band/events" params={params} search={{ when: 'past' }}>
               Past events
-            </Link>{' '}
-            ·{' '}
-            <Link to="/$band/events" params={params} search={{ when: 'archived' }}>
-              Archived
             </Link>
           </>
         ) : (

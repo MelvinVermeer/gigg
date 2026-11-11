@@ -38,10 +38,6 @@ function Songs() {
           <>
             <Link to="/$band/blocks" params={{ band: band.slug }}>
               Blocks
-            </Link>{' '}
-            ·{' '}
-            <Link to="/$band/songs" params={{ band: band.slug }} search={{ archived: true }}>
-              Archived songs
             </Link>
           </>
         )}

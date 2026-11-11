@@ -1,9 +1,12 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/manual')({ component: Manual })
 
 // Keep it short: one paragraph per topic. Update when a feature changes.
+const rootRoute = getRouteApi('__root__')
+
 function Manual() {
+  const bands = rootRoute.useLoaderData()?.bands ?? []
   return (
     <main>
       <h1>Manual</h1>
@@ -52,9 +55,47 @@ function Manual() {
 
       <h2>Archive and history</h2>
       <p>
-        Nothing is deleted: Archive hides an item and you can restore it. Every edit page links to History, which shows who
-        changed what, and what it was before.
+        Nothing is deleted: the Archive button at the bottom of an edit form hides an item, and nothing else in the app links
+        to archived items. This is the only place to find them again: open one and press Edit, then Restore. Every edit
+        page links to History, which shows who changed what, and what it was before.
       </p>
+      {bands.map((b) => (
+        <section key={b.slug} aria-label={`Archived items of ${b.name}`}>
+          {bands.length > 1 && <h3>{b.name}</h3>}
+          <ul>
+            <li>
+              <Link to="/$band/songs" params={{ band: b.slug }} search={{ archived: true }}>
+                Archived songs
+              </Link>
+            </li>
+            <li>
+              <Link to="/$band/events" params={{ band: b.slug }} search={{ when: 'archived' }}>
+                Archived events
+              </Link>
+            </li>
+            <li>
+              <Link to="/$band/setlists" params={{ band: b.slug }} search={{ archived: true }}>
+                Archived setlists
+              </Link>
+            </li>
+            <li>
+              <Link to="/$band/blocks" params={{ band: b.slug }} search={{ archived: true }}>
+                Archived blocks
+              </Link>
+            </li>
+            <li>
+              <Link to="/$band/settings/venues" params={{ band: b.slug }} search={{ archived: true }}>
+                Archived venues
+              </Link>
+            </li>
+            <li>
+              <Link to="/$band/settings/contacts" params={{ band: b.slug }} search={{ archived: true }}>
+                Archived contacts
+              </Link>
+            </li>
+          </ul>
+        </section>
+      ))}
 
       <h2>Feedback</h2>
       <p>Found a bug or missing something? Use Feedback in the account menu.</p>

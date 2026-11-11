@@ -1,11 +1,14 @@
-import { createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
 import { RecordList } from '#/components/RecordList'
 import type { Field } from '#/components/RecordList'
 import { bandOp } from '#/server/fns'
+import { archivedSearch } from '#/lib/archived'
 import type { VenueFields } from '#/server/ops'
 
 export const Route = createFileRoute('/$band/settings/venues')({
-  loader: ({ params }) => bandOp('listVenues', params.band, {}),
+  validateSearch: archivedSearch,
+  loaderDeps: ({ search }) => ({ archived: !!search.archived }),
+  loader: ({ params, deps }) => bandOp('listVenues', params.band, { archived: deps.archived }),
   component: Venues,
 })
 
@@ -21,9 +24,17 @@ function Venues() {
   const venues = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const router = useRouter()
+  const { archived } = Route.useSearch()
   return (
     <>
-      <h1>Venues</h1>
+      <h1>{archived ? 'Archived venues' : 'Venues'}</h1>
+      {archived && (
+        <p>
+          <Link to="/$band/settings/venues" params={{ band: band.slug }}>
+            Back to venues
+          </Link>
+        </p>
+      )}
       <RecordList
         items={venues}
         fields={fields}

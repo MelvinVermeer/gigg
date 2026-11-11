@@ -1,13 +1,16 @@
-import { createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { SongListEditor, totalDuration } from '#/components/SongListEditor'
 import type { SongRef } from '#/components/SongListEditor'
 import { formatDuration } from '#/lib/duration'
 import { bandOp } from '#/server/fns'
+import { archivedSearch } from '#/lib/archived'
 import { HistoryLink } from '#/components/HistoryLink'
 
 export const Route = createFileRoute('/$band/blocks')({
-  loader: ({ params }) => bandOp('listBlocks', params.band, {}),
+  validateSearch: archivedSearch,
+  loaderDeps: ({ search }) => ({ archived: !!search.archived }),
+  loader: ({ params, deps }) => bandOp('listBlocks', params.band, { archived: deps.archived }),
   component: Blocks,
 })
 
@@ -21,6 +24,7 @@ function Blocks() {
   const router = useRouter()
   const editable = band.role === 'member'
   const [name, setName] = useState('')
+  const { archived } = Route.useSearch()
 
   async function create(e: React.FormEvent) {
     e.preventDefault()
@@ -32,9 +36,17 @@ function Blocks() {
 
   return (
     <>
-      <h1>Blocks</h1>
-      <p>Reusable runs of songs, like an acoustic bit or the encore. Adding a block to a set copies its songs.</p>
-      {editable && (
+      <h1>{archived ? 'Archived blocks' : 'Blocks'}</h1>
+      {archived ? (
+        <p>
+          <Link to="/$band/blocks" params={{ band: band.slug }}>
+            Back to blocks
+          </Link>
+        </p>
+      ) : (
+        <p>Reusable runs of songs, like an acoustic bit or the encore. Adding a block to a set copies its songs.</p>
+      )}
+      {!archived && editable && (
         <form className="row" onSubmit={create}>
           <input aria-label="New block name" placeholder="e.g. Encore" value={name} onChange={(e) => setName(e.target.value)} />
           <button type="submit">Create block</button>
@@ -47,7 +59,7 @@ function Blocks() {
           ))}
         </ul>
       ) : (
-        <p>No blocks yet.</p>
+        <p>{archived ? 'No archived blocks.' : 'No blocks yet.'}</p>
       )}
     </>
   )
@@ -72,11 +84,10 @@ function BlockRow({ block, repertoire, editable }: { block: Block; repertoire: S
   }
 
   return (
-    <li className={block.archivedAt ? 'archived' : undefined}>
+    <li>
       <details>
         <summary>
           <strong>{block.name}</strong>
-          {block.archivedAt && <small> (archived)</small>}
           <br />
           <small>
             {block.songs.length} songs · {formatDuration(totalDuration(block.songs)) || '0:00'}

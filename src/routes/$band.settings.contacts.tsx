@@ -1,11 +1,14 @@
-import { createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
 import { RecordList } from '#/components/RecordList'
 import type { Field } from '#/components/RecordList'
 import { bandOp } from '#/server/fns'
+import { archivedSearch } from '#/lib/archived'
 import type { ContactFields } from '#/server/ops'
 
 export const Route = createFileRoute('/$band/settings/contacts')({
-  loader: ({ params }) => bandOp('listContacts', params.band, {}),
+  validateSearch: archivedSearch,
+  loaderDeps: ({ search }) => ({ archived: !!search.archived }),
+  loader: ({ params, deps }) => bandOp('listContacts', params.band, { archived: deps.archived }),
   component: Contacts,
 })
 
@@ -23,9 +26,17 @@ function Contacts() {
   const contacts = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const router = useRouter()
+  const { archived } = Route.useSearch()
   return (
     <>
-      <h1>Contacts</h1>
+      <h1>{archived ? 'Archived contacts' : 'Contacts'}</h1>
+      {archived && (
+        <p>
+          <Link to="/$band/settings/contacts" params={{ band: band.slug }}>
+            Back to contacts
+          </Link>
+        </p>
+      )}
       <RecordList
         items={contacts}
         fields={fields}

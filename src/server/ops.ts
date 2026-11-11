@@ -637,7 +637,7 @@ async function updateOwn(tx: Tx, table: typeof venues | typeof contacts, bandId:
 
 const venueContactOps = {
   /** All venues, active first, with how many events use each. */
-  listVenues: bandOp('reader', z.object({}), ({ tx, bandId }) =>
+  listVenues: bandOp('reader', z.object({ archived: z.boolean().default(false) }), ({ tx, bandId }, { archived }) =>
     tx
       .select({
         id: venues.id,
@@ -650,8 +650,8 @@ const venueContactOps = {
         events: sql<number>`(select count(*)::int from events where events.venue_id = venues.id)`,
       })
       .from(venues)
-      .where(eq(venues.bandId, bandId))
-      .orderBy(sql`${venues.archivedAt} is not null`, asc(venues.name)),
+      .where(and(eq(venues.bandId, bandId), archived ? isNotNull(venues.archivedAt) : isNull(venues.archivedAt)))
+      .orderBy(asc(venues.name)),
   ),
 
   updateVenue: bandOp('member', byId.extend({ fields: venueFields }), ({ tx, bandId }, { id, fields }) =>
@@ -665,7 +665,7 @@ const venueContactOps = {
   ),
 
   /** All contacts, active first, with how many events they're linked to. */
-  listContacts: bandOp('reader', z.object({}), ({ tx, bandId }) =>
+  listContacts: bandOp('reader', z.object({ archived: z.boolean().default(false) }), ({ tx, bandId }, { archived }) =>
     tx
       .select({
         id: contacts.id,
@@ -678,8 +678,8 @@ const venueContactOps = {
         events: sql<number>`(select count(*)::int from event_contacts where event_contacts.contact_id = contacts.id)`,
       })
       .from(contacts)
-      .where(eq(contacts.bandId, bandId))
-      .orderBy(sql`${contacts.archivedAt} is not null`, asc(contacts.name)),
+      .where(and(eq(contacts.bandId, bandId), archived ? isNotNull(contacts.archivedAt) : isNull(contacts.archivedAt)))
+      .orderBy(asc(contacts.name)),
   ),
 
   updateContact: bandOp('member', byId.extend({ fields: contactFields }), ({ tx, bandId }, { id, fields }) =>
@@ -807,7 +807,7 @@ async function readBlocks(tx: Tx, bandId: string, archived: boolean) {
   const blockRows = await tx
     .select({ id: blocks.id, name: blocks.name, archivedAt: blocks.archivedAt })
     .from(blocks)
-    .where(and(eq(blocks.bandId, bandId), archived ? undefined : isNull(blocks.archivedAt)))
+    .where(and(eq(blocks.bandId, bandId), archived ? isNotNull(blocks.archivedAt) : isNull(blocks.archivedAt)))
     .orderBy(sql`${blocks.archivedAt} is not null`, asc(blocks.name))
   const items = blockRows.length
     ? await tx
@@ -874,7 +874,7 @@ const setlistOps = {
   }),
 
   /** Standalone setlists (not tied to an event): templates to start events from. */
-  listSetlists: bandOp('reader', z.object({}), async ({ tx, bandId }) =>
+  listSetlists: bandOp('reader', z.object({ archived: z.boolean().default(false) }), async ({ tx, bandId }, { archived }) =>
     tx
       .select({
         id: setlists.id,
@@ -884,8 +884,8 @@ const setlistOps = {
         durationSec: sql<number>`(select coalesce(sum(songs.duration_sec), 0)::int from set_items join sets on sets.id = set_items.set_id join songs on songs.id = set_items.song_id where sets.setlist_id = setlists.id)`,
       })
       .from(setlists)
-      .where(and(eq(setlists.bandId, bandId), isNull(setlists.eventId)))
-      .orderBy(sql`${setlists.archivedAt} is not null`, asc(setlists.name)),
+      .where(and(eq(setlists.bandId, bandId), isNull(setlists.eventId), archived ? isNotNull(setlists.archivedAt) : isNull(setlists.archivedAt)))
+      .orderBy(asc(setlists.name)),
   ),
 
   /** A standalone setlist plus what the builder needs. */
@@ -929,8 +929,8 @@ const setlistOps = {
     await copySets(tx, bandId, await targetId(tx, bandId, input), input.from)
   }),
 
-  listBlocks: bandOp('reader', z.object({}), async ({ tx, bandId }) => ({
-    blocks: await readBlocks(tx, bandId, true),
+  listBlocks: bandOp('reader', z.object({ archived: z.boolean().default(false) }), async ({ tx, bandId }, { archived }) => ({
+    blocks: await readBlocks(tx, bandId, archived),
     songs: await repertoire(tx, bandId),
   })),
 

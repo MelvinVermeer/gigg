@@ -17,7 +17,7 @@ test('asks the reader, who answers from the emailed link without logging in', as
   // Nobody is preselected; pick just the reader.
   await page.getByRole('button', { name: 'Check availability' }).click()
   await expect(page.getByRole('button', { name: 'Send request' })).toBeDisabled()
-  await page.getByLabel(/reader@example.com/).check()
+  await page.getByLabel(/Dev Reader/).check()
   await page.getByRole('button', { name: 'Send request' }).click()
   await expect(page.getByText('0 yes, 0 maybe, 0 no, 1 waiting')).toBeVisible()
 

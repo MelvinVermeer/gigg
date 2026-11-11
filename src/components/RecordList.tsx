@@ -46,16 +46,15 @@ export function RecordList<T extends Item>({ items, fields, detail, canEdit, onS
     }
   }
 
-  if (!items.length) return <p>Nothing here yet. They're added from the event form.</p>
+  if (!items.length) return <p>Nothing here.</p>
 
   return (
     <ul className="records">
       {items.map((item) => (
-        <li key={item.id} id={item.id} className={item.archivedAt ? 'archived' : undefined}>
+        <li key={item.id} id={item.id}>
           <details>
             <summary>
               <strong>{item.name}</strong>
-              {item.archivedAt && <small> (archived)</small>}
               <br />
               <small>
                 {[detail(item), `used in ${item.events} ${item.events === 1 ? 'event' : 'events'}`]

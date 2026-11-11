@@ -370,7 +370,8 @@ describe('setlists & blocks', () => {
 
     await bandOps.archiveBlock(t.db, t.member, t.band, { id })
     expect((await bandOps.getSetlist(t.db, t.member, t.band, { event: 'summer-party' })).blocks).toEqual([])
-    expect((await bandOps.listBlocks(t.db, t.member, t.band, {})).blocks[0].archivedAt).not.toBeNull()
+    expect((await bandOps.listBlocks(t.db, t.member, t.band, {})).blocks).toEqual([])
+    expect((await bandOps.listBlocks(t.db, t.member, t.band, { archived: true })).blocks[0].archivedAt).not.toBeNull()
   })
 
   it('archived songs stay in existing setlists but are not offered for new ones', async () => {

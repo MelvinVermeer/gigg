@@ -1,4 +1,4 @@
-import { Link, createFileRoute, getRouteApi, redirect, useRouter } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi, redirect } from '@tanstack/react-router'
 import { formatDate, statusLabel } from '#/lib/date'
 import { formatDuration } from '#/lib/duration'
 import { Availability } from '#/components/Availability'
@@ -19,13 +19,7 @@ const bandRoute = getRouteApi('/$band')
 function Event() {
   const { event, venue, contacts, setlist, files, availability } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
-  const router = useRouter()
   const params = { band: band.slug, event: event.slug }
-
-  async function setArchived(archived: boolean) {
-    await bandOp(archived ? 'archiveEvent' : 'restoreEvent', band.slug, { slug: event.slug })
-    await router.invalidate()
-  }
 
   return (
     <>
@@ -96,20 +90,9 @@ function Event() {
       <Files band={band.slug} owner={{ event: event.slug }} files={files} canEdit={band.role === 'member' && !event.archivedAt} />
       {band.role === 'member' && (
         <p>
-          {event.archivedAt ? (
-            <button type="button" onClick={() => setArchived(false)}>
-              Restore
-            </button>
-          ) : (
-            <>
-              <Link to="/$band/events/$event/edit" params={params}>
-                Edit
-              </Link>{' '}
-              <button type="button" onClick={() => setArchived(true)}>
-                Archive
-              </button>
-            </>
-          )}
+          <Link to="/$band/events/$event/edit" params={params}>
+            Edit
+          </Link>
         </p>
       )}
       <p>

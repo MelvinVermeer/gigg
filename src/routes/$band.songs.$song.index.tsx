@@ -1,8 +1,7 @@
-import { Link, createFileRoute, getRouteApi, redirect, useRouter } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi, redirect } from '@tanstack/react-router'
 import { formatDuration } from '#/lib/duration'
 import { bandOp } from '#/server/fns'
 import { Files } from '#/components/Files'
-import { HistoryLink } from '#/components/HistoryLink'
 
 export const Route = createFileRoute('/$band/songs/$song/')({
   loader: async ({ params }) => {
@@ -18,13 +17,7 @@ const bandRoute = getRouteApi('/$band')
 function Song() {
   const { song, files } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
-  const router = useRouter()
   const params = { band: band.slug, song: song.slug }
-
-  async function setArchived(archived: boolean) {
-    await bandOp(archived ? 'archiveSong' : 'restoreSong', band.slug, { slug: song.slug })
-    await router.invalidate()
-  }
 
   return (
     <>
@@ -46,23 +39,9 @@ function Song() {
       <Files band={band.slug} owner={{ song: song.slug }} files={files} canEdit={band.role === 'member' && !song.archivedAt} />
       {band.role === 'member' && (
         <p>
-          {song.archivedAt ? (
-            <>
-              <button type="button" onClick={() => setArchived(false)}>
-                Restore
-              </button>{' '}
-              <HistoryLink item={song.id} />
-            </>
-          ) : (
-            <>
-              <Link to="/$band/songs/$song/edit" params={params}>
-                Edit
-              </Link>{' '}
-              <button type="button" onClick={() => setArchived(true)}>
-                Archive
-              </button>
-            </>
-          )}
+          <Link to="/$band/songs/$song/edit" params={params}>
+            Edit
+          </Link>
         </p>
       )}
       <p>

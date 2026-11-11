@@ -30,15 +30,19 @@ test.describe('member', () => {
     await page.goto(oldUrl)
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${title} (live)`)
 
-    // Archive: gone from the list, visible under archived songs, restorable.
+    // Archive (on the edit form): gone from the list, nothing links to archived songs except the manual, restorable.
+    await page.getByRole('link', { name: 'Edit' }).click()
     await page.getByRole('button', { name: 'Archive' }).click()
-    await expect(page.getByRole('status')).toHaveText('This song is archived.')
-    await page.getByRole('link', { name: 'All songs' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Songs')
     await expect(page.getByRole('link', { name: `${title} (live)` })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: /Archived/ })).toHaveCount(0)
+    await page.goto('/manual')
     await page.getByRole('link', { name: 'Archived songs' }).click()
     await page.getByRole('link', { name: `${title} (live)` }).click()
+    await expect(page.getByRole('status')).toHaveText('This song is archived.')
+    await page.getByRole('link', { name: 'Edit' }).click()
     await page.getByRole('button', { name: 'Restore' }).click()
-    await expect(page.getByRole('link', { name: 'Edit' })).toBeVisible()
+    await expect(page.getByRole('status')).toHaveCount(0)
   })
 
   test('song list on a phone has no horizontal scroll', async ({ page }) => {
