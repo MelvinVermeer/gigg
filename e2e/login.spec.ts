@@ -39,4 +39,15 @@ test('sign in with an email link, add a passkey, sign back in with it', async ({
   await page.getByRole('button', { name: 'Sign in with a passkey' }).click()
   await expect(page).toHaveURL(/\/demo-band\/events$/)
   await expect(page.getByRole('button', { name: 'Account menu for member@example.com' })).toHaveText('M')
+
+  // The passkey is listed in settings and can be deleted.
+  await page.getByRole('button', { name: /Account menu/ }).click()
+  await page.getByRole('link', { name: 'Settings' }).click()
+  const list = page.getByRole('list', { name: 'Your passkeys' })
+  await expect(list.getByRole('listitem')).toHaveCount(1)
+  await expect(list.getByRole('listitem')).toContainText(/Chrome on \w+, added/)
+  page.once('dialog', (d) => d.accept())
+  await list.getByRole('button', { name: 'Delete' }).click()
+  await expect(page.getByRole('status')).toHaveText('Passkey deleted')
+  await expect(list).toHaveCount(0)
 })

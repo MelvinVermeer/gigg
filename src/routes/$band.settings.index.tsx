@@ -1,6 +1,7 @@
 import { Link, createFileRoute, getRouteApi } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { authClient } from '#/lib/auth-client'
+import { deviceName } from '#/lib/device-name'
 import { currentTheme, setTheme } from '#/lib/theme'
 import type { Theme } from '#/lib/theme'
 
@@ -19,11 +20,19 @@ function Settings() {
   const band = bandRoute.useLoaderData()
   const [theme, setThemeState] = useState<Theme>('system')
   const [status, setStatus] = useState('')
+  const passkeys = authClient.useListPasskeys()
   useEffect(() => setThemeState(currentTheme()), [])
 
   async function addPasskey() {
-    const res = await authClient.passkey.addPasskey()
+    const res = await authClient.passkey.addPasskey({ name: deviceName(navigator.userAgent) })
     setStatus(res?.error ? (res.error.message ?? 'Could not add passkey') : 'Passkey added')
+  }
+
+  async function deletePasskey(id: string) {
+    if (!confirm('Delete this passkey? You can no longer sign in with it.')) return
+    const res = await authClient.passkey.deletePasskey({ id })
+    setStatus(res.error ? (res.error.message ?? 'Could not delete passkey') : 'Passkey deleted')
+    passkeys.refetch()
   }
 
   function pick(t: Theme) {
@@ -40,6 +49,19 @@ function Settings() {
         <p>
           Signed in as <strong>{me?.email}</strong>
         </p>
+        {passkeys.data && passkeys.data.length > 0 && (
+          <ul aria-label="Your passkeys">
+            {passkeys.data.map((p) => (
+              <li key={p.id}>
+                {p.name || (p.deviceType === 'multiDevice' ? 'Synced passkey' : 'Device passkey')}
+                {p.createdAt && <>, added {new Date(p.createdAt).toLocaleDateString()}</>}{' '}
+                <button type="button" onClick={() => deletePasskey(p.id)}>
+                  Delete
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         <p>
           <button type="button" onClick={addPasskey}>
             Add a passkey
