@@ -55,12 +55,12 @@ The term is **events** (URL `/<band>/events/<slug>`), not events.
 
 | Field   | Values                                                 |
 |---------|--------------------------------------------------------|
-| Booking | `lead → option → confirmed → played` (+ `cancelled`)   |
+| Booking | `lead → option → confirmed` (+ `cancelled`)            |
 | Payment | `open → invoiced → paid`                               |
 
-  Paid upfront = `confirmed` + `paid`. Paid afterwards = `played` + `invoiced`. Filters like "played but not paid" just work.
+  Paid upfront = `confirmed` + `paid`. Paid afterwards = past `confirmed` + `invoiced`. Played is implicit: a confirmed event in the past.
 - Free tags for anything else.
-- Calendar feed: Settings → Calendar gives each person a private link per band to subscribe to in Google or Apple Calendar. It has options (tentative, “(option)” in front), confirmed and played events from the past year on; the description has the notes and a link to the event.
+- Calendar feed: Settings → Calendar gives each person a private link per band to subscribe to in Google or Apple Calendar. It has options (tentative, “(option)” in front), and confirmed events from the past year on; the description has the notes and a link to the event.
 
 ## Songs (repertoire)
 

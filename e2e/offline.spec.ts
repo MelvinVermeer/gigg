@@ -6,7 +6,7 @@ test.use(asReader)
 // Uses whichever gig is first in the list: other tests add events, and the events list preloads
 // only the first few.
 test('visited pages, show mode and preloaded gigs work offline', async ({ page, context }) => {
-  await page.goto('/demo-band/events')
+  await page.goto('/demo-band/events?who=all')
   await page.evaluate(() => navigator.serviceWorker.ready)
   // Now controlled by the service worker: this page and the preloaded gigs go into the cache.
   await page.reload()
@@ -16,7 +16,7 @@ test('visited pages, show mode and preloaded gigs work offline', async ({ page, 
   const href = (await first.getAttribute('href'))!
   await page.goto(`${href}/show`)
   await expect(page.locator('.show-bar')).toContainText(title)
-  await page.goto('/demo-band/events')
+  await page.goto('/demo-band/events?who=all')
   await page.waitForLoadState('networkidle')
 
   await context.setOffline(true)

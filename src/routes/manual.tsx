@@ -24,8 +24,9 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
         </P>
         <H>Events</H>
         <P>
-          A gig with a date, a venue and contacts. Type a new venue or contact in the form to create it on the spot. Booking (lead → option → confirmed →
-          played) and payment (open → invoiced → paid) are separate, so you can find "played but not paid". Start and end times are optional; an end
+          A gig with a date, a venue and contacts. Type a new venue or contact in the form to create it on the spot. Booking (lead → option → confirmed, or
+          cancelled) and payment (open → invoiced → paid) are separate; a confirmed event in the past was played. The filter on the events page
+          switches between upcoming and past, picks statuses, and shows your own events (created by you or asked for your availability) or everyone's. Start and end times are optional; an end
           before the start means after midnight. Files such as contracts or riders go on the event page. To get the gigs in your own Google or Apple
           calendar, use Settings → Calendar.
         </P>
@@ -79,8 +80,9 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
         <H>Optredens</H>
         <P>
           Een optreden met een datum, een locatie en contacten. Typ een nieuwe locatie of een nieuw contact in het formulier om die meteen aan te maken.
-          Boeking (lead → optie → bevestigd → gespeeld) en betaling (open → gefactureerd → betaald) staan los van elkaar, zodat je "gespeeld maar niet
-          betaald" kunt terugvinden. Begin- en eindtijd zijn optioneel; een eindtijd vóór de begintijd betekent na middernacht. Bestanden zoals contracten
+          Boeking (lead → optie → bevestigd, of geannuleerd) en betaling (open → gefactureerd → betaald) staan los van elkaar; een bevestigd optreden
+          in het verleden is gespeeld. Met het filter op de optredenspagina wissel je tussen komende en eerdere optredens, kies je statussen, en zie je je eigen
+          optredens (door jou aangemaakt of waarvoor je beschikbaarheid is gevraagd) of die van iedereen. Begin- en eindtijd zijn optioneel; een eindtijd vóór de begintijd betekent na middernacht. Bestanden zoals contracten
           of riders zet je op de pagina van het optreden. Wil je de optredens in je eigen Google- of Apple-agenda? Gebruik Instellingen → Agenda.
         </P>
         <H>Setlists</H>

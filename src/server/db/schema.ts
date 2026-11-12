@@ -122,7 +122,7 @@ export const contacts = pgTable(
 
 // Events ------------------------------------------------------------------
 
-export const bookingStatus = pgEnum('booking_status', ['lead', 'option', 'confirmed', 'played', 'cancelled'])
+export const bookingStatus = pgEnum('booking_status', ['lead', 'option', 'confirmed', 'cancelled'])
 export const paymentStatus = pgEnum('payment_status', ['open', 'invoiced', 'paid'])
 
 export const events = pgTable(
@@ -143,6 +143,8 @@ export const events = pgTable(
     notes: text('notes'),
     // A standard (standalone) setlist used as is. Null: the event has its own (custom) setlist.
     setlistId: uuid('setlist_id').references((): AnyPgColumn => setlists.id),
+    // Null for events created before this column existed and not traceable in `changes`.
+    createdBy: uuid('created_by').references(() => users.id),
     createdAt: createdAt(),
     archivedAt: archivedAt(),
   },

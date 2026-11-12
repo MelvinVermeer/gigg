@@ -24,7 +24,7 @@ Decisions made while building:
 - `slug_redirects` has its own `id`; uniqueness is `(band_id, type, old_slug)` with nulls not distinct (band slugs have no band).
 - **Availability**: an event has at most one *open* `availability_requests` row (partial unique index); it stores the date asked, so a moved event shows as stale. `availability_responses` has one row per person asked (`answer` null = waiting) and a `token_hash` for the emailed link. Only the hash is stored; answering by link sets the audit user to the responder. Requests are closed, never deleted.
 - **Event times**: `start_time` / `end_time` are optional `time` columns (wall clock in the band's time zone). An end before the start means the next day; no end = 3 hours in the calendar feed. No times = an all-day event.
-- **Calendar feed**: `calendar_feeds` holds one random token per person per band (stored as is, so settings can show the link again; reset replaces it). `/api/calendar/<token>.ics` serves option, confirmed and played events from a year ago on, as UTC times. Leaving the band (archived membership) makes the token return 404. Not audited: history would show the token.
+- **Calendar feed**: `calendar_feeds` holds one random token per person per band (stored as is, so settings can show the link again; reset replaces it). `/api/calendar/<token>.ics` serves option and confirmed events from a year ago on, as UTC times. Leaving the band (archived membership) makes the token return 404. Not audited: history would show the token.
 - `users` comes from Better Auth, plus `locale` (`en` | `nl`, the user's language; an `additionalField` in auth.ts). Anonymisation (`anonymised_at`) is added when member removal is built.
 
 ## Hidden settings

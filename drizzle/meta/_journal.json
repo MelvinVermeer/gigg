@@ -64,6 +64,13 @@
       "when": 1794514294524,
       "tag": "0008_flowery_scorpion",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794520835166,
+      "tag": "0009_brave_thunderbolt",
+      "breakpoints": true
     }
   ]
 }

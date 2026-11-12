@@ -16,7 +16,7 @@ test.describe('member', () => {
   test('adds an event with a new venue and contact, without leaving the form', async ({ page }) => {
     const title = `Club Night ${Date.now()}`
     await page.goto('/demo-band')
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Upcoming events')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Events')
 
     await startEvent(page, title)
     await page.getByLabel('Venue').fill(`Club ${title}`)
@@ -56,14 +56,20 @@ test.describe('member', () => {
 test.describe('reader', () => {
   test.use(asReader)
 
-  test('sees upcoming events; past events are behind a button', async ({ page }) => {
+  test('sees only their own events by default; the filter shows everyone and the past', async ({ page }) => {
     await page.goto('/demo-band')
-    await expect(page.getByRole('link', { name: 'Summer Party' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Spring Show' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Events')
+    await expect(page.getByRole('link', { name: 'Summer Party' })).toHaveCount(0) // created by the member, reader not asked
     await expect(page.getByRole('link', { name: 'Add event' })).toHaveCount(0)
 
-    await page.getByRole('link', { name: 'Past events' }).click()
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Past events')
+    await page.getByRole('button', { name: 'Filter' }).click()
+    await page.getByRole('menuitemradio', { name: 'Everyone' }).click()
+    await expect(page.getByRole('link', { name: 'Summer Party' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Spring Show' })).toHaveCount(0)
+
+    await page.getByRole('menuitemradio', { name: 'Past' }).click()
     await expect(page.getByRole('link', { name: 'Spring Show' })).toBeVisible()
+    await expect(page).toHaveURL(/when=past/)
+    await expect(page).toHaveURL(/who=all/)
   })
 })

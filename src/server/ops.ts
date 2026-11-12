@@ -1,7 +1,7 @@
 // Band data operations as plain functions: (db, userId, bandSlug, input) → result.
 // Server functions (fns.ts) are thin wrappers around these, so everything here is testable without HTTP.
 import { createHash, randomBytes } from 'node:crypto'
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, notInArray, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, exists, gte, inArray, isNotNull, isNull, lt, ne, notInArray, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { formatDuration } from '#/lib/duration'
 import { dicts, label, locales, localeOf } from '#/lib/i18n'
@@ -460,10 +460,15 @@ async function setEventContacts(tx: Tx, bandId: string, eventId: string, contact
 
 const eventOps = {
   /** Upcoming (today and later, soonest first), past (latest first) or archived. */
+  /** Events by time; optionally only these statuses, and only mine (created by me or my availability asked). Archived ignores both. */
   listEvents: bandOp(
     'reader',
-    z.object({ when: z.enum(['upcoming', 'past', 'archived']).default('upcoming') }),
-    ({ tx, bandId }, { when }) =>
+    z.object({
+      when: z.enum(['upcoming', 'past', 'archived']).default('upcoming'),
+      statuses: z.array(z.enum(bookingStatus.enumValues)).optional(),
+      mine: z.boolean().optional(),
+    }),
+    ({ tx, bandId, userId }, { when, statuses, mine }) =>
       // ponytail: "today" is the database's date (UTC); pass the viewer's date if bands outside Europe complain.
       tx
         .select({
@@ -484,6 +489,19 @@ const eventOps = {
             when === 'archived' ? isNotNull(events.archivedAt) : isNull(events.archivedAt),
             when === 'upcoming' ? gte(events.date, sql`current_date`) : undefined,
             when === 'past' ? lt(events.date, sql`current_date`) : undefined,
+            when !== 'archived' && statuses ? inArray(events.bookingStatus, statuses) : undefined,
+            when !== 'archived' && mine
+              ? or(
+                  eq(events.createdBy, userId),
+                  exists(
+                    tx
+                      .select({ one: sql`1` })
+                      .from(availabilityResponses)
+                      .innerJoin(availabilityRequests, eq(availabilityRequests.id, availabilityResponses.requestId))
+                      .where(and(eq(availabilityRequests.eventId, events.id), eq(availabilityResponses.userId, userId))),
+                  ),
+                )
+              : undefined,
           ),
         )
         .orderBy(when === 'upcoming' ? asc(events.date) : desc(events.date), asc(events.title)),
@@ -574,13 +592,13 @@ const eventOps = {
   }),
 
   /** Create an event. Its setlist is chosen afterwards, on the event page. */
-  createEvent: bandOp('member', eventFieldsChecked, async ({ tx, bandId }, fields) => {
+  createEvent: bandOp('member', eventFieldsChecked, async ({ tx, bandId, userId }, fields) => {
     const { venueId, contactIds } = await resolveRefs(tx, bandId, fields)
     const { venue: _v, contacts: _c, ...rest } = fields
     const slug = await freeSlug(tx, events, bandId, eventSlugs(fields.title, fields.date))
     const [event] = await tx
       .insert(events)
-      .values({ ...rest, bandId, slug, venueId })
+      .values({ ...rest, bandId, slug, venueId, createdBy: userId })
       .returning()
     await setEventContacts(tx, bandId, event.id, contactIds)
     return event
@@ -1144,7 +1162,7 @@ async function describe(tx: Tx, t: Dict, rows: Change[]) {
 export type Diff = { what: string; field: string; from: string; to: string }
 
 /** Columns that are bookkeeping, not something a person changed. */
-const hidden = new Set(['id', 'band_id', 'slug', 'created_at', 'position'])
+const hidden = new Set(['id', 'band_id', 'slug', 'created_at', 'created_by', 'position'])
 const refs = ['song_id', 'venue_id', 'contact_id', 'event_id', 'setlist_id', 'block_id', 'user_id']
 
 /**
@@ -1534,7 +1552,7 @@ const calendarOps = {
   }),
 }
 
-/** The feed behind a token: options, confirmed and played events from a year ago on. Gone once you leave the band. */
+/** The feed behind a token: options and confirmed events from a year ago on. Gone once you leave the band. */
 export function calendarByToken(db: Db, token: string) {
   return db.transaction(async (tx) => {
     await tx.execute(sql`set transaction read only`)
@@ -1565,7 +1583,7 @@ export function calendarByToken(db: Db, token: string) {
         and(
           eq(events.bandId, band.id),
           isNull(events.archivedAt),
-          inArray(events.bookingStatus, ['option', 'confirmed', 'played']),
+          inArray(events.bookingStatus, ['option', 'confirmed']),
           gte(events.date, sql`current_date - interval '1 year'`),
         ),
       )

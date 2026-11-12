@@ -133,6 +133,19 @@ describe('events', () => {
     ])
   })
 
+  it('filters on status and on mine: created by me or my availability asked', async () => {
+    const t = await testDb()
+    await bandOps.createEvent(t.db, t.member, t.band, { title: 'Lead Gig', date: day(3) })
+    const titles = async (user: string, input: object) => (await bandOps.listEvents(t.db, user, t.band, input)).map((e) => e.title)
+    expect(await titles(t.member, { statuses: ['lead'] })).toEqual(['Lead Gig'])
+    expect(await titles(t.member, { statuses: ['option', 'confirmed'] })).toEqual(['Summer Party'])
+    expect(await titles(t.member, { mine: true })).toEqual(['Lead Gig', 'Summer Party']) // the seed's creator is the member
+    expect(await titles(t.reader, { mine: true })).toEqual([])
+    await bandOps.askAvailability(t.db, t.member, t.band, { event: 'summer-party', emails: ['reader@example.com'] })
+    expect(await titles(t.reader, { mine: true })).toEqual(['Summer Party'])
+    expect(await titles(t.reader, { when: 'archived', mine: true, statuses: [] })).toEqual([])
+  })
+
   it('creates a new venue and contacts inline and links them', async () => {
     const t = await testDb()
     const event = await bandOps.createEvent(t.db, t.member, t.band, {
@@ -756,7 +769,7 @@ describe('calendar feed', () => {
     await expect(calendarByToken(t.db, fresh)).rejects.toBeInstanceOf(NotFound)
   })
 
-  it('has options, confirmed and played events from the last year; no leads, cancelled or archived', async () => {
+  it('has options and confirmed events from the last year; no leads, cancelled or archived', async () => {
     const t = await testDb()
     const [{ bandId }] = await t.db.select({ bandId: events.bandId }).from(events).where(eq(events.slug, 'summer-party'))
     const day = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString().slice(0, 10)
@@ -765,7 +778,7 @@ describe('calendar feed', () => {
       { bandId, slug: 'lead', title: 'Lead', date: day(5), bookingStatus: 'lead' },
       { bandId, slug: 'gone', title: 'Gone', date: day(5), bookingStatus: 'cancelled' },
       { bandId, slug: 'arch', title: 'Arch', date: day(5), bookingStatus: 'confirmed', archivedAt: new Date() },
-      { bandId, slug: 'old', title: 'Old', date: day(-400), bookingStatus: 'played' },
+      { bandId, slug: 'old', title: 'Old', date: day(-400), bookingStatus: 'confirmed' },
     ])
     const { token } = await bandOps.calendarFeed(t.db, t.member, t.band, {})
     const titles = (await calendarByToken(t.db, token)).events.map((e) => e.title).sort()

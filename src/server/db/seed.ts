@@ -51,8 +51,8 @@ export async function seed(db: Db) {
   const [summer, spring] = await db
     .insert(events)
     .values([
-      { bandId: band.id, slug: 'summer-party', title: 'Summer Party', date: daysFromNow(30), venueId: venue.id, bookingStatus: 'confirmed' },
-      { bandId: band.id, slug: 'spring-show', title: 'Spring Show', date: daysFromNow(-30), venueId: venue.id, bookingStatus: 'played', paymentStatus: 'paid' },
+      { bandId: band.id, slug: 'summer-party', title: 'Summer Party', date: daysFromNow(30), venueId: venue.id, bookingStatus: 'confirmed', createdBy: member.id },
+      { bandId: band.id, slug: 'spring-show', title: 'Spring Show', date: daysFromNow(-30), venueId: venue.id, bookingStatus: 'confirmed', paymentStatus: 'paid', createdBy: member.id },
     ])
     .returning()
   await db.insert(eventContacts).values([
@@ -174,6 +174,7 @@ export async function seedDemo(db: Db) {
   if (!(await seed(db))) return
   const [band] = await db.select().from(bands).where(eq(bands.slug, 'demo-band'))
   const bandId = band.id
+  const [member] = await db.select({ id: users.id }).from(users).where(eq(users.email, 'member@example.com'))
   const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
   await db.insert(songs).values([
@@ -208,7 +209,7 @@ export async function seedDemo(db: Db) {
     .returning()
 
   const ev = (slug: string, title: string, days: number, venueId: string, rest: Partial<typeof events.$inferInsert> = {}) => ({
-    bandId, slug, title, date: daysFromNow(days), venueId, ...rest,
+    bandId, slug, title, date: daysFromNow(days), venueId, createdBy: member.id, ...rest,
   })
   const [friday, wedding, festival, , newYear, autumn, anchorSummer] = await db
     .insert(events)
@@ -220,9 +221,9 @@ export async function seedDemo(db: Db) {
       }),
       ev('park-festival', 'Park Festival', 45, park.id, { bookingStatus: 'option', tags: ['festival'] }),
       ev('cafe-central-sessions', 'Café Central Sessions', 75, cafe.id),
-      ev('new-year-at-de-kroeg', 'New Year at De Kroeg', -60, kroeg.id, { bookingStatus: 'played', paymentStatus: 'paid' }),
-      ev('cafe-central-autumn', 'Café Central Autumn', -100, cafe.id, { bookingStatus: 'played', paymentStatus: 'paid' }),
-      ev('rusty-anchor-summer', 'Rusty Anchor Summer', -140, anchor.id, { bookingStatus: 'played', paymentStatus: 'paid' }),
+      ev('new-year-at-de-kroeg', 'New Year at De Kroeg', -60, kroeg.id, { bookingStatus: 'confirmed', paymentStatus: 'paid' }),
+      ev('cafe-central-autumn', 'Café Central Autumn', -100, cafe.id, { bookingStatus: 'confirmed', paymentStatus: 'paid' }),
+      ev('rusty-anchor-summer', 'Rusty Anchor Summer', -140, anchor.id, { bookingStatus: 'confirmed', paymentStatus: 'paid' }),
       ev('rained-out-festival', 'Rained-out Festival', -20, park.id, { bookingStatus: 'cancelled' }),
     ])
     .returning()

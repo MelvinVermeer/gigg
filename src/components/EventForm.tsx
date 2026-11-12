@@ -36,7 +36,7 @@ type Props = {
 /** A picked contact: existing (id) or new (typed name plus optional details). */
 type Picked = { key: string; id?: string; name: string; email?: string; phone?: string }
 
-const bookingStatuses = ['lead', 'option', 'confirmed', 'played', 'cancelled'] as const
+const bookingStatuses = ['lead', 'option', 'confirmed', 'cancelled'] as const
 const paymentStatuses = ['open', 'invoiced', 'paid'] as const
 
 let nextKey = 0

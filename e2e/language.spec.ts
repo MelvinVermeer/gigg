@@ -25,7 +25,7 @@ test('a user switches to Dutch in Settings, and back', async ({ browser }) => {
   await expect(page.locator('html')).toHaveAttribute('lang', 'nl')
 
   await page.goto('/demo-band/events')
-  await expect(page.getByRole('heading', { name: 'Komende optredens' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Optredens', level: 1 })).toBeVisible()
 
   await page.goto('/demo-band/settings')
   await page.getByRole('radio', { name: 'English' }).click()
