@@ -53,6 +53,7 @@ function Settings() {
     passkeys.refetch()
   }
 
+  // '' | 'sent' | an error message
   const [inviteStatus, setInviteStatus] = useState('')
 
   async function invite(e: React.FormEvent<HTMLFormElement>) {
@@ -63,7 +64,7 @@ function Settings() {
     try {
       await inviteMember({ data: { band: band.slug, email: String(data.get('email')), role: String(data.get('role')) } })
       form.reset()
-      setInviteStatus(t.settings.invited(String(data.get('email'))))
+      setInviteStatus('sent')
       await router.invalidate()
     } catch (err) {
       setInviteStatus(errorText(t, err, t.settings.couldNotInvite))
@@ -271,7 +272,7 @@ function Settings() {
                   </li>
                 ))}
               </ul>
-              <form onSubmit={invite} className="flex flex-wrap items-end gap-2">
+              <form onSubmit={invite} onChange={() => setInviteStatus('')} className="flex flex-wrap items-end gap-2">
                 <Field label={t.settings.inviteByEmail} className="min-w-48 flex-1">
                   <Input name="email" type="email" required maxLength={200} />
                 </Field>
@@ -281,13 +282,17 @@ function Settings() {
                     <NativeSelectOption value="reader">{t.settings.roleReader}</NativeSelectOption>
                   </NativeSelect>
                 </Field>
-                <Button type="submit">{t.settings.invite}</Button>
+                <Button type="submit" aria-live="polite">
+                  {inviteStatus === 'sent' ? (
+                    <>
+                      <Check aria-hidden /> {t.settings.invited}
+                    </>
+                  ) : (
+                    t.settings.invite
+                  )}
+                </Button>
+                {inviteStatus !== 'sent' && <span className="self-center text-sm text-destructive">{inviteStatus}</span>}
               </form>
-              {inviteStatus && (
-                <p role="status" className="text-sm text-muted-foreground">
-                  {inviteStatus}
-                </p>
-              )}
             </CardContent>
           </Card>
         )}

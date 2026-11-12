@@ -347,7 +347,7 @@ export const en = {
     roleMember: 'Member (can edit)',
     roleReader: 'Reader (view only)',
     invite: 'Invite',
-    invited: (email: string) => `Invited ${email}`,
+    invited: 'Invited',
     couldNotInvite: 'Could not invite',
   },
 

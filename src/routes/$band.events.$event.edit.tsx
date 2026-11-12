@@ -35,7 +35,9 @@ function EditEvent() {
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="mb-0">{t.events.editTitle(event.title)}</h1>
-        <HistoryLink item={event.id} />
+        <Button type="submit" form="event-form">
+          {t.common.save}
+        </Button>
       </div>
       {event.archivedAt && (
         <p role="status" className="mb-4 rounded-md bg-muted px-3 py-2 text-sm">
@@ -43,6 +45,7 @@ function EditEvent() {
         </p>
       )}
       <EventForm
+        id="event-form"
         data={data}
         initial={{ ...event, contacts }}
         submitLabel={t.common.save}
@@ -52,9 +55,12 @@ function EditEvent() {
         }}
       />
       <Separator className="my-8" />
-      <Button variant="outline" onClick={() => setArchived(!event.archivedAt)}>
-        {event.archivedAt ? t.common.restore : t.common.archive}
-      </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button variant="outline" onClick={() => setArchived(!event.archivedAt)}>
+          {event.archivedAt ? t.common.restore : t.common.archive}
+        </Button>
+        <HistoryLink item={event.id} />
+      </div>
     </>
   )
 }

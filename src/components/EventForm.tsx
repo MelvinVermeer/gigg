@@ -28,6 +28,8 @@ type Props = {
   data: EventFormData
   initial?: Initial
   submitLabel: string
+  /** Lets a submit button outside the form (form={id}) save it too */
+  id?: string
   onSubmit: (fields: EventFields) => Promise<void>
 }
 
@@ -39,7 +41,7 @@ const paymentStatuses = ['open', 'invoiced', 'paid'] as const
 
 let nextKey = 0
 
-export function EventForm({ data, initial = {}, submitLabel, onSubmit }: Props) {
+export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Props) {
   const ids = useId()
   const t = useT()
   const venues = useMemo(() => withLabels(data.venues, (v) => v.name, (v) => v.address), [data.venues])
@@ -103,7 +105,7 @@ export function EventForm({ data, initial = {}, submitLabel, onSubmit }: Props) 
   }
 
   return (
-    <form className="grid gap-5" onSubmit={submit}>
+    <form id={id} className="grid gap-5" onSubmit={submit}>
       <Field label={t.common.title}>
         <Input name="title" required maxLength={200} defaultValue={initial.title ?? ''} />
       </Field>

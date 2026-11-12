@@ -345,7 +345,7 @@ export const nl: Dict = {
     roleMember: 'Lid (mag bewerken)',
     roleReader: 'Lezer (alleen bekijken)',
     invite: 'Uitnodigen',
-    invited: (email) => `${email} uitgenodigd`,
+    invited: 'Uitgenodigd',
     couldNotInvite: 'Uitnodigen lukte niet',
   },
 
