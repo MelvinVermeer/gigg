@@ -2,9 +2,10 @@ import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Field, FormError } from '#/components/Field'
 import { Button } from '#/components/ui/button'
+import { Checkbox } from '#/components/ui/checkbox'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
 import { Input } from '#/components/ui/input'
-import { addBand, deleteBand, deleteBandPermanently, getAllBands, getFeedback } from '#/server/fns'
+import { addBand, deleteBand, deleteBandPermanently, getAllBands, getFeedback, markFeedback } from '#/server/fns'
 import { errorText, useT } from '#/lib/i18n'
 
 const size = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : b < 1024 ** 3 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${(b / 1024 ** 3).toFixed(2)} GB`)
@@ -19,6 +20,14 @@ function Admin() {
   const router = useRouter()
   const t = useT()
   const [error, setError] = useState('')
+  const [allFeedback, setAllFeedback] = useState(false)
+  const doneCount = feedback.filter((f) => f.doneAt).length
+  const shownFeedback = allFeedback ? feedback : feedback.filter((f) => !f.doneAt)
+
+  async function mark(id: string, done: boolean) {
+    await markFeedback({ data: { id, done } })
+    await router.invalidate()
+  }
 
   async function add(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -112,22 +121,34 @@ function Admin() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {feedback.length ? (
+            {shownFeedback.length ? (
               <ul aria-label={t.admin.feedback} className="max-h-[32rem] divide-y overflow-y-auto rounded-lg border">
-                {feedback.map((f) => (
-                  <li key={f.id} className="grid gap-1 px-3 py-2 text-sm">
-                    <span>
-                      <strong>{f.name || f.email}</strong>
-                      <span className="text-muted-foreground">
-                        {f.band && t.admin.inBand(f.band)}, {new Date(f.createdAt).toLocaleDateString(t.intl)}
+                {shownFeedback.map((f) => (
+                  <li key={f.id} className={`grid gap-1 px-3 py-2 text-sm ${f.doneAt ? 'text-muted-foreground' : ''}`}>
+                    <span className="flex items-start justify-between gap-3">
+                      <span>
+                        <strong>{f.name || f.email}</strong>
+                        <span className="text-muted-foreground">
+                          {f.band && t.admin.inBand(f.band)}, {new Date(f.createdAt).toLocaleDateString(t.intl)}
+                        </span>
                       </span>
+                      <label className="flex shrink-0 items-center gap-1.5">
+                        <Checkbox checked={!!f.doneAt} onCheckedChange={(c) => mark(f.id, c === true)} />
+                        {t.admin.feedbackDone}
+                      </label>
                     </span>
                     <p className="notes whitespace-pre-wrap">{f.body}</p>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">{t.admin.noFeedback}</p>
+              <p className="text-sm text-muted-foreground">{feedback.length ? t.admin.noOpenFeedback : t.admin.noFeedback}</p>
+            )}
+            {doneCount > 0 && (
+              <label className="mt-3 flex items-center gap-2 text-sm">
+                <Checkbox checked={allFeedback} onCheckedChange={(c) => setAllFeedback(c === true)} />
+                {t.admin.showAllFeedback(doneCount)}
+              </label>
             )}
           </CardContent>
         </Card>

@@ -293,6 +293,8 @@ export const feedback = pgTable('feedback', {
   body: text('body').notNull(),
   githubIssueUrl: text('github_issue_url'),
   createdAt: createdAt(),
+  /** Handled by the admin: hidden from the default list. */
+  doneAt: timestamp('done_at', { withTimezone: true }),
 })
 
 // Audit trail: written only by the audit() trigger (see drizzle/*_audit.sql).

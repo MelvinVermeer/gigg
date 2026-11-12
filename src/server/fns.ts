@@ -10,7 +10,7 @@ import { formatLongDate } from '#/lib/date'
 import { auth, isAdminEmail } from './auth'
 import { db, schema } from './db'
 import { sendMail } from './mail'
-import { answerByToken, archiveBand, availabilityByToken, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, listFeedback, myBands, NotFound } from './ops'
+import { answerByToken, archiveBand, availabilityByToken, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, listFeedback, myBands, NotFound, setFeedbackDone } from './ops'
 import type { BandOpName, BandOps } from './ops'
 
 const authed = createMiddleware({ type: 'function' }).server(async ({ next }) => {
@@ -58,6 +58,11 @@ export const getAllBands = createServerFn({ method: 'GET' })
 export const getFeedback = createServerFn({ method: 'GET' })
   .middleware([admin])
   .handler(() => listFeedback(db))
+
+export const markFeedback = createServerFn({ method: 'POST' })
+  .middleware([admin])
+  .validator((data: { id: string; done: boolean }) => data)
+  .handler(({ data }) => setFeedbackDone(db, data.id, data.done))
 
 export const addBand = createServerFn({ method: 'POST' })
   .middleware([admin])

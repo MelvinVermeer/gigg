@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import { bands, changes, contacts, events, memberships, setlists, songs, users, venues } from './db/schema'
-import { answerByToken, archiveBand, availabilityByToken, bandOps, calendarByToken, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, slugify } from './ops'
+import { answerByToken, archiveBand, availabilityByToken, bandOps, calendarByToken, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, setFeedbackDone, slugify } from './ops'
 import type { BandOpName } from './ops'
 import { testDb } from './test-db'
 
@@ -601,7 +601,13 @@ describe('feedback', () => {
     await bandOps.sendFeedback(t.db, t.reader, t.band, { body: ' Love it ' })
     await expect(bandOps.sendFeedback(t.db, t.reader, t.band, { body: '  ' })).rejects.toThrow()
     await expect(bandOps.sendFeedback(t.db, t.outsider, t.band, { body: 'hi' })).rejects.toBeInstanceOf(Forbidden)
-    expect(await listFeedback(t.db)).toMatchObject([{ body: 'Love it', email: 'reader@example.com', band: expect.any(String) }])
+    const [item] = await listFeedback(t.db)
+    expect(item).toMatchObject({ body: 'Love it', email: 'reader@example.com', band: expect.any(String), doneAt: null })
+
+    await setFeedbackDone(t.db, item.id, true)
+    expect((await listFeedback(t.db))[0].doneAt).toBeInstanceOf(Date)
+    await setFeedbackDone(t.db, item.id, false)
+    expect((await listFeedback(t.db))[0].doneAt).toBeNull()
   })
 })
 

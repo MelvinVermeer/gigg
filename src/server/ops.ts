@@ -1636,11 +1636,16 @@ export function listAllBands(db: Db) {
 
 export function listFeedback(db: Db) {
   return db
-    .select({ id: feedback.id, body: feedback.body, createdAt: feedback.createdAt, email: users.email, name: users.name, band: bands.name })
+    .select({ id: feedback.id, body: feedback.body, createdAt: feedback.createdAt, doneAt: feedback.doneAt, email: users.email, name: users.name, band: bands.name })
     .from(feedback)
     .innerJoin(users, eq(users.id, feedback.userId))
     .leftJoin(bands, eq(bands.id, feedback.bandId))
     .orderBy(desc(feedback.createdAt))
+}
+
+/** Mark feedback as handled, or open again. */
+export async function setFeedbackDone(db: Db, id: string, done: boolean) {
+  await db.update(feedback).set({ doneAt: done ? new Date() : null }).where(eq(feedback.id, id))
 }
 
 const newBand = z.object({

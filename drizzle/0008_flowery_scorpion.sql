@@ -1,0 +1,1 @@
+ALTER TABLE "feedback" ADD COLUMN "done_at" timestamp with time zone;

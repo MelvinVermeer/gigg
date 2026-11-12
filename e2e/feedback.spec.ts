@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { asReader } from './helpers'
+import { asReader, signIn } from './helpers'
 
 test.describe('reader', () => {
   test.use(asReader)
@@ -12,4 +12,22 @@ test.describe('reader', () => {
     await page.getByRole('button', { name: 'Send feedback' }).click()
     await expect(page.getByRole('status')).toHaveText('Thanks, we got it.')
   })
+})
+
+test('admin marks feedback done; it is hidden until "Show all"', async ({ browser, page }) => {
+  const body = `Done me ${Date.now()}`
+  const reader = await browser.newPage({ storageState: asReader.storageState })
+  await reader.goto('/demo-band/feedback')
+  await reader.getByLabel('Your feedback').fill(body)
+  await reader.getByRole('button', { name: 'Send feedback' }).click()
+  await expect(reader.getByRole('status')).toHaveText('Thanks, we got it.')
+  await reader.close()
+
+  await signIn(page, 'admin@example.com')
+  await page.goto('/admin')
+  const item = page.getByRole('listitem').filter({ hasText: body })
+  await item.getByRole('checkbox', { name: 'Done' }).click()
+  await expect(item).toHaveCount(0)
+  await page.getByRole('checkbox', { name: /Show all/ }).click()
+  await expect(item.getByRole('checkbox', { name: 'Done' })).toBeChecked()
 })
