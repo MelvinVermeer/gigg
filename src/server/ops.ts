@@ -524,6 +524,7 @@ const eventOps = {
       contacts: eventContactRows,
       setlist,
       standardName: row.event.setlistId ? (await setlistById(tx, bandId, row.event.setlistId)).name : null,
+      standards: await standardSetlists(tx, bandId),
       files: await filesOf(tx, 'event', row.event.id),
     }
   }),
@@ -569,28 +570,19 @@ const eventOps = {
     for (const l of latest)
       lastContactsByVenue[l.venueId!] = links.filter((x) => x.eventId === l.eventId).map((x) => x.contactId)
 
-    // Standalone setlists a new event can start from.
-    const setlistRows = await tx
-      .select({ id: setlists.id, name: setlists.name })
-      .from(setlists)
-      .where(and(eq(setlists.bandId, bandId), isNull(setlists.eventId), isNull(setlists.archivedAt)))
-      .orderBy(asc(setlists.name))
-
-    return { venues: venueRows, contacts: contactRows, lastContactsByVenue, setlists: setlistRows }
+    return { venues: venueRows, contacts: contactRows, lastContactsByVenue }
   }),
 
-  /** Create an event; `setlistStandard` uses that standard setlist, `setlistFrom` starts its own setlist as a copy. */
-  createEvent: bandOp('member', eventFieldsChecked.safeExtend({ setlistFrom: z.uuid().nullish(), setlistStandard: z.uuid().nullish() }), async ({ tx, bandId }, fields) => {
+  /** Create an event. Its setlist is chosen afterwards, on the event page. */
+  createEvent: bandOp('member', eventFieldsChecked, async ({ tx, bandId }, fields) => {
     const { venueId, contactIds } = await resolveRefs(tx, bandId, fields)
-    const { venue: _v, contacts: _c, setlistFrom, setlistStandard, ...rest } = fields
+    const { venue: _v, contacts: _c, ...rest } = fields
     const slug = await freeSlug(tx, events, bandId, eventSlugs(fields.title, fields.date))
     const [event] = await tx
       .insert(events)
       .values({ ...rest, bandId, slug, venueId })
       .returning()
     await setEventContacts(tx, bandId, event.id, contactIds)
-    if (setlistStandard) await linkStandard(tx, bandId, event.id, setlistStandard)
-    else if (setlistFrom) await copySets(tx, bandId, await eventSetlistId(tx, bandId, event), setlistFrom)
     return event
   }),
 
@@ -865,24 +857,18 @@ const repertoire = (tx: Tx, bandId: string) =>
     .where(and(eq(songs.bandId, bandId), isNull(songs.archivedAt)))
     .orderBy(asc(songs.title))
 
-/** Everything the setlist builder needs besides the sets: repertoire, blocks, setlists to copy from. */
-async function builderData(tx: Tx, bandId: string, exceptSetlistId: string | undefined) {
-  const copyFrom = await tx
-    .select({ id: setlists.id, name: setlists.name, date: events.date })
-    .from(setlists)
-    .leftJoin(events, eq(events.id, setlists.eventId))
-    .where(
-      and(
-        eq(setlists.bandId, bandId),
-        exceptSetlistId ? ne(setlists.id, exceptSetlistId) : undefined,
-        isNull(setlists.archivedAt),
-        sql`exists (select 1 from sets where sets.setlist_id = setlists.id)`,
-      ),
-    )
-    // Standalone setlists first (by name), then events, latest first.
-    .orderBy(sql`${events.date} is not null`, desc(events.date), asc(setlists.name))
-  return { songs: await repertoire(tx, bandId), blocks: await readBlocks(tx, bandId, false), copyFrom }
+/** Everything the setlist builder needs besides the sets: repertoire and blocks. */
+async function builderData(tx: Tx, bandId: string) {
+  return { songs: await repertoire(tx, bandId), blocks: await readBlocks(tx, bandId, false) }
 }
+
+/** Standalone setlists (templates) an event can use. */
+const standardSetlists = (tx: Tx, bandId: string) =>
+  tx
+    .select({ id: setlists.id, name: setlists.name })
+    .from(setlists)
+    .where(and(eq(setlists.bandId, bandId), isNull(setlists.eventId), isNull(setlists.archivedAt)))
+    .orderBy(asc(setlists.name))
 
 const setlistTarget = z.union([z.object({ event: z.string() }), z.object({ setlist: z.uuid() })])
 
@@ -900,17 +886,13 @@ const setlistOps = {
     const ev = await eventBySlug(tx, bandId, event)
     const [own] = await tx.select({ id: setlists.id }).from(setlists).where(eq(setlists.eventId, ev.id))
     const standard = ev.setlistId ? await setlistById(tx, bandId, ev.setlistId) : null
-    const standards = await tx
-      .select({ id: setlists.id, name: setlists.name })
-      .from(setlists)
-      .where(and(eq(setlists.bandId, bandId), isNull(setlists.eventId), isNull(setlists.archivedAt)))
-      .orderBy(asc(setlists.name))
+    const standards = await standardSetlists(tx, bandId)
     return {
       event: ev,
       standard: standard && { id: standard.id, name: standard.name },
       standards,
       sets: await readSets(tx, standard?.id ?? own?.id),
-      ...(await builderData(tx, bandId, own?.id)),
+      ...(await builderData(tx, bandId)),
     }
   }),
 
@@ -919,10 +901,10 @@ const setlistOps = {
     await linkStandard(tx, bandId, (await eventBySlug(tx, bandId, event)).id, setlist)
   }),
 
-  /** Switch to a custom setlist: a copy of `from` (default: the standard in use), or what the event already had. */
-  useCustomSetlist: bandOp('member', z.object({ event: z.string(), from: z.uuid().nullish() }), async ({ tx, bandId }, { event, from }) => {
+  /** Switch to a custom setlist: a copy of the standard in use, or what the event already had. */
+  useCustomSetlist: bandOp('member', z.object({ event: z.string() }), async ({ tx, bandId }, { event }) => {
     const ev = await eventBySlug(tx, bandId, event)
-    const source = from ?? ev.setlistId
+    const source = ev.setlistId
     await linkStandard(tx, bandId, ev.id, null)
     if (source) await copySets(tx, bandId, await eventSetlistId(tx, bandId, ev), source)
   }),
@@ -946,18 +928,13 @@ const setlistOps = {
   getStandaloneSetlist: bandOp('reader', byId, async ({ tx, bandId }, { id }) => {
     const setlist = await setlistById(tx, bandId, id)
     if (setlist.eventId) throw new NotFound()
-    return { setlist, sets: await readSets(tx, id), ...(await builderData(tx, bandId, id)) }
+    return { setlist, sets: await readSets(tx, id), ...(await builderData(tx, bandId)) }
   }),
 
-  createSetlist: bandOp(
-    'member',
-    z.object({ name: z.string().trim().min(1).max(60), from: z.uuid().optional() }),
-    async ({ tx, bandId }, { name, from }) => {
-      const [row] = await tx.insert(setlists).values({ bandId, name }).returning({ id: setlists.id })
-      if (from) await copySets(tx, bandId, row.id, from)
-      return row
-    },
-  ),
+  createSetlist: bandOp('member', z.object({ name: z.string().trim().min(1).max(60) }), async ({ tx, bandId }, { name }) => {
+    const [row] = await tx.insert(setlists).values({ bandId, name }).returning({ id: setlists.id })
+    return row
+  }),
 
   renameSetlist: bandOp('member', byId.extend({ name: z.string().trim().min(1).max(60) }), async ({ tx, bandId }, { id, name }) => {
     await targetId(tx, bandId, { setlist: id })
@@ -976,11 +953,6 @@ const setlistOps = {
 
   saveSetlist: bandOp('member', z.intersection(setlistTarget, z.object({ sets: setsInput })), async ({ tx, bandId }, input) => {
     await writeSets(tx, bandId, await targetId(tx, bandId, input), input.sets)
-  }),
-
-  /** Copy another setlist (standalone or an event's) into this one, replacing what's there. */
-  copySetlist: bandOp('member', z.intersection(setlistTarget, z.object({ from: z.uuid() })), async ({ tx, bandId }, input) => {
-    await copySets(tx, bandId, await targetId(tx, bandId, input), input.from)
   }),
 
   listBlocks: bandOp('reader', z.object({ archived: z.boolean().default(false) }), async ({ tx, bandId }, { archived }) => ({

@@ -1,24 +1,16 @@
-import { useRouter } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
-import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { cn } from '#/lib/utils'
 import { SongListEditor, totalDuration } from '#/components/SongListEditor'
 import type { SongRef } from '#/components/SongListEditor'
-import { formatDate } from '#/lib/date'
 import { formatDuration } from '#/lib/duration'
 import { bandOp } from '#/server/fns'
 import { useT } from '#/lib/i18n'
 
 type Set = { name: string; songs: SongRef[] }
-
-export type CopySource = { id: string; name: string; date: string | null }
-
-/** What to copy from, as shown in the picker: standalone setlists by name, events with their date. */
-export const copyLabel = (s: CopySource, intl?: string) => (s.date ? `${formatDate(s.date, intl)} · ${s.name}` : s.name)
 
 type Props = {
   band: string
@@ -28,22 +20,19 @@ type Props = {
     sets: Set[]
     songs: SongRef[]
     blocks: { id: string; name: string; songs: SongRef[] }[]
-    copyFrom: CopySource[]
   }
   editable: boolean
 }
 
-/** Sets with songs and blocks. Every change saves the whole setlist right away. */
+/**
+ * Sets with songs and blocks. Every change saves the whole setlist right away.
+ * Local state wins over refetched data (a refetch can land before a save); remount with a new `key` to start over from the server.
+ */
 export function SetlistBuilder({ band, target, data, editable }: Props) {
-  const router = useRouter()
   const t = useT()
   const [sets, setSets] = useState<Set[]>(data.sets)
   const [status, setStatus] = useState<'saved' | 'saving' | 'error' | ''>('')
-  const [copyFrom, setCopyFrom] = useState(data.copyFrom[0]?.id ?? '')
   const queue = useRef(Promise.resolve())
-
-  // Fresh data from the server (after a copy) replaces local state.
-  useEffect(() => setSets(data.sets), [data.sets])
 
   /** Saves run one after another, in order. */
   function persist(next: Set[]) {
@@ -58,14 +47,9 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
       )
   }
 
-  const updateSet = (i: number, patch: Partial<Set>) => sets.map((s, j) => (j === i ? { ...s, ...patch } : s))
-
-  async function copy() {
-    setStatus('saving')
-    await bandOp('copySetlist', band, { ...target, from: copyFrom })
-    await router.invalidate()
-    setStatus('saved')
-  }
+  // An empty setlist being edited starts with one empty set, saved once something is added.
+  const shown: Set[] = editable && sets.length === 0 ? [{ name: t.setlist.setN(1), songs: [] }] : sets
+  const updateSet = (i: number, patch: Partial<Set>) => shown.map((s, j) => (j === i ? { ...s, ...patch } : s))
 
   const total = totalDuration(sets.flatMap((s) => s.songs))
 
@@ -80,32 +64,9 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
         )}
       </p>
 
-      {sets.length === 0 &&
-        (editable ? (
-          <div className="grid gap-3 rounded-xl border border-dashed p-6">
-            <div>
-              <Button onClick={() => persist([{ name: t.setlist.setN(1), songs: [] }])}>{t.setlist.startEmpty}</Button>
-            </div>
-            {data.copyFrom.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                <NativeSelect aria-label={t.setlist.copyFrom} value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)} className="min-w-0 flex-1">
-                  {data.copyFrom.map((s) => (
-                    <NativeSelectOption key={s.id} value={s.id}>
-                      {copyLabel(s, t.intl)}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
-                <Button variant="outline" onClick={copy}>
-                  {t.setlist.copy}
-                </Button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <p className="text-muted-foreground">{t.common.noSetlistYet}</p>
-        ))}
+      {shown.length === 0 && <p className="text-muted-foreground">{t.common.noSetlistYet}</p>}
 
-      {sets.map((set, i) => (
+      {shown.map((set, i) => (
         <section key={i} className="set rounded-xl border bg-card p-4">
           <h2 className="flex items-center gap-3">
             {editable ? (
@@ -115,7 +76,7 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
                 value={set.name}
                 maxLength={60}
                 onChange={(e) => setSets(updateSet(i, { name: e.target.value }))}
-                onBlur={() => persist(sets)}
+                onBlur={() => persist(shown)}
               />
             ) : (
               set.name
@@ -130,14 +91,14 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
             blocks={data.blocks}
             editable={editable}
             // Removing the last song removes the set.
-            onChange={(songs) => persist(songs.length || !set.songs.length ? updateSet(i, { songs }) : sets.filter((_, j) => j !== i))}
+            onChange={(songs) => persist(songs.length || !set.songs.length ? updateSet(i, { songs }) : shown.filter((_, j) => j !== i))}
           />
         </section>
       ))}
 
-      {editable && sets.length > 0 && (
+      {editable && (
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => persist([...sets, { name: t.setlist.setN(sets.length + 1), songs: [] }])}>
+          <Button variant="outline" onClick={() => persist([...shown, { name: t.setlist.setN(shown.length + 1), songs: [] }])}>
             <Plus aria-hidden /> {t.setlist.addSet}
           </Button>
         </div>

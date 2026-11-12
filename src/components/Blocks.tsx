@@ -137,7 +137,9 @@ function BlockRow({ block, repertoire, editable, isNew }: { block: Block; repert
               <Button variant="outline" onClick={() => setArchived(!block.archivedAt)}>
                 {block.archivedAt ? t.common.restore : t.common.archive}
               </Button>
-              <HistoryLink item={block.id} />
+              <span className="ml-auto">
+                <HistoryLink item={block.id} />
+              </span>
             </div>
           )}
         </div>

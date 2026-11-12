@@ -167,7 +167,8 @@ export const nl: Dict = {
     isArchived: 'Dit optreden is gearchiveerd.',
     booking: 'Boeking',
     payment: 'Betaling',
-    buildSetlist: 'Setlist maken',
+    chooseSetlist: 'Setlist kiezen',
+    newSetlist: 'Nieuw',
     noSetlist: 'Nog geen setlist',
   },
 
@@ -187,9 +188,6 @@ export const nl: Dict = {
     addContact: 'Contact toevoegen',
     contactPlaceholder: 'Zoek of typ een nieuw contact',
     notesHint: '(opbouw, soundcheck, parkeren, …)',
-    setlistEmpty: 'Leeg',
-    setlistStandard: 'Standaard (gebruik zoals hij is)',
-    setlistCustom: 'Eigen (begin met een kopie)',
   },
 
   setlist: {
@@ -200,6 +198,9 @@ export const nl: Dict = {
     standard: 'Standaardsetlist',
     custom: 'Eigen setlist',
     customize: 'Aanpassen',
+    confirmStandardTitle: 'Standaard setlist gebruiken?',
+    confirmStandardText: 'De eigen setlist van dit optreden, met alle wijzigingen, gaat verloren.',
+    confirmStandard: 'Standaard gebruiken',
     usingStandard: 'Gebruikt de standaardsetlist',
     changesShowUp: '. Wijzigingen daar zie je hier ook.',
     closeShow: 'Showmodus sluiten',
@@ -212,7 +213,7 @@ export const nl: Dict = {
     isArchived: 'Deze setlist is gearchiveerd.',
     archivedList: 'Gearchiveerde setlists',
     back2: 'Terug naar setlists',
-    intro: 'Setlists die je vaker gebruikt, zoals je standaardshow. Een nieuw optreden kan met een kopie ervan beginnen.',
+    intro: 'Setlists die je vaker gebruikt, zoals je standaardshow. Een optreden kan er een als setlist gebruiken.',
     newDefault: 'Nieuwe setlist',
     create: 'Setlist maken',
     noArchived: 'Geen gearchiveerde setlists.',
@@ -220,9 +221,6 @@ export const nl: Dict = {
     allSongs: 'Alle nummers',
     saving: 'Opslaan…',
     notSaved: 'Niet opgeslagen, probeer opnieuw',
-    startEmpty: 'Begin met een lege setlist',
-    copyFrom: 'Setlist kopiëren van',
-    copy: 'Die setlist kopiëren',
     setName: (i) => `Naam van set ${i}`,
     set: 'Set',
     setN: (i) => `Set ${i}`,
@@ -237,8 +235,7 @@ export const nl: Dict = {
     addTo: (label) => `Nummer toevoegen aan ${label}`,
     searchSongOrBlock: 'Zoek een nummer of blok',
     searchSong: 'Zoek een nummer',
-    addBlock: 'Blok toevoegen',
-    addSong: 'Nummer toevoegen',
+    addNew: (title) => `“${title}” toevoegen als nieuw nummer`,
   },
 
   blocks: {

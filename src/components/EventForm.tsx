@@ -4,7 +4,7 @@ import { Field, FormError } from '#/components/Field'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
-import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from '#/components/ui/native-select'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { Textarea } from '#/components/ui/textarea'
 import { withLabels } from '#/lib/labels'
 import type { EventFields } from '#/server/ops'
@@ -17,7 +17,6 @@ export type EventFormData = {
   venues: Venue[]
   contacts: Contact[]
   lastContactsByVenue: Record<string, string[]>
-  setlists: { id: string; name: string }[]
 }
 
 type Initial = Partial<Omit<EventFields, 'venue' | 'contacts'>> & {
@@ -29,9 +28,7 @@ type Props = {
   data: EventFormData
   initial?: Initial
   submitLabel: string
-  /** New events only: offer to start the setlist from a standalone one. */
-  pickSetlist?: boolean
-  onSubmit: (fields: EventFields & { setlistFrom?: string | null; setlistStandard?: string | null }) => Promise<void>
+  onSubmit: (fields: EventFields) => Promise<void>
 }
 
 /** A picked contact: existing (id) or new (typed name plus optional details). */
@@ -42,7 +39,7 @@ const paymentStatuses = ['open', 'invoiced', 'paid'] as const
 
 let nextKey = 0
 
-export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false, onSubmit }: Props) {
+export function EventForm({ data, initial = {}, submitLabel, onSubmit }: Props) {
   const ids = useId()
   const t = useT()
   const venues = useMemo(() => withLabels(data.venues, (v) => v.name, (v) => v.address), [data.venues])
@@ -81,7 +78,6 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
-    const setlist = String(f.get('setlist') ?? '')
     setBusy(true)
     setError('')
     try {
@@ -99,8 +95,6 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
           .split(',')
           .map((t) => t.trim())
           .filter(Boolean),
-        setlistStandard: setlist.startsWith('standard:') ? setlist.slice(9) : null,
-        setlistFrom: setlist.startsWith('custom:') ? setlist.slice(7) : null,
       })
     } catch (err) {
       setError(errorText(t, err, t.common.savingFailed))
@@ -247,27 +241,6 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
       <Field label={t.common.tags} hint={t.common.commaSeparated}>
         <Input name="tags" defaultValue={(initial.tags ?? []).join(', ')} />
       </Field>
-      {pickSetlist && data.setlists.length > 0 && (
-        <Field label={t.common.setlist}>
-          <NativeSelect name="setlist" defaultValue="" className="w-full">
-            <NativeSelectOption value="">{t.eventForm.setlistEmpty}</NativeSelectOption>
-            <NativeSelectOptGroup label={t.eventForm.setlistStandard}>
-              {data.setlists.map((s) => (
-                <NativeSelectOption key={s.id} value={`standard:${s.id}`}>
-                  {s.name}
-                </NativeSelectOption>
-              ))}
-            </NativeSelectOptGroup>
-            <NativeSelectOptGroup label={t.eventForm.setlistCustom}>
-              {data.setlists.map((s) => (
-                <NativeSelectOption key={s.id} value={`custom:${s.id}`}>
-                  {s.name}
-                </NativeSelectOption>
-              ))}
-            </NativeSelectOptGroup>
-          </NativeSelect>
-        </Field>
-      )}
       <FormError>{error}</FormError>
       <div>
         <Button type="submit" disabled={busy}>

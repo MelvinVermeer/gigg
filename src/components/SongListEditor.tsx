@@ -1,8 +1,8 @@
 import { Link, useRouter } from '@tanstack/react-router'
 import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react'
-import { useId, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button } from '#/components/ui/button'
-import { Input } from '#/components/ui/input'
+import { Command, CommandInput, CommandItem, CommandList } from '#/components/ui/command'
 import { formatDuration } from '#/lib/duration'
 import { withLabels } from '#/lib/labels'
 import { bandOp } from '#/server/fns'
@@ -26,33 +26,28 @@ export const totalDuration = (songs: SongRef[]) => songs.reduce((sum, s) => sum 
 
 /** An ordered list of songs: move up/down, remove, add from the repertoire. Used for sets and blocks. */
 export function SongListEditor({ band, label, songs, repertoire, blocks = [], editable, onChange }: Props) {
-  const listId = useId()
   const router = useRouter()
   const t = useT()
   const [text, setText] = useState('')
+  const [focused, setFocused] = useState(false)
   const options = useMemo(() => withLabels(repertoire, (s) => s.title, (s) => s.key), [repertoire])
 
   const blockLabel = (b: { name: string; songs: SongRef[] }) => t.songList.block(b.name, b.songs.length)
+  const query = text.trim()
+  const q = query.toLowerCase()
+  const matches = (label: string) => label.toLowerCase().includes(q)
+  const exact = options.some((o) => o.label.toLowerCase() === q)
 
-  const pickedBlock = blocks.find((b) => blockLabel(b) === text.trim())
-
-  async function add() {
-    const title = text.trim()
-    if (!title) return
-    const block = pickedBlock
-    if (block) {
-      onChange([...songs, ...block.songs])
-      setText('')
-      return
-    }
-    let song: SongRef | undefined = options.find((o) => o.label === title)
-    // Not in the repertoire: create it with that title.
-    if (!song) {
-      song = (await bandOp('createSong', band, { title })) as SongRef
-      await router.invalidate()
-    }
-    onChange([...songs, song])
+  function add(picked: SongRef[]) {
+    onChange([...songs, ...picked])
     setText('')
+  }
+
+  /** Not in the repertoire: create it with that title. */
+  async function addNew() {
+    const song = (await bandOp('createSong', band, { title: query })) as SongRef
+    await router.invalidate()
+    add([song])
   }
 
   const move = (i: number, by: number) => {
@@ -103,33 +98,41 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
         <p className="text-sm text-muted-foreground">{t.common.noSongsYet}</p>
       )}
       {editable && (
-        <span className="add-song flex gap-2">
-          <Input
-            aria-label={t.songList.addTo(label)}
-            list={listId}
+        // Typing opens the matches below; tapping one or pressing Enter adds the highlighted one.
+        <Command label={t.songList.addTo(label)} shouldFilter={false} className="add-song relative overflow-visible bg-transparent">
+          <CommandInput
             value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                add()
-              }
-            }}
+            onValueChange={setText}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onKeyDown={(e) => e.key === 'Escape' && setText('')}
             placeholder={blocks.length ? t.songList.searchSongOrBlock : t.songList.searchSong}
-            autoComplete="off"
+            className="h-9 rounded-md border border-input px-3 text-base shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
           />
-          <Button type="button" variant="outline" onClick={add}>
-            <Plus aria-hidden /> {pickedBlock ? t.songList.addBlock : t.songList.addSong}
-          </Button>
-          <datalist id={listId}>
-            {blocks.map((b) => (
-              <option key={b.id} value={blockLabel(b)} />
-            ))}
-            {options.map((o) => (
-              <option key={o.id} value={o.label} />
-            ))}
-          </datalist>
-        </span>
+          {focused && query && (
+            <CommandList
+              // Keep focus (and the phone keyboard) on the input while picking.
+              onMouseDown={(e) => e.preventDefault()}
+              className="absolute inset-x-0 top-full z-50 mt-1 rounded-md border bg-popover p-1 shadow-md"
+            >
+              {blocks.filter((b) => matches(blockLabel(b))).map((b) => (
+                <CommandItem key={b.id} value={blockLabel(b)} onSelect={() => add(b.songs)}>
+                  {blockLabel(b)}
+                </CommandItem>
+              ))}
+              {options.filter((o) => matches(o.label)).map((o) => (
+                <CommandItem key={o.id} value={o.label} onSelect={() => add([o])}>
+                  {o.label}
+                </CommandItem>
+              ))}
+              {!exact && (
+                <CommandItem value="+" onSelect={addNew}>
+                  <Plus aria-hidden /> {t.songList.addNew(query)}
+                </CommandItem>
+              )}
+            </CommandList>
+          )}
+        </Command>
       )}
     </div>
   )

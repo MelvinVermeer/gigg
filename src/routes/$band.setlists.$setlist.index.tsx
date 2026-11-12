@@ -1,4 +1,5 @@
-import { createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
+import { Check, MonitorPlay, Pencil, Printer } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { SetlistBuilder } from '#/components/SetlistBuilder'
 import { Button } from '#/components/ui/button'
@@ -8,7 +9,7 @@ import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
 import { useT } from '#/lib/i18n'
 
-export const Route = createFileRoute('/$band/setlists/$setlist')({
+export const Route = createFileRoute('/$band/setlists/$setlist/')({
   loader: ({ params }) => bandOp('getStandaloneSetlist', params.band, { id: params.setlist }),
   component: Setlist,
 })
@@ -25,6 +26,7 @@ function Setlist() {
   const editable = member && editing
   const [name, setName] = useState(data.setlist.name)
   const id = data.setlist.id
+  const params = { band: band.slug, setlist: id }
   const t = useT()
   const nameInput = useRef<HTMLInputElement>(null)
 
@@ -62,14 +64,23 @@ function Setlist() {
           )}
         </h1>
         {member && (
-          <Button size="sm" variant={editing ? 'default' : 'secondary'} onClick={() => setEditing(!editing)}>
-            {editing ? t.common.done : t.common.edit}
+          <Button size="sm" variant="outline" onClick={() => setEditing(!editing)}>
+            {editing ? <Check aria-hidden /> : <Pencil aria-hidden />} {editing ? t.common.done : t.common.edit}
           </Button>
         )}
       </div>
-      {editing && (
+      {data.sets.length > 0 && !editing && (
         <div className="mb-6 flex flex-wrap gap-2">
-          <HistoryLink item={id} />
+          <Button asChild variant="outline" size="sm">
+            <Link to="/$band/setlists/$setlist/show" params={params}>
+              <MonitorPlay aria-hidden /> {t.setlist.showMode}
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/$band/setlists/$setlist/print" params={params}>
+              <Printer aria-hidden /> {t.setlist.stagePdf}
+            </Link>
+          </Button>
         </div>
       )}
       {data.setlist.archivedAt && (
@@ -81,9 +92,12 @@ function Setlist() {
       {editable && (
         <>
           <Separator className="my-8" />
-          <Button variant="outline" onClick={() => setArchived(!data.setlist.archivedAt)}>
-            {data.setlist.archivedAt ? t.common.restore : t.common.archive}
-          </Button>
+          <div className="flex items-center justify-between gap-2">
+            <Button variant="outline" onClick={() => setArchived(!data.setlist.archivedAt)}>
+              {data.setlist.archivedAt ? t.common.restore : t.common.archive}
+            </Button>
+            <HistoryLink item={id} />
+          </div>
         </>
       )}
     </>

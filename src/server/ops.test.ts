@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
-import { bands, changes, contacts, events, memberships, songs, users, venues } from './db/schema'
+import { bands, changes, contacts, events, memberships, setlists, songs, users, venues } from './db/schema'
 import { answerByToken, archiveBand, availabilityByToken, bandOps, calendarByToken, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, slugify } from './ops'
 import type { BandOpName } from './ops'
 import { testDb } from './test-db'
@@ -295,22 +295,7 @@ describe('setlists & blocks', () => {
     expect(res.sets).toEqual([{ name: 'Only', songs: [expect.objectContaining({ slug: 'slow-one' }), expect.objectContaining({ slug: 'closer' })] }])
   })
 
-  it('copies a setlist from another event', async () => {
-    const t = await testDb()
-    const song = await ids(t)
-    await bandOps.saveSetlist(t.db, t.member, t.band, {
-      event: 'spring-show',
-      sets: [{ name: 'Set 1', songIds: [song.closer, song['opening-song']] }],
-    })
-    const before = await bandOps.getSetlist(t.db, t.member, t.band, { event: 'summer-party' })
-    expect(before.copyFrom.map((e) => e.name)).toEqual(['Spring Show'])
-
-    await bandOps.copySetlist(t.db, t.member, t.band, { event: 'summer-party', from: before.copyFrom[0].id })
-    const res = await bandOps.getSetlist(t.db, t.member, t.band, { event: 'summer-party' })
-    expect(res.sets.map((s) => s.songs.map((x) => x.slug))).toEqual([['closer', 'opening-song']])
-  })
-
-  it('standalone setlists: build one, list it, start a new event from it', async () => {
+  it('standalone setlists: build one, list it, use it as an event standard, customize it', async () => {
     const t = await testDb()
     const song = await ids(t)
     const { id } = await bandOps.createSetlist(t.db, t.member, t.band, { name: 'Standard show' })
@@ -321,29 +306,32 @@ describe('setlists & blocks', () => {
     expect(await bandOps.listSetlists(t.db, t.reader, t.band, {})).toEqual([
       { id, name: 'Standard show', archivedAt: null, songs: 2, durationSec: 510 },
     ])
-    // Offered first when copying, and in the new-event form.
-    expect((await bandOps.getSetlist(t.db, t.member, t.band, { event: 'summer-party' })).copyFrom[0]).toMatchObject({ id, date: null })
-    expect((await bandOps.eventFormData(t.db, t.member, t.band, {})).setlists).toEqual([{ id, name: 'Standard show' }])
+    const standards = async () => {
+      const ev = await bandOps.getEvent(t.db, t.member, t.band, { slug: 'summer-party' })
+      return !ev.moved && ev.standards
+    }
+    // Offered on the event page.
+    expect(await standards()).toEqual([{ id, name: 'Standard show' }])
 
-    const ev = await bandOps.createEvent(t.db, t.member, t.band, {
-      title: 'Club Night', date: '2027-03-01', venue: null, contacts: [], setlistFrom: id,
-    })
-    const copy = await bandOps.getSetlist(t.db, t.member, t.band, { event: ev.slug })
+    await bandOps.useStandardSetlist(t.db, t.member, t.band, { event: 'summer-party', setlist: id })
+    expect((await bandOps.getSetlist(t.db, t.member, t.band, { event: 'summer-party' })).standard).toEqual({ id, name: 'Standard show' })
+
+    // Customize: a copy, so editing the original leaves the event alone.
+    await bandOps.useCustomSetlist(t.db, t.member, t.band, { event: 'summer-party' })
+    await bandOps.saveSetlist(t.db, t.member, t.band, { setlist: id, sets: [] })
+    const copy = await bandOps.getSetlist(t.db, t.member, t.band, { event: 'summer-party' })
+    expect(copy.standard).toBeNull()
     expect(copy.sets.map((s) => s.songs.map((x) => x.slug))).toEqual([['opening-song', 'closer']])
 
-    // A copy: editing the original leaves the event alone.
-    await bandOps.saveSetlist(t.db, t.member, t.band, { setlist: id, sets: [] })
-    expect((await bandOps.getSetlist(t.db, t.member, t.band, { event: ev.slug })).sets).toHaveLength(1)
-
     await bandOps.archiveSetlist(t.db, t.member, t.band, { id })
-    expect((await bandOps.eventFormData(t.db, t.member, t.band, {})).setlists).toEqual([])
+    expect(await standards()).toEqual([])
   })
 
   it("an event's setlist can't be addressed as a standalone one", async () => {
     const t = await testDb()
     const song = await ids(t)
     await bandOps.saveSetlist(t.db, t.member, t.band, { event: 'summer-party', sets: [{ name: 'S', songIds: [song.closer] }] })
-    const [{ id }] = (await bandOps.getSetlist(t.db, t.member, t.band, { event: 'spring-show' })).copyFrom
+    const [{ id }] = await t.db.select({ id: setlists.id }).from(setlists).innerJoin(events, eq(events.id, setlists.eventId)).where(eq(events.slug, 'summer-party'))
     await expect(bandOps.getStandaloneSetlist(t.db, t.member, t.band, { id })).rejects.toBeInstanceOf(NotFound)
     await expect(bandOps.archiveSetlist(t.db, t.member, t.band, { id })).rejects.toBeInstanceOf(NotFound)
   })

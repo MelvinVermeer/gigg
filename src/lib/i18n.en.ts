@@ -168,7 +168,8 @@ export const en = {
     isArchived: 'This event is archived.',
     booking: 'Booking',
     payment: 'Payment',
-    buildSetlist: 'Build setlist',
+    chooseSetlist: 'Choose setlist',
+    newSetlist: 'New',
     noSetlist: 'No setlist yet',
   },
 
@@ -188,9 +189,6 @@ export const en = {
     addContact: 'Add contact',
     contactPlaceholder: 'Search or type a new contact',
     notesHint: '(load-in, soundcheck, parking, …)',
-    setlistEmpty: 'Empty',
-    setlistStandard: 'Standard (use as is)',
-    setlistCustom: 'Custom (start as a copy)',
   },
 
   setlist: {
@@ -201,6 +199,9 @@ export const en = {
     standard: 'Standard setlist',
     custom: 'Custom setlist',
     customize: 'Customize',
+    confirmStandardTitle: 'Use the standard setlist?',
+    confirmStandardText: 'This event’s own setlist, with all changes made to it, will be lost.',
+    confirmStandard: 'Use standard',
     usingStandard: 'Using the standard setlist',
     changesShowUp: '. Changes there show up here.',
     closeShow: 'Close show mode',
@@ -213,7 +214,7 @@ export const en = {
     isArchived: 'This setlist is archived.',
     archivedList: 'Archived setlists',
     back2: 'Back to setlists',
-    intro: 'Setlists you reuse, like your standard show. A new event can start from a copy of one.',
+    intro: 'Setlists you reuse, like your standard show. An event can use one as its setlist.',
     newDefault: 'New setlist',
     create: 'Create setlist',
     noArchived: 'No archived setlists.',
@@ -221,9 +222,6 @@ export const en = {
     allSongs: 'All songs',
     saving: 'Saving…',
     notSaved: 'Not saved, try again',
-    startEmpty: 'Start an empty setlist',
-    copyFrom: 'Copy setlist from',
-    copy: 'Copy that setlist',
     setName: (i: number) => `Name of set ${i}`,
     set: 'Set',
     setN: (i: number) => `Set ${i}`,
@@ -238,8 +236,7 @@ export const en = {
     addTo: (label: string) => `Add song to ${label}`,
     searchSongOrBlock: 'Search a song or block',
     searchSong: 'Search a song',
-    addBlock: 'Add block',
-    addSong: 'Add song',
+    addNew: (title: string) => `Add “${title}” as a new song`,
   },
 
   blocks: {

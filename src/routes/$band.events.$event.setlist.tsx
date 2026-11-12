@@ -2,8 +2,10 @@ import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-r
 import { useState } from 'react'
 import { SetlistBuilder } from '#/components/SetlistBuilder'
 import { formatWhen } from '#/lib/date'
-import { MonitorPlay, Printer } from 'lucide-react'
+import { Check, MonitorPlay, Pencil, Printer } from 'lucide-react'
 import { Button } from '#/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '#/components/ui/dialog'
+import { Separator } from '#/components/ui/separator'
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
@@ -22,13 +24,17 @@ function Setlist() {
   const router = useRouter()
   const params = { band: band.slug, event: data.event.slug }
   const member = band.role === 'member'
-  const [editing, setEditing] = useState(false)
+  // A new, empty setlist opens ready to build.
+  const [editing, setEditing] = useState(member && data.sets.length === 0)
   const t = useT()
 
   async function run(op: 'useStandardSetlist' | 'useCustomSetlist', extra: object) {
     await bandOp(op, band.slug, { event: data.event.slug, ...extra })
     await router.invalidate()
   }
+  const pickStandard = (setlist: string) => run('useStandardSetlist', { setlist })
+  // The standard setlist waiting for "are you sure?".
+  const [confirm, setConfirm] = useState('')
 
   return (
     <>
@@ -38,34 +44,32 @@ function Setlist() {
       <div className="mt-1 mb-4 flex items-center justify-between gap-3">
         <h1 className="mb-0">{t.common.setlist}</h1>
         {member && (
-          <Button size="sm" variant={editing ? 'default' : 'secondary'} onClick={() => setEditing(!editing)}>
-            {editing ? t.common.done : t.common.edit}
+          <Button size="sm" variant="outline" onClick={() => setEditing(!editing)}>
+            {editing ? <Check aria-hidden /> : <Pencil aria-hidden />} {editing ? t.common.done : t.common.edit}
           </Button>
         )}
       </div>
-      <div className="mb-6 flex flex-wrap gap-2">
-        {data.sets.length > 0 && (
-          <>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/$band/events/$event/show" params={params}>
-                <MonitorPlay aria-hidden /> {t.setlist.showMode}
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/$band/events/$event/print" params={params}>
-                <Printer aria-hidden /> {t.setlist.stagePdf}
-              </Link>
-            </Button>
-          </>
-        )}
-        {editing && <HistoryLink item={data.event.id} />}
-      </div>
+      {data.sets.length > 0 && !editing && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/$band/events/$event/show" params={params}>
+              <MonitorPlay aria-hidden /> {t.setlist.showMode}
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/$band/events/$event/print" params={params}>
+              <Printer aria-hidden /> {t.setlist.stagePdf}
+            </Link>
+          </Button>
+        </div>
+      )}
       {member && editing && data.standards.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
           <NativeSelect
             aria-label={t.setlist.standard}
             value={data.standard?.id ?? ''}
-            onChange={(e) => e.target.value && run('useStandardSetlist', { setlist: e.target.value })}
+            // Leaving a custom setlist throws it away: ask first.
+            onChange={(e) => e.target.value && (data.standard || !data.sets.length ? pickStandard(e.target.value) : setConfirm(e.target.value))}
             className="min-w-0 flex-1"
           >
             {!data.standard && <NativeSelectOption value="">{t.setlist.custom}</NativeSelectOption>}
@@ -91,7 +95,40 @@ function Setlist() {
           {t.setlist.changesShowUp}
         </p>
       )}
-      <SetlistBuilder band={band.slug} target={{ event: data.event.slug }} data={data} editable={member && editing && !data.standard} />
+      <Dialog open={!!confirm} onOpenChange={(o) => !o && setConfirm('')}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.setlist.confirmStandardTitle}</DialogTitle>
+            <DialogDescription>{t.setlist.confirmStandardText}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirm('')}>
+              {t.common.cancel}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                await pickStandard(confirm)
+                setConfirm('')
+              }}
+            >
+              {t.setlist.confirmStandard}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <SetlistBuilder
+        // A fresh builder when switching between standard and custom.
+        key={data.standard?.id ?? 'custom'}
+        band={band.slug} target={{ event: data.event.slug }} data={data} editable={member && editing && !data.standard} />
+      {member && editing && (
+        <>
+          <Separator className="my-8" />
+          <div className="flex justify-end">
+            <HistoryLink item={data.event.id} />
+          </div>
+        </>
+      )}
     </>
   )
 }

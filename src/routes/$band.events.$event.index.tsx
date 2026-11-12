@@ -1,12 +1,13 @@
-import { Link, createFileRoute, getRouteApi, redirect } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi, redirect, useRouter } from '@tanstack/react-router'
 import { formatWhen } from '#/lib/date'
 import { formatDuration } from '#/lib/duration'
 import { Availability, AvailabilitySummary } from '#/components/Availability'
 import { Files } from '#/components/Files'
-import { Pencil } from 'lucide-react'
+import { ChevronDown, Pencil } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '#/components/ui/dropdown-menu'
 import { bandOp } from '#/server/fns'
 import { useT } from '#/lib/i18n'
 
@@ -22,7 +23,7 @@ export const Route = createFileRoute('/$band/events/$event/')({
 const bandRoute = getRouteApi('/$band')
 
 function Event() {
-  const { event, venue, contacts, setlist, standardName, files, availability } = Route.useLoaderData()
+  const { event, venue, contacts, setlist, standardName, standards, files, availability } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const params = { band: band.slug, event: event.slug }
   const t = useT()
@@ -102,13 +103,15 @@ function Event() {
             <dd>{event.tags.length ? event.tags.join(', ') : '–'}</dd>
             <dt className="text-muted-foreground">{t.common.setlist}</dt>
             <dd>
-              <Link to="/$band/events/$event/setlist" params={params} className="font-medium">
-                {setlist.songs
-                  ? `${standardName ? `${standardName} · ` : ''}${t.common.songCount(setlist.songs)} · ${formatDuration(setlist.durationSec)}`
-                  : band.role === 'member'
-                    ? t.events.buildSetlist
+              {setlist.songs || standardName || band.role !== 'member' ? (
+                <Link to="/$band/events/$event/setlist" params={params} className="font-medium">
+                  {setlist.songs || standardName
+                    ? `${standardName ? `${standardName} · ` : ''}${t.common.songCount(setlist.songs)} · ${formatDuration(setlist.durationSec)}`
                     : t.events.noSetlist}
-              </Link>
+                </Link>
+              ) : (
+                <ChooseSetlist event={event.slug} standards={standards} />
+              )}
             </dd>
           </dl>
           {event.notes && <p className="notes mt-4 border-t pt-4 text-sm whitespace-pre-wrap">{event.notes}</p>}
@@ -117,5 +120,45 @@ function Event() {
       <Availability band={band.slug} event={event.slug} info={availability} canAsk={band.role === 'member' && !event.archivedAt} />
       <Files band={band.slug} owner={{ event: event.slug }} files={files} canEdit={band.role === 'member' && !event.archivedAt} />
     </>
+  )
+}
+
+/** No setlist yet: start a new one, or use a standalone setlist (template) as is. */
+function ChooseSetlist({ event, standards }: { event: string; standards: { id: string; name: string }[] }) {
+  const band = bandRoute.useLoaderData()
+  const router = useRouter()
+  const t = useT()
+  const params = { band: band.slug, event }
+  const newLink = (
+    <Link to="/$band/events/$event/setlist" params={params} className="font-medium">
+      {t.events.chooseSetlist}
+    </Link>
+  )
+  if (!standards.length) return newLink
+
+  async function use(setlist: string) {
+    await bandOp('useStandardSetlist', band.slug, { event, setlist })
+    await router.invalidate()
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="inline-flex items-center gap-1 font-medium">
+        {t.events.chooseSetlist} <ChevronDown aria-hidden className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem asChild>
+          <Link to="/$band/events/$event/setlist" params={params}>
+            {t.events.newSetlist}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {standards.map((s) => (
+          <DropdownMenuItem key={s.id} onSelect={() => use(s.id)}>
+            {s.name}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
