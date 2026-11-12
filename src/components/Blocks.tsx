@@ -1,5 +1,5 @@
 import { getRouteApi, useRouter } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SongListEditor, totalDuration } from '#/components/SongListEditor'
 import type { SongRef } from '#/components/SongListEditor'
 import { formatDuration } from '#/lib/duration'
@@ -21,34 +21,31 @@ export function Blocks({ blocks, songs, archived, }: { blocks: Block[]; songs: S
   const router = useRouter()
   const editable = band.role === 'member'
   const t = useT()
-  const [name, setName] = useState('')
+  const [newId, setNewId] = useState<string>()
 
-  async function create(e: React.FormEvent) {
-    e.preventDefault()
-    if (!name.trim()) return
-    await bandOp('saveBlock', band.slug, { name, songIds: [] })
-    setName('')
+  async function create() {
+    const { id } = await bandOp('saveBlock', band.slug, { name: t.blocks.newDefault, songIds: [] })
     await router.invalidate()
+    setNewId(id)
   }
 
   return (
     <>
-      <h2 id="blocks">{archived ? t.blocks.archivedList : t.common.blocks}</h2>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 id="blocks" className="mb-0">{archived ? t.blocks.archivedList : t.common.blocks}</h2>
+        {!archived && editable && (
+          <Button size="sm" onClick={create}>
+            <Plus aria-hidden /> <span className="max-sm:sr-only">{t.blocks.create}</span>
+          </Button>
+        )}
+      </div>
       {!archived && (
         <p className="mb-6 text-muted-foreground">{t.blocks.intro}</p>
-      )}
-      {!archived && editable && (
-        <form className="mb-6 flex gap-2" onSubmit={create}>
-          <Input aria-label={t.blocks.newName} placeholder={t.blocks.newPlaceholder} value={name} onChange={(e) => setName(e.target.value)} />
-          <Button type="submit">
-            <Plus aria-hidden /> {t.blocks.create}
-          </Button>
-        </form>
       )}
       {blocks.length ? (
         <ul className="records divide-y rounded-xl border bg-card">
           {blocks.map((b) => (
-            <BlockRow key={b.id} block={b} repertoire={songs} editable={editable} />
+            <BlockRow key={b.id} block={b} repertoire={songs} editable={editable} isNew={b.id === newId} />
           ))}
         </ul>
       ) : (
@@ -58,13 +55,23 @@ export function Blocks({ blocks, songs, archived, }: { blocks: Block[]; songs: S
   )
 }
 
-function BlockRow({ block, repertoire, editable }: { block: Block; repertoire: SongRef[]; editable: boolean }) {
+function BlockRow({ block, repertoire, editable, isNew }: { block: Block; repertoire: SongRef[]; editable: boolean; isNew: boolean }) {
   const band = bandRoute.useLoaderData()
   const router = useRouter()
   const [name, setName] = useState(block.name)
   const [songs, setSongs] = useState(block.songs)
   const [saved, setSaved] = useState(false)
   const t = useT()
+  const details = useRef<HTMLDetailsElement>(null)
+  const nameInput = useRef<HTMLInputElement>(null)
+
+  // A just-created block opens with its placeholder name selected, ready to type over.
+  useEffect(() => {
+    if (!isNew || !details.current) return
+    details.current.open = true
+    details.current.scrollIntoView({ block: 'center' })
+    nameInput.current?.select()
+  }, [isNew])
 
   async function save() {
     await bandOp('saveBlock', band.slug, { id: block.id, name, songIds: songs.map((s) => s.id) })
@@ -79,7 +86,7 @@ function BlockRow({ block, repertoire, editable }: { block: Block; repertoire: S
 
   return (
     <li>
-      <details className="group">
+      <details ref={details} className="group">
         <summary className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
           <span className="grid flex-1 gap-0.5">
             <span className="font-medium">{block.name}</span>
@@ -93,6 +100,7 @@ function BlockRow({ block, repertoire, editable }: { block: Block; repertoire: S
           {editable && (
             <Field label={t.common.name}>
               <Input
+                ref={nameInput}
                 value={name}
                 maxLength={60}
                 onChange={(e) => {
@@ -104,7 +112,7 @@ function BlockRow({ block, repertoire, editable }: { block: Block; repertoire: S
           )}
           <SongListEditor
             band={band.slug}
-            label={block.name}
+            label={name || block.name}
             songs={songs}
             repertoire={repertoire}
             editable={editable && !block.archivedAt}

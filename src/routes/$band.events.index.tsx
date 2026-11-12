@@ -59,7 +59,7 @@ function Events() {
           {band.role === 'member' && (
             <Button asChild size="sm">
               <Link to="/$band/events/new" params={params}>
-                <Plus aria-hidden /> {t.events.add}
+                <Plus aria-hidden /> <span className="max-sm:sr-only">{t.events.add}</span>
               </Link>
             </Button>
           )}

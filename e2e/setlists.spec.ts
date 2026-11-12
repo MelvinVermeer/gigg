@@ -28,10 +28,10 @@ test.describe('member', () => {
 
     // A block to reuse.
     await page.goto('/demo-band/setlists')
-    await page.getByLabel('New block name').fill(`Encore ${ts}`)
     await page.getByRole('button', { name: 'Create block' }).click()
-    const block = page.locator('ul.records li', { hasText: `Encore ${ts}` })
-    await block.locator('summary').click()
+    const block = page.locator('ul.records li', { has: page.locator('details[open]') })
+    await expect(block.getByLabel('Name')).toBeFocused()
+    await page.keyboard.type(`Encore ${ts}`) // the placeholder name is selected, so typing replaces it
     await addSong(page, `Encore ${ts}`, 'Closer')
     await block.getByRole('button', { name: 'Save' }).click()
     await expect(block.getByRole('button', { name: 'Saved' })).toBeVisible()
@@ -102,8 +102,9 @@ test.describe('standalone setlists', () => {
     const ts = Date.now()
     await page.goto('/demo-band')
     await page.getByRole('link', { name: 'Setlists' }).click()
-    await page.getByLabel('New setlist name').fill(`Festival ${ts}`)
     await page.getByRole('button', { name: 'Create setlist' }).click()
+    await expect(page.getByLabel('Setlist name')).toBeFocused()
+    await page.keyboard.type(`Festival ${ts}`)
     await page.getByRole('button', { name: 'Start an empty setlist' }).click()
     await addSong(page, 'Set 1', 'Neon Harbour')
     await addSong(page, 'Set 1', 'Closer')

@@ -1,9 +1,7 @@
 import { Link, createFileRoute, getRouteApi, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
 import { formatDuration } from '#/lib/duration'
 import { Music, Plus } from 'lucide-react'
 import { Button } from '#/components/ui/button'
-import { Input } from '#/components/ui/input'
 import { bandOp } from '#/server/fns'
 import { archivedSearch } from '#/lib/archived'
 import { Blocks } from '#/components/Blocks'
@@ -26,20 +24,24 @@ function Setlists() {
   const { setlists, blocks } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const navigate = useNavigate()
-  const [name, setName] = useState('')
   const { archived } = Route.useSearch()
   const t = useT()
 
-  async function create(e: React.FormEvent) {
-    e.preventDefault()
-    if (!name.trim()) return
-    const { id } = await bandOp('createSetlist', band.slug, { name })
+  async function create() {
+    const { id } = await bandOp('createSetlist', band.slug, { name: t.setlist.newDefault })
     await navigate({ to: '/$band/setlists/$setlist', params: { band: band.slug, setlist: id } })
   }
 
   return (
     <>
-      <h1>{archived ? t.setlist.archivedList : t.common.setlists}</h1>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h1 className="mb-0">{archived ? t.setlist.archivedList : t.common.setlists}</h1>
+        {!archived && band.role === 'member' && (
+          <Button size="sm" onClick={create}>
+            <Plus aria-hidden /> <span className="max-sm:sr-only">{t.setlist.create}</span>
+          </Button>
+        )}
+      </div>
       {archived ? (
         <Button asChild variant="ghost" size="sm" className="mb-4">
           <Link to="/$band/setlists" params={{ band: band.slug }}>
@@ -48,14 +50,6 @@ function Setlists() {
         </Button>
       ) : (
         <p className="mb-6 text-muted-foreground">{t.setlist.intro}</p>
-      )}
-      {!archived && band.role === 'member' && (
-        <form className="mb-6 flex gap-2" onSubmit={create}>
-          <Input aria-label={t.setlist.newName} placeholder={t.setlist.newPlaceholder} maxLength={60} value={name} onChange={(e) => setName(e.target.value)} />
-          <Button type="submit">
-            <Plus aria-hidden /> {t.setlist.create}
-          </Button>
-        </form>
       )}
       <ul className="records divide-y rounded-xl border bg-card">
         {setlists.map((s) => (

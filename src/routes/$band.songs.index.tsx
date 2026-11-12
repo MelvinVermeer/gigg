@@ -44,7 +44,7 @@ function Songs() {
           {!archived && band.role === 'member' && (
             <Button asChild size="sm">
               <Link to="/$band/songs/new" params={{ band: band.slug }}>
-                <Plus aria-hidden /> {t.songs.add}
+                <Plus aria-hidden /> <span className="max-sm:sr-only">{t.songs.add}</span>
               </Link>
             </Button>
           )}

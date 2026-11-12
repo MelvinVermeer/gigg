@@ -1,5 +1,5 @@
 import { createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SetlistBuilder } from '#/components/SetlistBuilder'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -26,6 +26,13 @@ function Setlist() {
   const [name, setName] = useState(data.setlist.name)
   const id = data.setlist.id
   const t = useT()
+  const nameInput = useRef<HTMLInputElement>(null)
+
+  // An empty setlist (usually just created) opens with its name selected, ready to type over.
+  useEffect(() => {
+    if (data.sets.length === 0) nameInput.current?.select()
+    // Only on opening, not when the last set is removed while editing.
+  }, [id])
 
   async function rename() {
     if (name.trim() && name !== data.setlist.name) await bandOp('renameSetlist', band.slug, { id, name })
@@ -42,6 +49,7 @@ function Setlist() {
         <h1 className="mb-0 min-w-0 flex-1">
           {editable ? (
             <Input
+              ref={nameInput}
               aria-label={t.setlist.name}
               className="title-input h-10 text-2xl font-semibold md:text-2xl"
               value={name}
