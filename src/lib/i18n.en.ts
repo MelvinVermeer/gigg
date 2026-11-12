@@ -273,7 +273,6 @@ export const en = {
   availability: {
     title: 'Availability',
     yourAnswer: 'Your answer',
-    allYes: (n: number) => `all ${n} yes`,
     count: { yes: 'yes', no: 'no', maybe: 'maybe', waiting: 'waiting' },
     waiting: 'waiting',
     check: 'Check availability',
@@ -281,7 +280,7 @@ export const en = {
     askWho: 'Ask who?',
     selectAll: 'Select all',
     send: 'Send request',
-    asking: (date: string, summary: string) => `Asking for ${date}: ${summary}`,
+    asking: (date: string) => `Asking for ${date}`,
     close: 'Close request',
     moved: 'The event has moved since people were asked.',
     note: 'Note',

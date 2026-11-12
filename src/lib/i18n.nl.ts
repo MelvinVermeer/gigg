@@ -272,7 +272,6 @@ export const nl: Dict = {
   availability: {
     title: 'Beschikbaarheid',
     yourAnswer: 'Je antwoord',
-    allYes: (n) => `alle ${n} ja`,
     count: { yes: 'ja', no: 'nee', maybe: 'misschien', waiting: 'wacht' },
     waiting: 'wacht',
     check: 'Beschikbaarheid vragen',
@@ -280,7 +279,7 @@ export const nl: Dict = {
     askWho: 'Wie vragen?',
     selectAll: 'Iedereen',
     send: 'Vraag versturen',
-    asking: (date, summary) => `Vraag voor ${date}: ${summary}`,
+    asking: (date) => `Vraag voor ${date}`,
     close: 'Vraag sluiten',
     moved: 'Het optreden is verplaatst sinds de vraag is gesteld.',
     note: 'Toelichting',

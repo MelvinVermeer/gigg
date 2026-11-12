@@ -19,7 +19,7 @@ test('asks the reader, who answers from the emailed link without logging in', as
   await expect(page.getByRole('button', { name: 'Send request' })).toBeDisabled()
   await page.getByLabel(/Dev Reader/).check()
   await page.getByRole('button', { name: 'Send request' }).click()
-  await expect(page.getByText(/Asking for .*: 1 waiting/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Availability' }).getByText('waiting', { exact: true })).toBeVisible()
 
   const mail = (await readFile('.outbox.jsonl', 'utf8'))
     .trim()
@@ -34,7 +34,7 @@ test('asks the reader, who answers from the emailed link without logging in', as
   await guest.goto(maybeLink)
   await expect(guest.getByRole('radio', { name: 'Maybe' })).toBeChecked()
   await page.reload()
-  await expect(page.getByText(/Asking for .*: 1 waiting/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Availability' }).getByText('waiting', { exact: true })).toBeVisible()
   // A note is only asked for with a maybe.
   await guest.getByRole('radio', { name: 'Yes' }).check()
   await expect(guest.getByRole('textbox', { name: 'Why maybe? (optional)' })).toBeHidden()
@@ -52,5 +52,5 @@ test('asks the reader, who answers from the emailed link without logging in', as
   await dialog.getByRole('button', { name: 'New availability check' }).click()
   await dialog.getByLabel(/Dev Reader/).check()
   await dialog.getByRole('button', { name: 'Send request' }).click()
-  await expect(page.getByText(/Asking for .*: 1 waiting/)).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Availability' }).getByText('waiting', { exact: true })).toBeVisible()
 })

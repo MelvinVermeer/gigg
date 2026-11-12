@@ -10,14 +10,20 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { formatDate } from '#/lib/date'
+import { cn } from '#/lib/utils'
 import { askAvailability, bandOp } from '#/server/fns'
 import { errorText, label as labelOf, useT } from '#/lib/i18n'
-import type { Dict } from '#/lib/i18n'
 
 type Info = NonNullable<Awaited<ReturnType<typeof bandOp<'getAvailability'>>>>
 type Answer = 'yes' | 'maybe' | 'no'
 const answers: Answer[] = ['yes', 'maybe', 'no']
-const answerBadge = { yes: 'default', maybe: 'secondary', no: 'destructive' } as const
+const answerColor = { yes: 'bg-green-600 text-white', maybe: 'bg-amber-400 text-amber-950', no: 'bg-red-600 text-white' }
+const pickerColor = {
+  yes: 'data-[state=off]:hover:bg-green-600/10 data-[state=on]:bg-green-600 data-[state=on]:text-white',
+  maybe: 'data-[state=off]:hover:bg-amber-400/15 data-[state=on]:bg-amber-400 data-[state=on]:text-amber-950',
+  no: 'data-[state=off]:hover:bg-red-600/10 data-[state=on]:bg-red-600 data-[state=on]:text-white',
+}
+const rank = (a: Answer | null) => (a ? answers.indexOf(a) : answers.length)
 
 /** Yes / Maybe / No as one segmented button group (radios to assistive tech). */
 export function AnswerPicker({ value, onChange }: { value: Answer | undefined; onChange: (a: Answer) => void }) {
@@ -34,7 +40,7 @@ export function AnswerPicker({ value, onChange }: { value: Answer | undefined; o
         <ToggleGroup.Item
           key={a}
           value={a}
-          className="h-9 border-l px-5 text-sm font-medium outline-none first:border-l-0 hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+          className={cn('h-9 border-l px-5 text-sm font-medium outline-none first:border-l-0 focus-visible:ring-[3px] focus-visible:ring-ring/50', pickerColor[a])}
         >
           {t.answer[a]}
         </ToggleGroup.Item>
@@ -43,22 +49,11 @@ export function AnswerPicker({ value, onChange }: { value: Answer | undefined; o
   )
 }
 
-/** "all 5 yes", or "5 yes / 2 no / 1 maybe / 1 waiting" (zero counts left out). */
-export function summarize(t: Dict, responses: { answer: Answer | null }[]) {
-  const n = (a: Answer | null) => responses.filter((r) => r.answer === a).length
-  const w = t.availability.count
-  if (n('yes') === responses.length) return t.availability.allYes(responses.length)
-  return (
-    [
-      [n('yes'), w.yes],
-      [n('no'), w.no],
-      [n('maybe'), w.maybe],
-      [n(null), w.waiting],
-    ] as const
-  )
-    .filter(([c]) => c)
-    .map(([c, w]) => `${c} ${w}`)
-    .join(' / ')
+/** Nonzero counts in yes / maybe / no / waiting order. */
+function counts(responses: { answer: Answer | null }[]) {
+  return ([...answers, null] as const)
+    .map((a) => [a ?? 'waiting', responses.filter((r) => r.answer === a).length] as const)
+    .filter(([, n]) => n)
 }
 
 /** Run a change, then reload the page data; returns the error message, if any. */
@@ -84,10 +79,10 @@ function Responses({ info, onEdit }: { info: Info; onEdit?: () => void }) {
   const t = useT()
   return (
     <ul className="divide-y">
-      {info.responses.map((r) => (
+      {[...info.responses].sort((a, b) => rank(a.answer) - rank(b.answer)).map((r) => (
         <li key={r.email} className="flex flex-wrap items-center gap-2 py-2 text-sm">
           <span className="font-medium">{r.name || r.email}:</span>
-          {r.answer ? <Badge variant={answerBadge[r.answer]}>{t.answer[r.answer]}</Badge> : <Badge variant="outline">{t.availability.waiting}</Badge>}
+          {r.answer ? <Badge className={answerColor[r.answer]}>{t.answer[r.answer]}</Badge> : <Badge variant="outline">{t.availability.waiting}</Badge>}
           {r.note && <span className="text-muted-foreground">“{r.note}”</span>}
           {r.mine && r.answer && onEdit && (
             <Button variant="ghost" size="xs" className="ml-auto" onClick={onEdit}>
@@ -174,7 +169,7 @@ export function Availability({ band, event, info, canAsk }: { band: string; even
         </CardTitle>
         {info && (
           <CardDescription>
-            {t.availability.asking(formatDate(info.date, t.intl), summarize(t, info.responses))}
+            {t.availability.asking(formatDate(info.date, t.intl))}
           </CardDescription>
         )}
         {info && canAsk && (
@@ -208,8 +203,8 @@ export function Availability({ band, event, info, canAsk }: { band: string; even
                   <legend className="mb-2 text-sm font-medium">{t.availability.yourAnswer}</legend>
                   <AnswerPicker value={answer} onChange={setAnswer} />
                 </fieldset>
-                <div className="flex gap-2">
-                  {answer === 'maybe' && <Input name="note" aria-label={t.availability.note} placeholder={t.availability.whyMaybe} defaultValue={mine.note ?? ''} maxLength={500} />}
+                <div className="flex gap-2 max-sm:flex-wrap">
+                  {answer === 'maybe' && <Input className="max-sm:basis-full" name="note" aria-label={t.availability.note} placeholder={t.availability.whyMaybe} defaultValue={mine.note ?? ''} maxLength={500} />}
                   <Button type="submit" disabled={!answer}>
                     {t.common.save}
                   </Button>
@@ -252,8 +247,18 @@ export function AvailabilitySummary({ band, event, info, canAsk }: { band: strin
       <dd>
         <Dialog>
           <DialogTrigger asChild>
-            <button type="button" className="text-left font-medium underline-offset-4 hover:underline">
-              {summarize(t, info.responses)}
+            <button
+              type="button"
+              aria-label={counts(info.responses)
+                .map(([k, n]) => `${n} ${t.availability.count[k]}`)
+                .join(', ')}
+              className="inline-flex overflow-hidden rounded-full text-xs font-medium tabular-nums outline-none hover:opacity-80 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              {counts(info.responses).map(([k, n]) => (
+                <span key={k} className={cn('px-2 py-0.5', k === 'waiting' ? 'bg-muted text-muted-foreground' : answerColor[k])}>
+                  {n}
+                </span>
+              ))}
             </button>
           </DialogTrigger>
           <DialogContent>
