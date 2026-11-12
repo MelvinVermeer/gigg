@@ -34,7 +34,7 @@ test.describe('member', () => {
     await block.locator('summary').click()
     await addSong(page, `Encore ${ts}`, 'Closer')
     await block.getByRole('button', { name: 'Save' }).click()
-    await expect(block.getByRole('status')).toHaveText('Saved')
+    await expect(block.getByRole('button', { name: 'Saved' })).toBeVisible()
 
     // Build the setlist.
     await newEvent(page, `Setlist Show ${ts}`)

@@ -202,4 +202,14 @@ How to self-host on Vercel, step by step.
 - Generated tech rider / stage plot / input list
 - Notifications (push / email)
 - Keep the in-app manual (`/manual`, a short static page) up to date automatically using skills
-- Money: fees per event, totals per year
+
+### From feedback (2026-11-12)
+
+Each of these needs a **grill-me session** before building: the open questions below get settled first.
+
+- **C. Availability vs. assignment (decide first, A and B depend on it).** Find the balance between asking everyone whether they can make it and just assigning the people who are relevant to an event. Also: log your non-availability ahead of time (holidays, blocked dates), maybe pre-filling answers to availability checks. Open: does an event get a list of assigned people, and how does that relate to availability answers?
+- **A. Event filtering and default view.** Filter the events list; by default show only confirmed gigs you're part of. Remember the chosen view per user or device. The same filter for the iCal feed ("only my events/gigs"). Open: what "part of" means (see C).
+- **B. Event types and money.** Event types such as *repetitie* (rehearsal) besides gigs. A fee field (*vergoeding*) per event, with free events as an empty or zero fee; later, totals per year. Open: which fields (booking/payment status, fee) apply to which type.
+- **D. Setlists and songs.** Drag and drop to reorder songs (the up/down arrows already exist; native drag and drop is flaky on mobile). Personal notes per song, visible only to you (different from per-song notes in a setlist). A setting for which song fields a setlist shows (key, BPM, duration…), tied in with the other PDFs.
+- **Styled invite emails.** HTML emails with branding instead of plain text.
+- **Multi-lingual.** Every string in the app is touched; decide whether Dutch is needed before the MVP or can wait.

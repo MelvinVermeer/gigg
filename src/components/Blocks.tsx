@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { SongListEditor, totalDuration } from '#/components/SongListEditor'
 import type { SongRef } from '#/components/SongListEditor'
 import { formatDuration } from '#/lib/duration'
-import { ChevronDown, Plus } from 'lucide-react'
+import { Check, ChevronDown, Plus } from 'lucide-react'
 import { Field } from '#/components/Field'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -61,11 +61,11 @@ function BlockRow({ block, repertoire, editable }: { block: Block; repertoire: S
   const router = useRouter()
   const [name, setName] = useState(block.name)
   const [songs, setSongs] = useState(block.songs)
-  const [status, setStatus] = useState('')
+  const [saved, setSaved] = useState(false)
 
   async function save() {
     await bandOp('saveBlock', band.slug, { id: block.id, name, songIds: songs.map((s) => s.id) })
-    setStatus('Saved')
+    setSaved(true)
     await router.invalidate()
   }
 
@@ -89,7 +89,14 @@ function BlockRow({ block, repertoire, editable }: { block: Block; repertoire: S
         <div className="grid gap-4 border-t px-4 py-4">
           {editable && (
             <Field label="Name">
-              <Input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} />
+              <Input
+                value={name}
+                maxLength={60}
+                onChange={(e) => {
+                  setName(e.target.value)
+                  setSaved(false)
+                }}
+              />
             </Field>
           )}
           <SongListEditor
@@ -100,21 +107,26 @@ function BlockRow({ block, repertoire, editable }: { block: Block; repertoire: S
             editable={editable && !block.archivedAt}
             onChange={(next) => {
               setSongs(next)
-              setStatus('')
+              setSaved(false)
             }}
           />
           {editable && (
             <div className="flex flex-wrap items-center gap-2">
-              {!block.archivedAt && <Button onClick={save}>Save</Button>}
+              {!block.archivedAt && (
+                <Button onClick={save} aria-live="polite">
+                  {saved ? (
+                    <>
+                      <Check aria-hidden /> Saved
+                    </>
+                  ) : (
+                    'Save'
+                  )}
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setArchived(!block.archivedAt)}>
                 {block.archivedAt ? 'Restore' : 'Archive'}
               </Button>
               <HistoryLink item={block.id} />
-              {status && (
-                <span role="status" className="text-sm text-muted-foreground">
-                  {status}
-                </span>
-              )}
             </div>
           )}
         </div>

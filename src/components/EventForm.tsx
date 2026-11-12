@@ -115,7 +115,7 @@ export function EventForm({ data, initial = {}, submitLabel, pickSetlist = false
       <Field label="Date">
         <Input name="date" type="date" required defaultValue={initial.date ?? ''} />
       </Field>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Start" hint="(optional)">
           <Input name="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required={!!endTime} />
         </Field>

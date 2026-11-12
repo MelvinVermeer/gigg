@@ -80,15 +80,15 @@ function Admin() {
           </CardHeader>
           <CardContent>
             {active.length ? (
-              <ul className="divide-y rounded-lg border">
+              <ul className="max-h-[28rem] divide-y overflow-y-auto rounded-lg border">
                 {active.map((b) => (
                   <li key={b.slug} className="flex items-center gap-3 px-3 py-2 text-sm">
-                    <span className="grid flex-1 gap-0.5">
+                    <span className="grid min-w-0 flex-1 gap-0.5">
                       <Link to="/$band" params={{ band: b.slug }} className="font-medium hover:underline">
                         {b.name}
                       </Link>
-                      <span className="text-muted-foreground">
-                        ({b.members.join(', ') || 'no members'}), files: {size(b.fileBytes)}
+                      <span className="truncate text-muted-foreground" title={b.members.join(', ')}>
+                        {b.members.length} members · files: {size(b.fileBytes)} · {b.members.join(', ')}
                       </span>
                     </span>
                     <Button variant="ghost" size="xs" className="text-destructive" onClick={() => remove(b.slug, b.name)}>
@@ -111,7 +111,7 @@ function Admin() {
           </CardHeader>
           <CardContent>
             {feedback.length ? (
-              <ul aria-label="Feedback" className="divide-y rounded-lg border">
+              <ul aria-label="Feedback" className="max-h-[32rem] divide-y overflow-y-auto rounded-lg border">
                 {feedback.map((f) => (
                   <li key={f.id} className="grid gap-1 px-3 py-2 text-sm">
                     <span>
@@ -139,10 +139,10 @@ function Admin() {
               <CardDescription>Hidden from everyone, but their data is still stored.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="divide-y rounded-lg border">
+              <ul className="max-h-[28rem] divide-y overflow-y-auto rounded-lg border">
                 {deleted.map((b) => (
                   <li key={b.slug} className="flex items-center gap-3 px-3 py-2 text-sm">
-                    <span className="flex-1">
+                    <span className="min-w-0 flex-1 truncate" title={b.members.join(', ')}>
                       {b.name}{' '}
                       <span className="text-muted-foreground">
                         ({b.members.join(', ') || 'no members'}), files: {size(b.fileBytes)}

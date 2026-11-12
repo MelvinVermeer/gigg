@@ -2,7 +2,7 @@ import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-r
 import { useEffect, useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 import { deviceName } from '#/lib/device-name'
-import { KeyRound, Plus } from 'lucide-react'
+import { Check, KeyRound, Plus } from 'lucide-react'
 import { Field } from '#/components/Field'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -125,10 +125,18 @@ function Settings() {
           <CardContent className="grid gap-6">
             <form onSubmit={saveName} className="flex flex-wrap items-end gap-2">
               <Field label="Display name" className="min-w-48 flex-1">
-                <Input name="name" defaultValue={me?.name} maxLength={100} placeholder={me?.email} />
+                <Input name="name" defaultValue={me?.name} maxLength={100} placeholder={me?.email} onChange={() => setNameStatus('')} />
               </Field>
-              <Button type="submit">Save</Button>
-              <span className="self-center text-sm text-muted-foreground">{nameStatus}</span>
+              <Button type="submit" aria-live="polite">
+                {nameStatus === 'Saved' ? (
+                  <>
+                    <Check aria-hidden /> Saved
+                  </>
+                ) : (
+                  'Save'
+                )}
+              </Button>
+              {nameStatus !== 'Saved' && <span className="self-center text-sm text-destructive">{nameStatus}</span>}
             </form>
             <Separator />
             <div className="grid gap-3">

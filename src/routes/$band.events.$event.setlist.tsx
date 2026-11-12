@@ -56,7 +56,7 @@ function Setlist() {
             </Button>
           </>
         )}
-        {!editing && <HistoryLink item={data.event.id} />}
+        {editing && <HistoryLink item={data.event.id} />}
       </div>
       {member && editing && data.standards.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">

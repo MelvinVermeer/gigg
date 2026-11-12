@@ -57,7 +57,7 @@ function Setlist() {
           </Button>
         )}
       </div>
-      {!editing && (
+      {editing && (
         <div className="mb-6 flex flex-wrap gap-2">
           <HistoryLink item={id} />
         </div>

@@ -1,4 +1,5 @@
 import { useRouter } from '@tanstack/react-router'
+import { ToggleGroup } from 'radix-ui'
 import { useState } from 'react'
 import { FormError } from '#/components/Field'
 import { Badge } from '#/components/ui/badge'
@@ -8,7 +9,6 @@ import { Checkbox } from '#/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '#/components/ui/radio-group'
 import { formatDate } from '#/lib/date'
 import { askAvailability, bandOp } from '#/server/fns'
 
@@ -16,6 +16,29 @@ type Info = NonNullable<Awaited<ReturnType<typeof bandOp<'getAvailability'>>>>
 type Answer = 'yes' | 'maybe' | 'no'
 const labels = { yes: 'Yes', maybe: 'Maybe', no: 'No' } as const
 const answerBadge = { yes: 'default', maybe: 'secondary', no: 'destructive' } as const
+
+/** Yes / Maybe / No as one segmented button group (radios to assistive tech). */
+export function AnswerPicker({ value, onChange }: { value: Answer | undefined; onChange: (a: Answer) => void }) {
+  return (
+    <ToggleGroup.Root
+      type="single"
+      aria-label="Your answer"
+      value={value ?? ''}
+      onValueChange={(v) => v && onChange(v as Answer)}
+      className="inline-flex w-fit overflow-hidden rounded-md border shadow-xs"
+    >
+      {(Object.keys(labels) as Answer[]).map((a) => (
+        <ToggleGroup.Item
+          key={a}
+          value={a}
+          className="h-9 border-l px-5 text-sm font-medium outline-none first:border-l-0 hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+        >
+          {labels[a]}
+        </ToggleGroup.Item>
+      ))}
+    </ToggleGroup.Root>
+  )
+}
 
 /** "all 5 yes", or "5 yes / 2 no / 1 maybe / 1 waiting" (zero counts left out). */
 export function summarize(responses: { answer: Answer | null }[]) {
@@ -175,13 +198,7 @@ export function Availability({ band, event, info, canAsk }: { band: string; even
               >
                 <fieldset className="grid gap-2">
                   <legend className="mb-2 text-sm font-medium">Your answer</legend>
-                  <RadioGroup value={answer ?? ''} onValueChange={(v) => setAnswer(v as Answer)} required className="flex gap-4">
-                    {(Object.keys(labels) as Answer[]).map((a) => (
-                      <Label key={a} className="font-normal">
-                        <RadioGroupItem value={a} /> {labels[a]}
-                      </Label>
-                    ))}
-                  </RadioGroup>
+                  <AnswerPicker value={answer} onChange={setAnswer} />
                 </fieldset>
                 <div className="flex gap-2">
                   {answer === 'maybe' && <Input name="note" aria-label="Note" placeholder="Why maybe?" defaultValue={mine.note ?? ''} maxLength={500} />}

@@ -4,8 +4,7 @@ import { formatDate } from '#/lib/date'
 import { Field, FormError } from '#/components/Field'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
 import { Button } from '#/components/ui/button'
-import { Label } from '#/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '#/components/ui/radio-group'
+import { AnswerPicker } from '#/components/Availability'
 import { Textarea } from '#/components/ui/textarea'
 import { answerAvailabilityByToken, getAvailabilityByToken } from '#/server/fns'
 
@@ -68,13 +67,7 @@ function Answer() {
             <form onSubmit={submit} className="grid gap-5">
               <fieldset>
                 <legend className="mb-3 text-sm font-medium">Your answer</legend>
-                <RadioGroup value={choice ?? ''} onValueChange={(v) => setChoice(v as keyof typeof labels)} className="flex gap-6">
-                  {(Object.keys(labels) as (keyof typeof labels)[]).map((a) => (
-                    <Label key={a} className="font-normal">
-                      <RadioGroupItem value={a} /> {labels[a]}
-                    </Label>
-                  ))}
-                </RadioGroup>
+                <AnswerPicker value={choice} onChange={setChoice} />
               </fieldset>
               {choice === 'maybe' && (
                 <Field label="Why maybe? (optional)">
