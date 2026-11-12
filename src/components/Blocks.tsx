@@ -9,6 +9,7 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
+import { useT } from '#/lib/i18n'
 
 const bandRoute = getRouteApi('/$band')
 
@@ -19,6 +20,7 @@ export function Blocks({ blocks, songs, archived, }: { blocks: Block[]; songs: S
   const band = bandRoute.useLoaderData()
   const router = useRouter()
   const editable = band.role === 'member'
+  const t = useT()
   const [name, setName] = useState('')
 
   async function create(e: React.FormEvent) {
@@ -31,15 +33,15 @@ export function Blocks({ blocks, songs, archived, }: { blocks: Block[]; songs: S
 
   return (
     <>
-      <h2 id="blocks">{archived ? 'Archived blocks' : 'Blocks'}</h2>
+      <h2 id="blocks">{archived ? t.blocks.archivedList : t.common.blocks}</h2>
       {!archived && (
-        <p className="mb-6 text-muted-foreground">Reusable runs of songs, like an acoustic bit or the encore. Adding a block to a set copies its songs.</p>
+        <p className="mb-6 text-muted-foreground">{t.blocks.intro}</p>
       )}
       {!archived && editable && (
         <form className="mb-6 flex gap-2" onSubmit={create}>
-          <Input aria-label="New block name" placeholder="e.g. Encore" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input aria-label={t.blocks.newName} placeholder={t.blocks.newPlaceholder} value={name} onChange={(e) => setName(e.target.value)} />
           <Button type="submit">
-            <Plus aria-hidden /> Create block
+            <Plus aria-hidden /> {t.blocks.create}
           </Button>
         </form>
       )}
@@ -50,7 +52,7 @@ export function Blocks({ blocks, songs, archived, }: { blocks: Block[]; songs: S
           ))}
         </ul>
       ) : (
-        <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">{archived ? 'No archived blocks.' : 'No blocks yet.'}</p>
+        <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">{archived ? t.blocks.noArchived : t.blocks.none}</p>
       )}
     </>
   )
@@ -62,6 +64,7 @@ function BlockRow({ block, repertoire, editable }: { block: Block; repertoire: S
   const [name, setName] = useState(block.name)
   const [songs, setSongs] = useState(block.songs)
   const [saved, setSaved] = useState(false)
+  const t = useT()
 
   async function save() {
     await bandOp('saveBlock', band.slug, { id: block.id, name, songIds: songs.map((s) => s.id) })
@@ -81,14 +84,14 @@ function BlockRow({ block, repertoire, editable }: { block: Block; repertoire: S
           <span className="grid flex-1 gap-0.5">
             <span className="font-medium">{block.name}</span>
             <span className="text-sm text-muted-foreground">
-              {block.songs.length} songs · {formatDuration(totalDuration(block.songs)) || '0:00'}
+              {t.common.songCount(block.songs.length)} · {formatDuration(totalDuration(block.songs)) || '0:00'}
             </span>
           </span>
           <ChevronDown aria-hidden className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
         </summary>
         <div className="grid gap-4 border-t px-4 py-4">
           {editable && (
-            <Field label="Name">
+            <Field label={t.common.name}>
               <Input
                 value={name}
                 maxLength={60}
@@ -116,15 +119,15 @@ function BlockRow({ block, repertoire, editable }: { block: Block; repertoire: S
                 <Button onClick={save} aria-live="polite">
                   {saved ? (
                     <>
-                      <Check aria-hidden /> Saved
+                      <Check aria-hidden /> {t.common.saved}
                     </>
                   ) : (
-                    'Save'
+                    t.common.save
                   )}
                 </Button>
               )}
               <Button variant="outline" onClick={() => setArchived(!block.archivedAt)}>
-                {block.archivedAt ? 'Restore' : 'Archive'}
+                {block.archivedAt ? t.common.restore : t.common.archive}
               </Button>
               <HistoryLink item={block.id} />
             </div>

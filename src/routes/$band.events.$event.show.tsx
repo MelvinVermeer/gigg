@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { bandOp } from '#/server/fns'
+import { useT } from '#/lib/i18n'
 
 export const Route = createFileRoute('/$band/events/$event/show')({
   loader: ({ params }) => bandOp('getSetlist', params.band, { event: params.event }),
@@ -38,6 +39,7 @@ function Show() {
   const { event, sets } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const track = useRef<HTMLDivElement>(null)
+  const t = useT()
   useWakeLock()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -57,26 +59,26 @@ function Show() {
     <div className="show fixed inset-0 z-50 flex flex-col bg-background text-foreground">
       <div className="show-bar flex items-center gap-2 border-b px-2 py-1.5">
         <Button asChild variant="ghost" size="icon-lg">
-          <Link to="/$band/events/$event/setlist" params={{ band: band.slug, event: event.slug }} aria-label="Close show mode">
+          <Link to="/$band/events/$event/setlist" params={{ band: band.slug, event: event.slug }} aria-label={t.setlist.closeShow}>
             <X className="size-6" />
           </Link>
         </Button>
         <span className="flex-1 truncate text-muted-foreground">{event.title}</span>
         {sets.length > 1 && (
           <>
-            <Button variant="ghost" size="icon-lg" aria-label="Previous set" onClick={() => step(-1)}>
+            <Button variant="ghost" size="icon-lg" aria-label={t.setlist.previousSet} onClick={() => step(-1)}>
               <ChevronLeft className="size-7" />
             </Button>
-            <Button variant="ghost" size="icon-lg" aria-label="Next set" onClick={() => step(1)}>
+            <Button variant="ghost" size="icon-lg" aria-label={t.setlist.nextSet} onClick={() => step(1)}>
               <ChevronRight className="size-7" />
             </Button>
           </>
         )}
       </div>
       {sets.length === 0 ? (
-        <p className="p-6 text-muted-foreground">No setlist yet.</p>
+        <p className="p-6 text-muted-foreground">{t.common.noSetlistYet}</p>
       ) : (
-        <div className="show-track flex flex-1 snap-x snap-mandatory overflow-x-auto outline-none" ref={track} aria-label="Sets">
+        <div className="show-track flex flex-1 snap-x snap-mandatory overflow-x-auto outline-none" ref={track} aria-label={t.setlist.sets}>
           {sets.map((set, i) => (
             <article
               key={i}
@@ -99,7 +101,7 @@ function Show() {
                   </li>
                 ))}
               </ol>
-              <p className="mt-4 text-lg text-muted-foreground">{sets[i + 1] ? `Next: ${sets[i + 1].name} ›` : 'End of setlist'}</p>
+              <p className="mt-4 text-lg text-muted-foreground">{sets[i + 1] ? t.setlist.next(sets[i + 1].name) : t.setlist.end}</p>
             </article>
           ))}
         </div>

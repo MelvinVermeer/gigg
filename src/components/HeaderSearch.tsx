@@ -2,10 +2,12 @@ import { useCanGoBack, useMatchRoute, useNavigate, useRouter, useSearch } from '
 import { Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Input } from '#/components/ui/input'
+import { useT } from '#/lib/i18n'
 
 /** Always-visible search box. Typing opens /$band/search and keeps its ?q= in step. */
 export function HeaderSearch({ band }: { band: string }) {
   const navigate = useNavigate()
+  const t = useT()
   const router = useRouter()
   const canGoBack = useCanGoBack()
   const onSearchPage = !!useMatchRoute()({ to: '/$band/search' })
@@ -34,8 +36,8 @@ export function HeaderSearch({ band }: { band: string }) {
       <Input
         className="pl-8"
         type="search"
-        aria-label="Search"
-        placeholder="Search songs, events…"
+        aria-label={t.header.search}
+        placeholder={t.header.searchPlaceholder}
         value={text}
         onChange={(e) => setText(e.target.value)}
       />

@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '#/components/ui/dropdown-menu'
 import { authClient } from '#/lib/auth-client'
+import { useT } from '#/lib/i18n'
 
 type Props = { name: string; bands: { slug: string; name: string }[]; isAdmin: boolean }
 
@@ -18,6 +19,7 @@ type Props = { name: string; bands: { slug: string; name: string }[]; isAdmin: b
 export function UserMenu({ name, bands, isAdmin }: Props) {
   // Settings live per band: the band you're in, otherwise your first band.
   const settingsBand = useParams({ strict: false }).band ?? bands[0]?.slug
+  const t = useT()
 
   async function logOut() {
     await authClient.signOut()
@@ -30,7 +32,7 @@ export function UserMenu({ name, bands, isAdmin }: Props) {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-full" aria-label={`Account menu for ${name}`}>
+        <Button variant="ghost" size="icon" className="rounded-full" aria-label={t.menu.accountFor(name)}>
           <Avatar className="size-9">
             <AvatarFallback className="bg-stage font-bold text-ink">{name[0].toUpperCase()}</AvatarFallback>
           </Avatar>
@@ -56,31 +58,31 @@ export function UserMenu({ name, bands, isAdmin }: Props) {
           <>
             <DropdownMenuItem asChild>
               <Link to="/$band/settings" params={{ band: settingsBand }}>
-                <Settings aria-hidden /> Settings
+                <Settings aria-hidden /> {t.menu.settings}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to="/$band/feedback" params={{ band: settingsBand }}>
-                <MessageSquare aria-hidden /> Feedback
+                <MessageSquare aria-hidden /> {t.menu.feedback}
               </Link>
             </DropdownMenuItem>
           </>
         )}
         <DropdownMenuItem asChild>
           <Link to="/manual">
-            <BookOpen aria-hidden /> Manual
+            <BookOpen aria-hidden /> {t.menu.manual}
           </Link>
         </DropdownMenuItem>
         {isAdmin && (
           <DropdownMenuItem asChild>
             <Link to="/admin">
-              <Shield aria-hidden /> Admin
+              <Shield aria-hidden /> {t.menu.admin}
             </Link>
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={logOut}>
-          <LogOut aria-hidden /> Log out
+          <LogOut aria-hidden /> {t.menu.logOut}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

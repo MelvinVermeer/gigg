@@ -5,6 +5,8 @@ import type { Field } from '#/components/RecordList'
 import { bandOp } from '#/server/fns'
 import { archivedSearch } from '#/lib/archived'
 import type { VenueFields } from '#/server/ops'
+import { useT } from '#/lib/i18n'
+import type { Dict } from '#/lib/i18n'
 
 export const Route = createFileRoute('/$band/settings/venues')({
   validateSearch: archivedSearch,
@@ -15,10 +17,10 @@ export const Route = createFileRoute('/$band/settings/venues')({
 
 const bandRoute = getRouteApi('/$band')
 
-const fields: Field[] = [
-  { name: 'name', label: 'Name', required: true, max: 200 },
-  { name: 'address', label: 'Address', max: 500 },
-  { name: 'notes', label: 'Notes', type: 'textarea', max: 10_000 },
+const fields = (t: Dict): Field[] => [
+  { name: 'name', label: t.common.name, required: true, max: 200 },
+  { name: 'address', label: t.common.address, max: 500 },
+  { name: 'notes', label: t.common.notes, type: 'textarea', max: 10_000 },
 ]
 
 function Venues() {
@@ -26,19 +28,20 @@ function Venues() {
   const band = bandRoute.useLoaderData()
   const router = useRouter()
   const { archived } = Route.useSearch()
+  const t = useT()
   return (
     <>
-      <h1>{archived ? 'Archived venues' : 'Venues'}</h1>
+      <h1>{archived ? t.records.archivedVenues : t.common.venues}</h1>
       {archived && (
         <Button asChild variant="ghost" size="sm" className="mb-4">
           <Link to="/$band/settings/venues" params={{ band: band.slug }}>
-            Back to venues
+            {t.records.backToVenues}
           </Link>
         </Button>
       )}
       <RecordList
         items={venues}
-        fields={fields}
+        fields={fields(t)}
         detail={(v) => v.address}
         canEdit={band.role === 'member'}
         onSave={async (id, values) => {

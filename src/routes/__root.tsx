@@ -7,6 +7,7 @@ import { HeaderSearch } from '#/components/HeaderSearch'
 import { PasskeyPrompt } from '#/components/PasskeyPrompt'
 import { UserMenu } from '#/components/UserMenu'
 import { Button } from '#/components/ui/button'
+import { useT } from '#/lib/i18n'
 import { themeScript } from '#/lib/theme'
 import { getMe } from '#/server/fns'
 import appCss from '../styles.css?url'
@@ -27,7 +28,7 @@ export const Route = createRootRoute({
       { rel: 'manifest', href: '/manifest.webmanifest' },
     ],
   }),
-  // The signed-in user, for the header. Loaded once; sign-in and sign-out do a full page load.
+  // The language and signed-in user, for every page. Loaded once; sign-in, sign-out and a language change do a full page load.
   loader: () => getMe(),
   staleTime: Infinity,
   shellComponent: RootDocument,
@@ -35,9 +36,10 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const { locale } = Route.useLoaderData()
   return (
     // data-theme is set by themeScript before hydration, hence suppressHydrationWarning.
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <HeadContent />
@@ -68,7 +70,8 @@ function useOnline() {
 }
 
 function RootLayout() {
-  const me = Route.useLoaderData()
+  const me = Route.useLoaderData().user
+  const t = useT()
   const online = useOnline()
   // Search is per band: the band you're in, otherwise your first band.
   const searchBand = useParams({ strict: false }).band ?? me?.bands[0]?.slug
@@ -76,12 +79,12 @@ function RootLayout() {
     <>
       {!online && (
         <p className="bg-stage px-4 py-1.5 text-center text-sm font-medium text-ink" role="status">
-          Offline: showing saved data. Changes can't be saved.
+          {t.header.offline}
         </p>
       )}
       <header className="site-header sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center gap-4 px-4">
-        <Link to="/" aria-label="Gigg home" className="shrink-0">
+        <Link to="/" aria-label={t.header.home} className="shrink-0">
           {/* CSS shows the one matching the theme (handover: no yellow wordmark on light). */}
           <img className="logo-on-light" src={lockupInk} alt="Gigg" height={32} width={97} />
           <img className="logo-on-dark" src={lockup} alt="Gigg" height={32} width={97} />
@@ -92,7 +95,7 @@ function RootLayout() {
             <UserMenu name={me.name || me.email} bands={me.bands} isAdmin={me.isAdmin} />
           ) : (
             <Button asChild variant="outline" size="sm">
-              <Link to="/login">Sign in</Link>
+              <Link to="/login">{t.header.signIn}</Link>
             </Button>
           )}
         </div>

@@ -17,6 +17,10 @@ Installable PWA. Everything must be readable on a mobile phone, also offline.
 - gigg.band is **invitation only** at the start, to keep costs down.
 - Anyone can self-host: deploy to Vercel, link a database, set env vars, done.
 
+## Languages
+
+English and Dutch (informal *je*). Each user has a language, changeable in Settings; someone invited gets the inviter's. Signed out, the browser's language decides. Emails, the emailed availability page and the calendar feed use the recipient's language; history is written in the viewer's. URLs, user content and stored values stay as they are. A third language is one more dictionary file.
+
 ## Auth & access
 
 - Login: **passkeys + email magic link**. No passwords.
@@ -212,4 +216,3 @@ Each of these needs a **grill-me session** before building: the open questions b
 - **B. Event types and money.** Event types such as *repetitie* (rehearsal) besides gigs. A fee field (*vergoeding*) per event, with free events as an empty or zero fee; later, totals per year. Open: which fields (booking/payment status, fee) apply to which type.
 - **D. Setlists and songs.** Drag and drop to reorder songs (the up/down arrows already exist; native drag and drop is flaky on mobile). Personal notes per song, visible only to you (different from per-song notes in a setlist). A setting for which song fields a setlist shows (key, BPM, duration…), tied in with the other PDFs.
 - **Styled invite emails.** HTML emails with branding instead of plain text.
-- **Multi-lingual.** Every string in the app is touched; decide whether Dutch is needed before the MVP or can wait.

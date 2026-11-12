@@ -3,9 +3,12 @@
 import { notFound, redirect } from '@tanstack/react-router'
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders, getRequestUrl } from '@tanstack/react-start/server'
+import { eq } from 'drizzle-orm'
 import type { z } from 'zod'
+import { dicts, isLocale, localeOf, pickLocale } from '#/lib/i18n'
+import { formatLongDate } from '#/lib/date'
 import { auth, isAdminEmail } from './auth'
-import { db } from './db'
+import { db, schema } from './db'
 import { sendMail } from './mail'
 import { answerByToken, archiveBand, availabilityByToken, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, listFeedback, myBands, NotFound } from './ops'
 import type { BandOpName, BandOps } from './ops'
@@ -16,19 +19,36 @@ const authed = createMiddleware({ type: 'function' }).server(async ({ next }) =>
   return next({ context: { userId: session.user.id } })
 })
 
-/** The signed-in user for the header, or null. Public pages call this too, so no redirect. */
+/**
+ * The page language and the signed-in user (null when signed out) for the header. Public pages
+ * call this too, so no redirect. Signed out, the browser's language decides.
+ */
 export const getMe = createServerFn({ method: 'GET' }).handler(async () => {
-  const session = await auth.api.getSession({ headers: getRequestHeaders() })
-  if (!session) return null
-  return { email: session.user.email, name: session.user.name, isAdmin: isAdminEmail(session.user.email), bands: await myBands(db, session.user.id) }
+  const headers = getRequestHeaders()
+  const session = await auth.api.getSession({ headers })
+  if (!session) return { locale: pickLocale(headers.get('accept-language')), user: null }
+  const { user } = session
+  return {
+    locale: localeOf(user.locale),
+    user: { email: user.email, name: user.name, isAdmin: isAdminEmail(user.email), bands: await myBands(db, user.id) },
+  }
 })
+
+/** Change your language (Settings). The page reloads after, so everything renders in it. */
+export const setLocale = createServerFn({ method: 'POST' })
+  .middleware([authed])
+  .validator((data: { locale: string }) => data)
+  .handler(async ({ context, data }) => {
+    if (!isLocale(data.locale)) throw new Error('Unknown language')
+    await db.update(schema.users).set({ locale: data.locale }).where(eq(schema.users.id, context.userId))
+  })
 
 // Instance admin (ADMIN_EMAILS). Others get a 404, like outsiders of a band.
 const admin = createMiddleware({ type: 'function' }).server(async ({ next }) => {
   const session = await auth.api.getSession({ headers: getRequestHeaders() })
   if (!session) throw redirect({ to: '/login' })
   if (!isAdminEmail(session.user.email)) throw notFound()
-  return next()
+  return next({ context: { locale: localeOf(session.user.locale) } })
 })
 
 export const getAllBands = createServerFn({ method: 'GET' })
@@ -42,15 +62,16 @@ export const getFeedback = createServerFn({ method: 'GET' })
 export const addBand = createServerFn({ method: 'POST' })
   .middleware([admin])
   .validator((data: { name: string; email: string }) => data)
-  .handler(async ({ data }) => {
-    const band = await createBand(db, data)
-    const email = data.email.trim().toLowerCase()
+  .handler(async ({ context, data }) => {
+    // A new first member gets the admin's language, like any invite.
+    const band = await createBand(db, { ...data, locale: context.locale })
+    const t = dicts[band.locale]
     await sendMail({
-      to: email,
-      subject: `You've been added to ${band.name} on Gigg`,
-      text: `You're now a member of ${band.name} on Gigg: gigs, setlists and riders for bands.\n\nSign in with ${email}: ${new URL('/login', getRequestUrl())}`,
+      to: band.email,
+      subject: t.mail.addedSubject(band.name),
+      text: t.mail.addedText(band.name, 'member', band.email, String(new URL('/login', getRequestUrl()))),
     })
-    return band
+    return { slug: band.slug, name: band.name }
   })
 
 export const deleteBand = createServerFn({ method: 'POST' })
@@ -109,10 +130,11 @@ export const inviteMember = createServerFn({ method: 'POST' })
   .validator((data: { band: string; email: string; role: string }) => data)
   .handler(async ({ context, data }) => {
     const invited = await run(context.userId, { band: data.band, op: 'inviteMember', input: { email: data.email, role: data.role } }, false)
+    const t = dicts[localeOf(invited.locale)]
     await sendMail({
       to: invited.email,
-      subject: `You've been added to ${invited.bandName} on Gigg`,
-      text: `You're now ${invited.role === 'member' ? 'a member' : 'a reader'} of ${invited.bandName} on Gigg: gigs, setlists and riders for bands.\n\nSign in with ${invited.email}: ${new URL('/login', getRequestUrl())}`,
+      subject: t.mail.addedSubject(invited.bandName),
+      text: t.mail.addedText(invited.bandName, invited.role, invited.email, String(new URL('/login', getRequestUrl()))),
     })
     return invited
   })
@@ -124,20 +146,21 @@ export const askAvailability = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }) => {
     const asked = await run(context.userId, { band: data.band, op: 'askAvailability', input: { event: data.event, emails: data.emails } }, false)
     const { band, event } = asked
-    const when = new Date(`${event.date}T00:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     for (const r of asked.recipients) {
+      const t = dicts[localeOf(r.locale)]
+      const when = formatLongDate(event.date, t.intl)
       const link = (answer: string) => new URL(`/availability/${r.token}?answer=${answer}`, getRequestUrl())
       await sendMail({
         to: r.email,
-        subject: `Can you make ${event.title} on ${when}?`,
+        subject: t.mail.askSubject(event.title, when),
         text: [
-          `${band.name} is checking who can make ${event.title}${event.venue ? ` at ${event.venue}` : ''} on ${when}.`,
+          t.mail.askIntro(band.name, event.title, event.venue, when),
           '',
-          `Yes: ${link('yes')}`,
-          `Maybe: ${link('maybe')}`,
-          `No: ${link('no')}`,
+          `${t.answer.yes}: ${link('yes')}`,
+          `${t.answer.maybe}: ${link('maybe')}`,
+          `${t.answer.no}: ${link('no')}`,
           '',
-          'You confirm on the next page, and can change your answer until the request is closed.',
+          t.mail.askOutro,
         ].join('\n'),
       })
     }

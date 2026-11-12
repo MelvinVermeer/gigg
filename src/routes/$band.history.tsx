@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ChevronDown } from 'lucide-react'
 import { bandOp } from '#/server/fns'
+import { useT } from '#/lib/i18n'
 
 export const Route = createFileRoute('/$band/history')({
   validateSearch: (search: Record<string, unknown>): { item?: string } =>
@@ -10,24 +11,25 @@ export const Route = createFileRoute('/$band/history')({
   component: History,
 })
 
-const when = (d: Date) =>
-  new Date(d).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const when = (d: Date, intl: string) =>
+  new Date(d).toLocaleString(intl, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 /** Who changed what, when; each save folds open to show before → after. */
 function History() {
   const saves = Route.useLoaderData()
   const { item } = Route.useSearch()
+  const t = useT()
 
   return (
     <>
-      <h1>History</h1>
-      <p className="mb-6 text-muted-foreground">Every change{item && ' to this item'}, newest first.</p>
-      {!saves.length && <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">No changes yet.</p>}
+      <h1>{t.history.title}</h1>
+      <p className="mb-6 text-muted-foreground">{t.history.intro(!!item)}</p>
+      {!saves.length && <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">{t.history.empty}</p>}
       <ul className="history divide-y rounded-xl border bg-card empty:hidden">
         {saves.map((s) => (
           <li key={s.txId} className="grid gap-1 px-4 py-3">
             <small className="text-xs text-muted-foreground">
-              {when(s.at)} · {s.who}
+              {when(s.at, t.intl)} · {s.who}
             </small>
             <details className="group">
               <summary className="flex items-start gap-2">
@@ -46,7 +48,7 @@ function History() {
                     </small>
                     <div className="diff grid gap-1 text-sm whitespace-pre-line [overflow-wrap:anywhere] sm:grid-cols-[1fr_auto_1fr] sm:gap-2">
                       <span className="text-muted-foreground line-through decoration-muted-foreground/50">{d.from}</span>
-                      <span aria-label="changed to" className="text-muted-foreground">
+                      <span aria-label={t.history.changedTo} className="text-muted-foreground">
                         →
                       </span>
                       <span>{d.to}</span>

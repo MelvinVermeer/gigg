@@ -1,6 +1,8 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { bandOp } from '#/server/fns'
 import type { SearchResult } from '#/server/ops'
+import { useT } from '#/lib/i18n'
+import type { Dict } from '#/lib/i18n'
 
 export const Route = createFileRoute('/$band/search')({
   validateSearch: (search: Record<string, unknown>): { q?: string } =>
@@ -10,11 +12,11 @@ export const Route = createFileRoute('/$band/search')({
   component: Search,
 })
 
-const groups: { type: SearchResult['type']; title: string }[] = [
-  { type: 'song', title: 'Songs' },
-  { type: 'event', title: 'Events' },
-  { type: 'venue', title: 'Venues' },
-  { type: 'contact', title: 'Contacts' },
+const groups = (t: Dict): { type: SearchResult['type']; title: string }[] => [
+  { type: 'song', title: t.common.songs },
+  { type: 'event', title: t.common.events },
+  { type: 'venue', title: t.common.venues },
+  { type: 'contact', title: t.common.contacts },
 ]
 
 function ResultLink({ band, r }: { band: string; r: SearchResult }) {
@@ -34,14 +36,15 @@ function Search() {
   const results = Route.useLoaderData()
   const { q = '' } = Route.useSearch()
   const { band } = Route.useParams()
+  const t = useT()
 
   return (
     <>
-      <h1>Search</h1>
-      {!q && <p className="text-muted-foreground">Type in the search box above.</p>}
-      {q && !results.length && <p className="text-muted-foreground">Nothing found for “{q}”.</p>}
+      <h1>{t.search.title}</h1>
+      {!q && <p className="text-muted-foreground">{t.search.typeAbove}</p>}
+      {q && !results.length && <p className="text-muted-foreground">{t.search.nothingFound(q)}</p>}
       <div className="grid gap-6">
-        {groups.map(({ type, title }) => {
+        {groups(t).map(({ type, title }) => {
           const hits = results.filter((r) => r.type === type)
           if (!hits.length) return null
           return (

@@ -4,6 +4,7 @@ import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
 import { Button } from '#/components/ui/button'
 import { Separator } from '#/components/ui/separator'
+import { useT } from '#/lib/i18n'
 
 export const Route = createFileRoute('/$band/events/$event/edit')({
   loader: async ({ params }) => {
@@ -21,6 +22,7 @@ function EditEvent() {
   const { event, contacts, data } = Route.useLoaderData()
   const { band } = Route.useParams()
   const navigate = useNavigate()
+  const t = useT()
   const router = useRouter()
 
   async function setArchived(archived: boolean) {
@@ -32,18 +34,18 @@ function EditEvent() {
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="mb-0">Edit {event.title}</h1>
+        <h1 className="mb-0">{t.events.editTitle(event.title)}</h1>
         <HistoryLink item={event.id} />
       </div>
       {event.archivedAt && (
         <p role="status" className="mb-4 rounded-md bg-muted px-3 py-2 text-sm">
-          This event is archived.
+          {t.events.isArchived}
         </p>
       )}
       <EventForm
         data={data}
         initial={{ ...event, contacts }}
-        submitLabel="Save"
+        submitLabel={t.common.save}
         onSubmit={async (fields) => {
           const saved = await bandOp('updateEvent', band, { slug: event.slug, fields })
           await navigate({ to: '/$band/events/$event', params: { band, event: saved.slug } })
@@ -51,7 +53,7 @@ function EditEvent() {
       />
       <Separator className="my-8" />
       <Button variant="outline" onClick={() => setArchived(!event.archivedAt)}>
-        {event.archivedAt ? 'Restore' : 'Archive'}
+        {event.archivedAt ? t.common.restore : t.common.archive}
       </Button>
     </>
   )

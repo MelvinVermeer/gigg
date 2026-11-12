@@ -4,6 +4,8 @@ import { createHash, randomBytes } from 'node:crypto'
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, notInArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { formatDuration } from '#/lib/duration'
+import { dicts, label, locales, localeOf } from '#/lib/i18n'
+import type { Dict } from '#/lib/i18n'
 import type { Db } from './db'
 import {
   availabilityAnswer,
@@ -263,15 +265,17 @@ const memberOps = {
   inviteMember: bandOp(
     'member',
     z.object({ email: z.string().trim().toLowerCase().email().max(200), role: z.enum(role.enumValues) }),
-    async ({ tx, bandId }, { email, role }) => {
-      await tx.insert(users).values({ name: '', email }).onConflictDoNothing()
-      const [user] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email))
+    async ({ tx, bandId, userId }, { email, role }) => {
+      // A new account gets the inviter's language.
+      const [inviter] = await tx.select({ locale: users.locale }).from(users).where(eq(users.id, userId))
+      await tx.insert(users).values({ name: '', email, locale: inviter.locale }).onConflictDoNothing()
+      const [user] = await tx.select({ id: users.id, locale: users.locale }).from(users).where(eq(users.email, email))
       await tx
         .insert(memberships)
         .values({ bandId, userId: user.id, role })
         .onConflictDoUpdate({ target: [memberships.bandId, memberships.userId], set: { role, archivedAt: null } })
       const [band] = await tx.select({ name: bands.name }).from(bands).where(eq(bands.id, bandId))
-      return { email, role, bandName: band.name }
+      return { email, role, bandName: band.name, locale: user.locale }
     },
   ),
 
@@ -279,7 +283,7 @@ const memberOps = {
   removeMember: bandOp('member', z.object({ email: z.string().trim().toLowerCase() }), async ({ tx, bandId, userId }, { email }) => {
     const [user] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email))
     if (!user) throw new NotFound()
-    if (user.id === userId) throw new Error('You cannot remove yourself')
+    if (user.id === userId) throw new Error('cannotRemoveYourself')
     const [row] = await tx
       .update(memberships)
       .set({ archivedAt: new Date() })
@@ -406,7 +410,7 @@ const eventFields = z.object({
 })
 
 export type EventFields = z.input<typeof eventFields>
-const eventFieldsChecked = eventFields.refine((f) => !f.endTime || f.startTime, { message: 'Add a start time too', path: ['startTime'] })
+const eventFieldsChecked = eventFields.refine((f) => !f.endTime || f.startTime, { message: 'startTimeNeeded', path: ['startTime'] })
 
 /** Resolve venue/contact refs to ids of *this band*, creating new ones. Foreign ids are rejected. */
 async function resolveRefs(tx: Tx, bandId: string, fields: z.output<typeof eventFields>) {
@@ -1083,10 +1087,11 @@ type Row = Record<string, unknown>
 const entities: Record<string, string> = {
   songs: 'song', venues: 'venue', contacts: 'contact', events: 'event', blocks: 'block', setlists: 'setlist',
 }
-const human = (column: string) => column.replace(/_(id|sec)$/, '').replaceAll('_', ' ')
+/** A column as a word in the viewer's language: "duration_sec" → "duration" / "duur". */
+const human = (t: Dict, column: string) => label(t.history.field, column.replace(/_(id|sec)$/, '')).replaceAll('_', ' ')
 
 /** Event title per availability request, for history lines. */
-async function requestEvents(tx: Tx, rows: Change[]) {
+async function requestEvents(tx: Tx, t: Dict, rows: Change[]) {
   const ids = new Set<string>()
   for (const c of rows) {
     const r = (c.after ?? c.before) as Row
@@ -1100,17 +1105,18 @@ async function requestEvents(tx: Tx, rows: Change[]) {
         .innerJoin(events, eq(events.id, availabilityRequests.eventId))
         .where(inArray(availabilityRequests.id, [...ids]))
     : []
-  return (id: unknown) => found.find((f) => f.id === id)?.title ?? 'deleted'
+  return (id: unknown) => found.find((f) => f.id === id)?.title ?? t.history.deleted
 }
 
 /** Plain-language lines for one transaction's changes. Child rows are summed up by their parent. */
-async function describe(tx: Tx, rows: Change[]) {
+async function describe(tx: Tx, t: Dict, rows: Change[]) {
+  const h = t.history
   const lines: string[] = []
   const setlistIds = new Set<string>()
   const blockIds = new Set<string>()
   const eventIds = new Set<string>()
   const people: { userId: string; before: Row | null; after: Row | null }[] = []
-  const requestEvent = await requestEvents(tx, rows)
+  const requestEvent = await requestEvents(tx, t, rows)
   const answerers: Row[] = [] // response rows that got an answer, named below with the members
   for (const c of rows) {
     const before = c.before as Row | null
@@ -1119,20 +1125,20 @@ async function describe(tx: Tx, rows: Change[]) {
     const entity = entities[c.tableName]
     if (c.tableName === 'memberships') people.push({ userId: r.user_id as string, before, after })
     else if (c.tableName === 'availability_requests') {
-      const event = `event “${requestEvent(r.id)}”`
-      if (c.action === 'insert') lines.push(`Asked availability for ${event}`)
-      else if (after?.closed_at && !before?.closed_at) lines.push(`Closed the availability request for ${event}`)
-      else if (before?.closed_at && !after?.closed_at) lines.push(`Reopened the availability request for ${event}`)
+      const event = requestEvent(r.id)
+      if (c.action === 'insert') lines.push(h.askedAvailability(event))
+      else if (after?.closed_at && !before?.closed_at) lines.push(h.closedAvailability(event))
+      else if (before?.closed_at && !after?.closed_at) lines.push(h.reopenedAvailability(event))
     } else if (c.tableName === 'availability_responses') {
       if (after?.answer && (before?.answer !== after.answer || before?.note !== after.note)) answerers.push(after)
     } else if (entity) {
-      const name = `${entity} “${r.title ?? r.name}”`
-      if (c.action === 'insert') lines.push(`Added ${name}`)
-      else if (c.action === 'delete') lines.push(`Removed ${name}`)
+      const name = `${label(h.entity, entity)} “${r.title ?? r.name}”`
+      if (c.action === 'insert') lines.push(h.added(name))
+      else if (c.action === 'delete') lines.push(h.removed(name))
       else {
         const changed = Object.keys(after!).filter((k) => JSON.stringify(after![k]) !== JSON.stringify(before![k]))
-        if (changed.length === 1 && changed[0] === 'archived_at') lines.push(`${after!.archived_at ? 'Archived' : 'Restored'} ${name}`)
-        else if (changed.length) lines.push(`Changed ${name}: ${changed.filter((k) => k !== 'slug').map(human).join(', ')}`)
+        if (changed.length === 1 && changed[0] === 'archived_at') lines.push(after!.archived_at ? h.archived(name) : h.restored(name))
+        else if (changed.length) lines.push(h.changed(name, changed.filter((k) => k !== 'slug').map((k) => human(t, k)).join(', ')))
       }
     } else if (c.tableName === 'sets') setlistIds.add(r.setlist_id as string)
     else if (c.tableName === 'block_songs') blockIds.add(r.block_id as string)
@@ -1141,23 +1147,25 @@ async function describe(tx: Tx, rows: Change[]) {
   if (people.length || answerers.length) {
     const wanted = [...people.map((p) => p.userId), ...answerers.map((a) => a.user_id as string)]
     const found = await tx.select({ id: users.id, email: users.email, name: users.name }).from(users).where(inArray(users.id, wanted))
-    const email = (id: string) => found.find((u) => u.id === id)?.name || found.find((u) => u.id === id)?.email || 'someone'
+    const email = (id: string) => found.find((u) => u.id === id)?.name || found.find((u) => u.id === id)?.email || h.someone
+    const roleOf = (r: Row) => label(t.role, r.role as string)
     for (const { userId, before, after } of people) {
-      const who = `“${email(userId)}”`
-      if (!after) lines.push(`Removed member ${who}`)
-      else if (!before || (before.archived_at && !after.archived_at)) lines.push(`Added ${after.role} ${who}`)
-      else if (after.archived_at && !before.archived_at) lines.push(`Removed member ${who}`)
-      else if (before.role !== after.role) lines.push(`Changed ${who} from ${before.role} to ${after.role}`)
+      const who = email(userId)
+      if (!after) lines.push(h.removedMember(who))
+      else if (!before || (before.archived_at && !after.archived_at)) lines.push(h.addedPerson(roleOf(after), who))
+      else if (after.archived_at && !before.archived_at) lines.push(h.removedMember(who))
+      else if (before.role !== after.role) lines.push(h.changedRole(who, roleOf(before), roleOf(after)))
     }
-    for (const a of answerers) lines.push(`“${email(a.user_id as string)}” answered ${a.answer} for event “${requestEvent(a.request_id)}”`)
+    for (const a of answerers)
+      lines.push(h.answered(email(a.user_id as string), label(t.answer, a.answer as string).toLowerCase(), requestEvent(a.request_id)))
   }
   const names = async (table: typeof setlists | typeof blocks, ids: Set<string>) =>
     ids.size ? (await tx.select({ name: table.name }).from(table).where(inArray(table.id, [...ids]))).map((x) => x.name) : []
-  for (const n of await names(setlists, setlistIds)) lines.push(`Changed setlist “${n}”`)
-  for (const n of await names(blocks, blockIds)) lines.push(`Changed songs of block “${n}”`)
+  for (const n of await names(setlists, setlistIds)) lines.push(h.changedSetlist(n))
+  for (const n of await names(blocks, blockIds)) lines.push(h.changedBlockSongs(n))
   if (eventIds.size)
     for (const e of await tx.select({ title: events.title }).from(events).where(inArray(events.id, [...eventIds])))
-      lines.push(`Changed contacts of event “${e.title}”`)
+      lines.push(h.changedEventContacts(e.title))
   return [...new Set(lines)]
 }
 
@@ -1171,7 +1179,8 @@ const refs = ['song_id', 'venue_id', 'contact_id', 'event_id', 'setlist_id', 'bl
  * Field-by-field before → after for one transaction. Ids are shown as names; set and block songs
  * as the whole list (their saves rewrite every row, so before/after hold the full list).
  */
-async function diff(tx: Tx, rows: Change[]): Promise<Diff[]> {
+async function diff(tx: Tx, t: Dict, rows: Change[]): Promise<Diff[]> {
+  const h = t.history
   // Names for every id these rows mention: current rows first, then names from the rows themselves (deleted since).
   const ids = new Set<string>()
   for (const c of rows)
@@ -1191,13 +1200,15 @@ async function diff(tx: Tx, rows: Change[]): Promise<Diff[]> {
       union all select id::text, coalesce(nullif(name, ''), email) from users where id in (${list})`)) as unknown as { rows: { id: string; name: string }[] }
     for (const f of found) names.set(f.id, f.name)
   }
-  const name = (id: unknown) => (typeof id === 'string' ? (names.get(id) ?? 'deleted') : '–')
-  const requestEvent = await requestEvents(tx, rows)
+  const name = (id: unknown) => (typeof id === 'string' ? (names.get(id) ?? h.deleted) : '–')
+  const requestEvent = await requestEvents(tx, t, rows)
+  const enums: Record<string, object> = { role: t.role, booking_status: t.booking, payment_status: t.payment, answer: t.answer }
   const show = (k: string, v: unknown) => {
     if (v == null || v === '' || (Array.isArray(v) && !v.length)) return '–'
     if (refs.includes(k)) return name(v)
-    if (k === 'archived_at') return 'yes'
+    if (k === 'archived_at') return h.yes
     if (k === 'duration_sec') return formatDuration(v as number)
+    if (enums[k]) return label(enums[k], String(v))
     return Array.isArray(v) ? v.join(', ') : String(v)
   }
 
@@ -1217,38 +1228,38 @@ async function diff(tx: Tx, rows: Change[]): Promise<Diff[]> {
     const r = (after ?? before)!
     const entity = entities[c.tableName]
     if (entity) {
-      const what = `${entity[0].toUpperCase()}${entity.slice(1)} “${r.title ?? r.name}”`
+      const what = `${label(h.entityTitle, entity)} “${r.title ?? r.name}”`
       for (const k of Object.keys(r)) {
         if (hidden.has(k)) continue
         const from = show(k, before?.[k])
         const to = show(k, after?.[k])
-        if (from !== to) out.push({ what, field: human(k), from, to })
+        if (from !== to) out.push({ what, field: human(t, k), from, to })
       }
     } else if (c.tableName === 'memberships') {
-      const what = `Member “${name(r.user_id)}”`
+      const what = h.member(name(r.user_id))
       for (const k of ['role', 'archived_at']) {
         const from = show(k, before?.[k])
         const to = show(k, after?.[k])
-        if (from !== to) out.push({ what, field: human(k), from, to })
+        if (from !== to) out.push({ what, field: human(t, k), from, to })
       }
     } else if (c.tableName === 'availability_responses' && after) {
-      const what = `Availability of “${name(r.user_id)}” for event “${requestEvent(r.request_id)}”`
+      const what = h.availabilityOf(name(r.user_id), requestEvent(r.request_id))
       for (const k of ['answer', 'note']) {
         const from = show(k, before?.[k])
         const to = show(k, after[k])
-        if (from !== to) out.push({ what, field: k, from, to })
+        if (from !== to) out.push({ what, field: human(t, k), from, to })
       }
     } else if (c.tableName === 'event_contacts') {
       // Links are written per contact (only what changed), so show each one added or removed.
-      out.push({ what: `Event “${name(r.event_id)}”`, field: 'contact', from: before ? name(before.contact_id) : '–', to: after ? name(after.contact_id) : '–' })
+      out.push({ what: `${h.entityTitle.event} “${name(r.event_id)}”`, field: human(t, 'contact'), from: before ? name(before.contact_id) : '–', to: after ? name(after.contact_id) : '–' })
     } else if (c.tableName === 'block_songs') {
-      const l = list(`bs:${r.block_id}`, `Block “${name(r.block_id)}”`, 'songs')
+      const l = list(`bs:${r.block_id}`, `${h.entityTitle.block} “${name(r.block_id)}”`, human(t, 'songs'))
       if (before) l.before.push(before)
       if (after) l.after.push(after)
     } else if (c.tableName === 'sets' || c.tableName === 'set_items') {
       const setlist = c.tableName === 'sets' ? (r.setlist_id as string) : setOf(r.set_id)?.setlist
       if (!setlist) continue
-      const l = list(`sl:${setlist}`, `Setlist “${name(setlist)}”`, 'sets')
+      const l = list(`sl:${setlist}`, `${h.entityTitle.setlist} “${name(setlist)}”`, human(t, 'sets'))
       if (before) l.before.push({ ...before, table: c.tableName })
       if (after) l.after.push({ ...after, table: c.tableName })
     }
@@ -1276,11 +1287,14 @@ async function diff(tx: Tx, rows: Change[]): Promise<Diff[]> {
 
 const historyOps = {
   /**
-   * The band's latest saves (one per transaction), newest first, in plain language.
+   * The band's latest saves (one per transaction), newest first, in plain language (the viewer's).
    * With `item`: only saves that touched that row or its children (an event's contacts and
    * setlist, a setlist's sets and their songs, a block's songs).
    */
-  listChanges: bandOp('reader', z.object({ item: z.string().uuid().optional() }), async ({ tx, bandId }, { item }) => {
+  listChanges: bandOp('reader', z.object({ item: z.string().uuid().optional() }), async ({ tx, bandId, userId }, { item }) => {
+    // In the viewer's language.
+    const [viewer] = await tx.select({ locale: users.locale }).from(users).where(eq(users.id, userId))
+    const t = dicts[localeOf(viewer?.locale)]
     const parent = sql`coalesce(c.after, c.before)`
     const touchesItem = sql`${changes.txId} in (
       with recursive related(id) as (
@@ -1315,14 +1329,14 @@ const historyOps = {
     const result = []
     for (const { txId, at } of recent) {
       const mine = rows.filter((r) => r.change.txId === txId)
-      const lines = await describe(tx, mine.map((r) => r.change))
+      const lines = await describe(tx, t, mine.map((r) => r.change))
       if (!lines.length) continue
       result.push({
         txId,
         at,
-        who: mine[0].name || mine[0].email || 'System',
+        who: mine[0].name || mine[0].email || t.history.system,
         lines,
-        diffs: await diff(tx, mine.map((r) => r.change)),
+        diffs: await diff(tx, t, mine.map((r) => r.change)),
       })
     }
     return result
@@ -1399,7 +1413,7 @@ const availabilityOps = {
     async ({ tx, bandId, userId }, { event: slug, emails }) => {
       const event = await availabilityEvent(tx, bandId, slug)
       const people = await tx
-        .select({ id: users.id, email: users.email })
+        .select({ id: users.id, email: users.email, locale: users.locale })
         .from(memberships)
         .innerJoin(users, eq(users.id, memberships.userId))
         .where(and(eq(memberships.bandId, bandId), isNull(memberships.archivedAt), inArray(users.email, emails)))
@@ -1408,7 +1422,7 @@ const availabilityOps = {
         .select({ id: availabilityRequests.id })
         .from(availabilityRequests)
         .where(and(eq(availabilityRequests.eventId, event.id), isNull(availabilityRequests.closedAt)))
-      if (open) throw new Error('This event is already being asked. Close that request first.')
+      if (open) throw new Error('alreadyAsked')
       const [request] = await tx
         .insert(availabilityRequests)
         .values({ bandId, eventId: event.id, date: event.date, askedBy: userId })
@@ -1469,6 +1483,7 @@ async function responseByToken(tx: Tx, token: string) {
       answer: availabilityResponses.answer,
       note: availabilityResponses.note,
       name: users.name,
+      locale: users.locale,
       closed: availabilityRequests.closedAt,
       date: availabilityRequests.date,
       eventDate: events.date,
@@ -1502,6 +1517,7 @@ export function availabilityByToken(db: Db, token: string) {
     return {
       band: r.bandName,
       name: r.name,
+      locale: localeOf(r.locale),
       event: r.eventTitle,
       venue: r.venue,
       date: r.date,
@@ -1517,7 +1533,7 @@ export async function answerByToken(db: Db, token: string, rawInput: unknown) {
   const input = answerInput.parse(rawInput)
   return db.transaction(async (tx) => {
     const r = await responseByToken(tx, token)
-    if (r.closed) throw new Error('This request is closed')
+    if (r.closed) throw new Error('requestClosed')
     await tx.execute(sql`select set_config('app.user_id', ${r.userId}, true)`) // the audit trail shows who answered
     await saveAnswer(tx, r.id, r.requestId, input.answer, input.note)
   })
@@ -1551,9 +1567,10 @@ export function calendarByToken(db: Db, token: string) {
   return db.transaction(async (tx) => {
     await tx.execute(sql`set transaction read only`)
     const [band] = await tx
-      .select({ id: bands.id, slug: bands.slug, name: bands.name, timeZone: bands.timeZone })
+      .select({ id: bands.id, slug: bands.slug, name: bands.name, timeZone: bands.timeZone, locale: users.locale })
       .from(calendarFeeds)
       .innerJoin(bands, eq(bands.id, calendarFeeds.bandId))
+      .innerJoin(users, eq(users.id, calendarFeeds.userId))
       .innerJoin(memberships, and(eq(memberships.bandId, calendarFeeds.bandId), eq(memberships.userId, calendarFeeds.userId), isNull(memberships.archivedAt)))
       .where(and(eq(calendarFeeds.token, token), isNull(bands.archivedAt)))
     if (!band) throw new NotFound()
@@ -1654,11 +1671,15 @@ export function listFeedback(db: Db) {
     .orderBy(desc(feedback.createdAt))
 }
 
-const newBand = z.object({ name: z.string().trim().min(1).max(200), email: z.string().trim().toLowerCase().email().max(200) })
+const newBand = z.object({
+  name: z.string().trim().min(1).max(200),
+  email: z.string().trim().toLowerCase().email().max(200),
+  locale: z.enum(locales).default('en'),
+})
 
 /** A band always starts with a first member, so there are no bands nobody can reach. */
 export async function createBand(db: Db, rawInput: z.input<typeof newBand>) {
-  const { name, email } = newBand.parse(rawInput)
+  const { name, email, locale } = newBand.parse(rawInput)
   return db.transaction(async (tx) => {
     let slug = ''
     for (const s of numbered(slugify(name))) {
@@ -1671,10 +1692,10 @@ export async function createBand(db: Db, rawInput: z.input<typeof newBand>) {
     }
     const [band] = await tx.insert(bands).values({ slug, name }).returning()
     // Invitation only: having a users row is what lets them sign in (auth.ts).
-    await tx.insert(users).values({ name: '', email }).onConflictDoNothing()
-    const [user] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email))
+    await tx.insert(users).values({ name: '', email, locale }).onConflictDoNothing()
+    const [user] = await tx.select({ id: users.id, locale: users.locale }).from(users).where(eq(users.email, email))
     await tx.insert(memberships).values({ bandId: band.id, userId: user.id, role: 'member' })
-    return { slug: band.slug, name: band.name }
+    return { slug: band.slug, name: band.name, email, locale: localeOf(user.locale) }
   })
 }
 

@@ -6,6 +6,7 @@ import { Input } from '#/components/ui/input'
 import { formatDuration } from '#/lib/duration'
 import { withLabels } from '#/lib/labels'
 import { bandOp } from '#/server/fns'
+import { useT } from '#/lib/i18n'
 
 export type SongRef = { id: string; slug: string; title: string; key: string | null; durationSec: number | null }
 
@@ -27,10 +28,11 @@ export const totalDuration = (songs: SongRef[]) => songs.reduce((sum, s) => sum 
 export function SongListEditor({ band, label, songs, repertoire, blocks = [], editable, onChange }: Props) {
   const listId = useId()
   const router = useRouter()
+  const t = useT()
   const [text, setText] = useState('')
   const options = useMemo(() => withLabels(repertoire, (s) => s.title, (s) => s.key), [repertoire])
 
-  const blockLabel = (b: { name: string; songs: SongRef[] }) => `Block: ${b.name} (${b.songs.length})`
+  const blockLabel = (b: { name: string; songs: SongRef[] }) => t.songList.block(b.name, b.songs.length)
 
   const pickedBlock = blocks.find((b) => blockLabel(b) === text.trim())
 
@@ -75,19 +77,19 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
               <span className="text-muted-foreground tabular-nums">{formatDuration(s.durationSec)}</span>
               {editable ? (
                 <span className="flex gap-0.5">
-                  <Button variant="ghost" size="icon-sm" aria-label={`Move ${s.title} up`} disabled={i === 0} onClick={() => move(i, -1)}>
+                  <Button variant="ghost" size="icon-sm" aria-label={t.songList.moveUp(s.title)} disabled={i === 0} onClick={() => move(i, -1)}>
                     <ArrowUp />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`Move ${s.title} down`}
+                    aria-label={t.songList.moveDown(s.title)}
                     disabled={i === songs.length - 1}
                     onClick={() => move(i, 1)}
                   >
                     <ArrowDown />
                   </Button>
-                  <Button variant="ghost" size="icon-sm" aria-label={`Remove ${s.title}`} onClick={() => onChange(songs.filter((_, j) => j !== i))}>
+                  <Button variant="ghost" size="icon-sm" aria-label={t.songList.remove(s.title)} onClick={() => onChange(songs.filter((_, j) => j !== i))}>
                     <X />
                   </Button>
                 </span>
@@ -98,12 +100,12 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
           ))}
         </ol>
       ) : (
-        <p className="text-sm text-muted-foreground">No songs yet.</p>
+        <p className="text-sm text-muted-foreground">{t.common.noSongsYet}</p>
       )}
       {editable && (
         <span className="add-song flex gap-2">
           <Input
-            aria-label={`Add song to ${label}`}
+            aria-label={t.songList.addTo(label)}
             list={listId}
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -113,11 +115,11 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
                 add()
               }
             }}
-            placeholder={blocks.length ? 'Search a song or block' : 'Search a song'}
+            placeholder={blocks.length ? t.songList.searchSongOrBlock : t.songList.searchSong}
             autoComplete="off"
           />
           <Button type="button" variant="outline" onClick={add}>
-            <Plus aria-hidden /> {pickedBlock ? 'Add block' : 'Add song'}
+            <Plus aria-hidden /> {pickedBlock ? t.songList.addBlock : t.songList.addSong}
           </Button>
           <datalist id={listId}>
             {blocks.map((b) => (

@@ -1,5 +1,6 @@
 import { Link, createFileRoute, redirect } from '@tanstack/react-router'
 import { getMyBands } from '#/server/fns'
+import { useT } from '#/lib/i18n'
 
 export const Route = createFileRoute('/me')({
   loader: async () => {
@@ -12,9 +13,10 @@ export const Route = createFileRoute('/me')({
 
 function MyBands() {
   const bands = Route.useLoaderData()
+  const t = useT()
   return (
     <main className="mx-auto w-full max-w-3xl px-4 pt-8 pb-16">
-      <h1>My bands</h1>
+      <h1>{t.me.title}</h1>
       {bands.length ? (
         <ul className="divide-y rounded-xl border bg-card">
           {bands.map((b) => (
@@ -26,7 +28,7 @@ function MyBands() {
           ))}
         </ul>
       ) : (
-        <p className="text-muted-foreground">You're not in a band yet.</p>
+        <p className="text-muted-foreground">{t.me.noBand}</p>
       )}
     </main>
   )

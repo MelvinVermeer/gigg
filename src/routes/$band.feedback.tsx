@@ -4,6 +4,7 @@ import { Field, FormError } from '#/components/Field'
 import { Button } from '#/components/ui/button'
 import { Textarea } from '#/components/ui/textarea'
 import { bandOp } from '#/server/fns'
+import { useT } from '#/lib/i18n'
 
 export const Route = createFileRoute('/$band/feedback')({ component: Feedback })
 
@@ -11,6 +12,7 @@ const bandRoute = getRouteApi('/$band')
 
 function Feedback() {
   const band = bandRoute.useLoaderData()
+  const t = useT()
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
 
@@ -23,25 +25,25 @@ function Feedback() {
       form.reset()
       setSent(true)
     } catch {
-      setError('Could not send. Are you offline?')
+      setError(t.feedback.failed)
     }
   }
 
   return (
     <>
-      <h1>Feedback</h1>
-      <p className="mb-6 text-muted-foreground">Something broken, confusing or missing? Tell us. It goes to whoever runs this Gigg.</p>
+      <h1>{t.feedback.title}</h1>
+      <p className="mb-6 text-muted-foreground">{t.feedback.intro}</p>
       <form onSubmit={send} onChange={() => setSent(false)} className="grid gap-4">
-        <Field label="Your feedback">
+        <Field label={t.feedback.label}>
           <Textarea name="body" required rows={6} maxLength={5000} />
         </Field>
         <div>
-          <Button type="submit">Send feedback</Button>
+          <Button type="submit">{t.feedback.send}</Button>
         </div>
       </form>
       {sent && (
         <p role="status" className="mt-4 text-sm text-muted-foreground">
-          Thanks, we got it.
+          {t.feedback.thanks}
         </p>
       )}
       <FormError>{error}</FormError>

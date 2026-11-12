@@ -6,6 +6,7 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Textarea } from '#/components/ui/textarea'
 import { cn } from '#/lib/utils'
+import { errorText, useT } from '#/lib/i18n'
 
 export type Field = {
   name: string
@@ -29,6 +30,7 @@ type Props<T extends Item> = {
 
 /** A list where each row folds open into an edit form. Used for venues and contacts. */
 export function RecordList<T extends Item>({ items, fields, detail, canEdit, onSave, onArchive }: Props<T>) {
+  const t = useT()
   const [error, setError] = useState<{ id: string; message: string }>()
 
   // Arriving from search (#<id>): open that row and scroll to it.
@@ -48,11 +50,11 @@ export function RecordList<T extends Item>({ items, fields, detail, canEdit, onS
       setError(undefined)
       form.closest('details')!.open = false
     } catch (err) {
-      setError({ id, message: err instanceof Error ? err.message : 'Saving failed' })
+      setError({ id, message: errorText(t, err, t.common.savingFailed) })
     }
   }
 
-  if (!items.length) return <p className="text-muted-foreground">Nothing here.</p>
+  if (!items.length) return <p className="text-muted-foreground">{t.common.nothingHere}</p>
 
   return (
     <ul className="records divide-y rounded-xl border bg-card">
@@ -63,7 +65,7 @@ export function RecordList<T extends Item>({ items, fields, detail, canEdit, onS
               <span className="grid flex-1 gap-0.5">
                 <span className="font-medium">{item.name}</span>
                 <span className="text-sm text-muted-foreground">
-                  {[detail(item), `used in ${item.events} ${item.events === 1 ? 'event' : 'events'}`]
+                  {[detail(item), t.records.usedIn(item.events)]
                     .filter(Boolean)
                     .join(' · ')}
                 </span>
@@ -87,9 +89,9 @@ export function RecordList<T extends Item>({ items, fields, detail, canEdit, onS
                   })}
                   {error?.id === item.id && <FormError>{error.message}</FormError>}
                   <div className="flex flex-wrap gap-2">
-                    <Button type="submit">Save</Button>
+                    <Button type="submit">{t.common.save}</Button>
                     <Button type="button" variant="outline" onClick={() => onArchive(item.id, !item.archivedAt)}>
-                      {item.archivedAt ? 'Restore' : 'Archive'}
+                      {item.archivedAt ? t.common.restore : t.common.archive}
                     </Button>
                     <HistoryLink item={item.id} />
                   </div>

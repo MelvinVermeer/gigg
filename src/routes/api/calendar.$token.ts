@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { db } from '#/server/db'
 import { calendarByToken, NotFound } from '#/server/ops'
 import { toIcs } from '#/lib/ics'
+import { dicts, localeOf } from '#/lib/i18n'
 
 /** Subscribed-calendar feed: /api/calendar/<token>.ics. No session; the token is the credential (see ops.ts). */
 export const Route = createFileRoute('/api/calendar/$token')({
@@ -15,6 +16,7 @@ export const Route = createFileRoute('/api/calendar/$token')({
           const body = toIcs({
             name: `gigg – ${band.name}`,
             timeZone: band.timeZone,
+            option: dicts[localeOf(band.locale)].calendar.option,
             events: events.map((e) => ({
               id: e.id,
               title: e.title,

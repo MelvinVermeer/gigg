@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { EventForm } from '#/components/EventForm'
 import { bandOp } from '#/server/fns'
+import { useT } from '#/lib/i18n'
 
 export const Route = createFileRoute('/$band/events/new')({
   loader: ({ params }) => bandOp('eventFormData', params.band, {}),
@@ -11,12 +12,13 @@ function NewEvent() {
   const data = Route.useLoaderData()
   const { band } = Route.useParams()
   const navigate = useNavigate()
+  const t = useT()
   return (
     <>
-      <h1>Add event</h1>
+      <h1>{t.events.add}</h1>
       <EventForm
         data={data}
-        submitLabel="Add event"
+        submitLabel={t.events.add}
         pickSetlist
         onSubmit={async (fields) => {
           const event = await bandOp('createEvent', band, fields)

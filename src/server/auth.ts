@@ -4,6 +4,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { magicLink } from 'better-auth/plugins/magic-link'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { eq } from 'drizzle-orm'
+import { dicts, localeOf, pickLocale } from '#/lib/i18n'
 import { db, isLocal, schema } from './db'
 import { sendMail } from './mail'
 
@@ -16,10 +17,9 @@ const adminEmails = (process.env.ADMIN_EMAILS ?? (isLocal ? 'admin@example.com' 
 export const isAdminEmail = (email: string) => adminEmails.includes(email.toLowerCase())
 
 /** Invitation only: accounts are created by an admin (or the seed). Admins may sign themselves up. */
-async function mayHaveAccount(email: string) {
-  if (isAdminEmail(email)) return true
-  const [user] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email.toLowerCase()))
-  return !!user
+async function account(email: string) {
+  const [user] = await db.select({ locale: schema.users.locale }).from(schema.users).where(eq(schema.users.email, email.toLowerCase()))
+  return user
 }
 
 export const auth = betterAuth({
@@ -29,17 +29,25 @@ export const auth = betterAuth({
   advanced: { database: { generateId: 'uuid' } },
   // Local mode is dev/test only; E2E tests sign in many times in a row.
   rateLimit: { enabled: !isLocal },
+  // The user's language: set on invite (the inviter's), changeable in Settings (setLocale in fns.ts).
+  user: { additionalFields: { locale: { type: 'string', required: false, defaultValue: 'en', input: false } } },
   databaseHooks: {
     user: {
-      create: { before: async (user) => (isAdminEmail(user.email) ? undefined : false) },
+      // An admin signing themselves up gets their browser's language.
+      create: {
+        before: async (user, ctx) =>
+          isAdminEmail(user.email) ? { data: { ...user, locale: pickLocale(ctx?.headers?.get('accept-language')) } } : false,
+      },
     },
   },
   plugins: [
     magicLink({
-      sendMagicLink: async ({ email, url }) => {
+      sendMagicLink: async ({ email, url }, ctx) => {
+        const user = await account(email)
         // Same response either way, so this doesn't reveal who has an account.
-        if (!(await mayHaveAccount(email))) return
-        await sendMail({ to: email, subject: 'Sign in to Gigg', text: `Sign in: ${url}` })
+        if (!user && !isAdminEmail(email)) return
+        const t = dicts[user ? localeOf(user.locale) : pickLocale(ctx?.headers?.get('accept-language'))]
+        await sendMail({ to: email, subject: t.mail.signInSubject, text: t.mail.signInText(url) })
       },
     }),
     passkey({ rpName: 'Gigg' }),

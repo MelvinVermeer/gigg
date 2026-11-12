@@ -4,6 +4,7 @@ import { Button } from '#/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '#/components/ui/dialog'
 import { authClient } from '#/lib/auth-client'
 import { deviceName } from '#/lib/device-name'
+import { useT } from '#/lib/i18n'
 
 const DISMISSED = 'passkey-prompt-dismissed'
 
@@ -12,6 +13,7 @@ const DISMISSED = 'passkey-prompt-dismissed'
  * so the next sign-in skips the email. Not shown if the user already has one, or said "later" on this device.
  */
 export function PasskeyPrompt() {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState('')
 
@@ -29,8 +31,8 @@ export function PasskeyPrompt() {
   }, [])
 
   async function add() {
-    const res = await authClient.passkey.addPasskey({ name: deviceName(navigator.userAgent) })
-    if (res?.error) setError(res.error.message ?? 'Could not add passkey')
+    const res = await authClient.passkey.addPasskey({ name: deviceName(navigator.userAgent, t.passkey.deviceOn) })
+    if (res?.error) setError(res.error.message ?? t.passkey.couldNotAdd)
     else setOpen(false)
   }
 
@@ -45,10 +47,8 @@ export function PasskeyPrompt() {
     <Dialog open={open} onOpenChange={(o) => (o ? setOpen(true) : later())}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Sign in faster next time</DialogTitle>
-          <DialogDescription>
-            Add a passkey and sign in with Face ID, Touch ID or your device PIN instead of an email link.
-          </DialogDescription>
+          <DialogTitle>{t.passkey.promptTitle}</DialogTitle>
+          <DialogDescription>{t.passkey.promptText}</DialogDescription>
         </DialogHeader>
         {error && (
           <Alert variant="destructive">
@@ -57,9 +57,9 @@ export function PasskeyPrompt() {
         )}
         <DialogFooter>
           <Button variant="outline" onClick={later}>
-            I'll configure later via settings
+            {t.passkey.later}
           </Button>
-          <Button onClick={add}>Add passkey</Button>
+          <Button onClick={add}>{t.passkey.add}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

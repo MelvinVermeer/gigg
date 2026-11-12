@@ -62,7 +62,8 @@ const DAY = 86_400_000
 /** A start without an end lasts this long in the calendar. */
 const DEFAULT_LENGTH = 3 * 3_600_000
 
-export function toIcs(cal: { name: string; timeZone: string; events: IcsEvent[] }, now = new Date()) {
+/** `option` prefixes tentative events' titles, in the subscriber's language. */
+export function toIcs(cal: { name: string; timeZone: string; events: IcsEvent[]; option?: string }, now = new Date()) {
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//gigg//calendar//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', `X-WR-CALNAME:${esc(cal.name)}`, `X-WR-TIMEZONE:${cal.timeZone}`]
   for (const e of cal.events) {
     lines.push('BEGIN:VEVENT', `UID:${e.id}@gigg`, `DTSTAMP:${utcStamp(now)}`)
@@ -75,7 +76,7 @@ export function toIcs(cal: { name: string; timeZone: string; events: IcsEvent[] 
       const day = new Date(`${e.date}T00:00Z`)
       lines.push(`DTSTART;VALUE=DATE:${dateValue(day)}`, `DTEND;VALUE=DATE:${dateValue(new Date(+day + DAY))}`)
     }
-    lines.push(`SUMMARY:${esc(e.tentative ? `(option) ${e.title}` : e.title)}`, `STATUS:${e.tentative ? 'TENTATIVE' : 'CONFIRMED'}`)
+    lines.push(`SUMMARY:${esc(e.tentative ? `${cal.option ?? '(option)'} ${e.title}` : e.title)}`, `STATUS:${e.tentative ? 'TENTATIVE' : 'CONFIRMED'}`)
     if (e.location) lines.push(`LOCATION:${esc(e.location)}`)
     lines.push(`DESCRIPTION:${esc([e.description, e.url].filter(Boolean).join('\n\n'))}`, `URL:${e.url}`, 'END:VEVENT')
   }

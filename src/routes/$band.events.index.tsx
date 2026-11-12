@@ -1,10 +1,11 @@
 import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
 import { useEffect } from 'react'
-import { formatDate, formatTimes, statusLabel } from '#/lib/date'
+import { formatDate, formatTimes } from '#/lib/date'
 import { Plus } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { bandOp } from '#/server/fns'
+import { useT } from '#/lib/i18n'
 
 type When = 'upcoming' | 'past' | 'archived'
 
@@ -17,7 +18,6 @@ export const Route = createFileRoute('/$band/events/')({
 })
 
 const bandRoute = getRouteApi('/$band')
-const headings = { upcoming: 'Upcoming events', past: 'Past events', archived: 'Archived events' }
 
 function Events() {
   const events = Route.useLoaderData()
@@ -25,6 +25,8 @@ function Events() {
   const band = bandRoute.useLoaderData()
   const params = { band: band.slug }
   const router = useRouter()
+  const t = useT()
+  const headings = { upcoming: t.events.upcoming, past: t.events.past, archived: t.events.archivedList }
 
   // Fetch the next few gigs and their setlists now, so the service worker has them for offline use.
   useEffect(() => {
@@ -44,20 +46,20 @@ function Events() {
           {when === 'upcoming' ? (
             <Button asChild variant="ghost" size="sm">
               <Link to="/$band/events" params={params} search={{ when: 'past' }}>
-                Past events
+                {t.events.past}
               </Link>
             </Button>
           ) : (
             <Button asChild variant="ghost" size="sm">
               <Link to="/$band/events" params={params}>
-                Upcoming events
+                {t.events.upcoming}
               </Link>
             </Button>
           )}
           {band.role === 'member' && (
             <Button asChild size="sm">
               <Link to="/$band/events/new" params={params}>
-                <Plus aria-hidden /> Add event
+                <Plus aria-hidden /> {t.events.add}
               </Link>
             </Button>
           )}
@@ -69,7 +71,7 @@ function Events() {
             <li key={e.slug} className="relative flex items-center gap-4 px-4 py-3 hover:bg-muted/50">
               <span className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-4">
               <span className="date shrink-0 text-sm text-muted-foreground tabular-nums sm:w-32">
-                {formatDate(e.date)}
+                {formatDate(e.date, t.intl)}
                 {e.startTime && <span className="block text-xs">{formatTimes(e.startTime, e.endTime)}</span>}
               </span>
               <span className="grid min-w-0 flex-1 gap-0.5">
@@ -80,15 +82,15 @@ function Events() {
               </span>
               </span>
               <span className="status flex shrink-0 gap-1">
-                <Badge variant={e.bookingStatus === 'confirmed' ? 'default' : 'outline'}>{statusLabel(e.bookingStatus)}</Badge>
-                {e.paymentStatus !== 'open' && <Badge variant="secondary">{statusLabel(e.paymentStatus)}</Badge>}
+                <Badge variant={e.bookingStatus === 'confirmed' ? 'default' : 'outline'}>{t.booking[e.bookingStatus]}</Badge>
+                {e.paymentStatus !== 'open' && <Badge variant="secondary">{t.payment[e.paymentStatus]}</Badge>}
               </span>
             </li>
           ))}
         </ul>
       ) : (
         <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
-          {when === 'upcoming' ? 'No upcoming events.' : `No ${when} events.`}
+          {{ upcoming: t.events.noUpcoming, past: t.events.noPast, archived: t.events.noArchived }[when]}
         </p>
       )}
     </>

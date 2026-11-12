@@ -1,5 +1,5 @@
 import { Link, createFileRoute, getRouteApi, redirect } from '@tanstack/react-router'
-import { formatWhen, statusLabel } from '#/lib/date'
+import { formatWhen } from '#/lib/date'
 import { formatDuration } from '#/lib/duration'
 import { Availability, AvailabilitySummary } from '#/components/Availability'
 import { Files } from '#/components/Files'
@@ -8,6 +8,7 @@ import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
 import { bandOp } from '#/server/fns'
+import { useT } from '#/lib/i18n'
 
 export const Route = createFileRoute('/$band/events/$event/')({
   loader: async ({ params }) => {
@@ -24,6 +25,7 @@ function Event() {
   const { event, venue, contacts, setlist, standardName, files, availability } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const params = { band: band.slug, event: event.slug }
+  const t = useT()
 
   return (
     <>
@@ -32,23 +34,23 @@ function Event() {
         {band.role === 'member' && (
           <Button asChild variant="outline" size="sm">
             <Link to="/$band/events/$event/edit" params={params}>
-              <Pencil aria-hidden /> Edit
+              <Pencil aria-hidden /> {t.common.edit}
             </Link>
           </Button>
         )}
       </div>
       {event.archivedAt && (
         <p role="status" className="mb-4 rounded-md bg-muted px-3 py-2 text-sm">
-          This event is archived.
+          {t.events.isArchived}
         </p>
       )}
       <Card>
         <CardContent>
           <dl className="fields grid grid-cols-[max-content_1fr] gap-x-6 gap-y-3 text-sm">
-            <dt className="text-muted-foreground">Date</dt>
-            <dd>{formatWhen(event)}</dd>
+            <dt className="text-muted-foreground">{t.common.date}</dt>
+            <dd>{formatWhen(event, t.intl)}</dd>
             <AvailabilitySummary band={band.slug} event={event.slug} info={availability} canAsk={band.role === 'member' && !event.archivedAt} />
-            <dt className="text-muted-foreground">Venue</dt>
+            <dt className="text-muted-foreground">{t.common.venue}</dt>
             <dd>
               {venue ? (
                 <>
@@ -66,15 +68,15 @@ function Event() {
                 '–'
               )}
             </dd>
-            <dt className="text-muted-foreground">Booking</dt>
+            <dt className="text-muted-foreground">{t.events.booking}</dt>
             <dd>
-              <Badge variant={event.bookingStatus === 'confirmed' ? 'default' : 'outline'}>{statusLabel(event.bookingStatus)}</Badge>
+              <Badge variant={event.bookingStatus === 'confirmed' ? 'default' : 'outline'}>{t.booking[event.bookingStatus]}</Badge>
             </dd>
-            <dt className="text-muted-foreground">Payment</dt>
+            <dt className="text-muted-foreground">{t.events.payment}</dt>
             <dd>
-              <Badge variant="secondary">{statusLabel(event.paymentStatus)}</Badge>
+              <Badge variant="secondary">{t.payment[event.paymentStatus]}</Badge>
             </dd>
-            <dt className="text-muted-foreground">Contacts</dt>
+            <dt className="text-muted-foreground">{t.common.contacts}</dt>
             <dd>
               {contacts.length
                 ? contacts.map((c) => (
@@ -96,16 +98,16 @@ function Event() {
                   ))
                 : '–'}
             </dd>
-            <dt className="text-muted-foreground">Tags</dt>
+            <dt className="text-muted-foreground">{t.common.tags}</dt>
             <dd>{event.tags.length ? event.tags.join(', ') : '–'}</dd>
-            <dt className="text-muted-foreground">Setlist</dt>
+            <dt className="text-muted-foreground">{t.common.setlist}</dt>
             <dd>
               <Link to="/$band/events/$event/setlist" params={params} className="font-medium">
                 {setlist.songs
-                  ? `${standardName ? `${standardName} · ` : ''}${setlist.songs} songs · ${formatDuration(setlist.durationSec)}`
+                  ? `${standardName ? `${standardName} · ` : ''}${t.common.songCount(setlist.songs)} · ${formatDuration(setlist.durationSec)}`
                   : band.role === 'member'
-                    ? 'Build setlist'
-                    : 'No setlist yet'}
+                    ? t.events.buildSetlist
+                    : t.events.noSetlist}
               </Link>
             </dd>
           </dl>

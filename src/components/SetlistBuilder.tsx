@@ -11,13 +11,14 @@ import type { SongRef } from '#/components/SongListEditor'
 import { formatDate } from '#/lib/date'
 import { formatDuration } from '#/lib/duration'
 import { bandOp } from '#/server/fns'
+import { useT } from '#/lib/i18n'
 
 type Set = { name: string; songs: SongRef[] }
 
 export type CopySource = { id: string; name: string; date: string | null }
 
 /** What to copy from, as shown in the picker: standalone setlists by name, events with their date. */
-export const copyLabel = (s: CopySource) => (s.date ? `${formatDate(s.date)} · ${s.name}` : s.name)
+export const copyLabel = (s: CopySource, intl?: string) => (s.date ? `${formatDate(s.date, intl)} · ${s.name}` : s.name)
 
 type Props = {
   band: string
@@ -35,6 +36,7 @@ type Props = {
 /** Sets with songs and blocks. Every change saves the whole setlist right away. */
 export function SetlistBuilder({ band, target, data, editable }: Props) {
   const router = useRouter()
+  const t = useT()
   const [sets, setSets] = useState<Set[]>(data.sets)
   const [status, setStatus] = useState<'saved' | 'saving' | 'error' | ''>('')
   const [copyFrom, setCopyFrom] = useState(data.copyFrom[0]?.id ?? '')
@@ -47,7 +49,7 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
   function persist(next: Set[]) {
     setSets(next)
     setStatus('saving')
-    const body = next.map((s) => ({ name: s.name.trim() || 'Set', songIds: s.songs.map((song) => song.id) }))
+    const body = next.map((s) => ({ name: s.name.trim() || t.setlist.set, songIds: s.songs.map((song) => song.id) }))
     queue.current = queue.current
       .then(() => bandOp('saveSetlist', band, { ...target, sets: body }))
       .then(
@@ -70,10 +72,10 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
   return (
     <div className="grid gap-4">
       <p className="setlist-meta flex items-center gap-3 text-sm text-muted-foreground">
-        {sets.flatMap((s) => s.songs).length} songs · {formatDuration(total) || '0:00'}
+        {t.common.songCount(sets.flatMap((s) => s.songs).length)} · {formatDuration(total) || '0:00'}
         {status && (
           <Badge role="status" variant={status === 'error' ? 'destructive' : 'secondary'} className={cn('save-status', status)}>
-            {{ saving: 'Saving…', saved: 'Saved', error: 'Not saved, try again' }[status]}
+            {{ saving: t.setlist.saving, saved: t.common.saved, error: t.setlist.notSaved }[status]}
           </Badge>
         )}
       </p>
@@ -82,25 +84,25 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
         (editable ? (
           <div className="grid gap-3 rounded-xl border border-dashed p-6">
             <div>
-              <Button onClick={() => persist([{ name: 'Set 1', songs: [] }])}>Start an empty setlist</Button>
+              <Button onClick={() => persist([{ name: t.setlist.setN(1), songs: [] }])}>{t.setlist.startEmpty}</Button>
             </div>
             {data.copyFrom.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                <NativeSelect aria-label="Copy setlist from" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)} className="min-w-0 flex-1">
+                <NativeSelect aria-label={t.setlist.copyFrom} value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)} className="min-w-0 flex-1">
                   {data.copyFrom.map((s) => (
                     <NativeSelectOption key={s.id} value={s.id}>
-                      {copyLabel(s)}
+                      {copyLabel(s, t.intl)}
                     </NativeSelectOption>
                   ))}
                 </NativeSelect>
                 <Button variant="outline" onClick={copy}>
-                  Copy that setlist
+                  {t.setlist.copy}
                 </Button>
               </div>
             )}
           </div>
         ) : (
-          <p className="text-muted-foreground">No setlist yet.</p>
+          <p className="text-muted-foreground">{t.common.noSetlistYet}</p>
         ))}
 
       {sets.map((set, i) => (
@@ -108,7 +110,7 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
           <h2 className="flex items-center gap-3">
             {editable ? (
               <Input
-                aria-label={`Name of set ${i + 1}`}
+                aria-label={t.setlist.setName(i + 1)}
                 className="h-8 max-w-[70%] text-base font-semibold md:text-base"
                 value={set.name}
                 maxLength={60}
@@ -135,8 +137,8 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
 
       {editable && sets.length > 0 && (
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => persist([...sets, { name: `Set ${sets.length + 1}`, songs: [] }])}>
-            <Plus aria-hidden /> Add set
+          <Button variant="outline" onClick={() => persist([...sets, { name: t.setlist.setN(sets.length + 1), songs: [] }])}>
+            <Plus aria-hidden /> {t.setlist.addSet}
           </Button>
         </div>
       )}

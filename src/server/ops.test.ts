@@ -648,7 +648,7 @@ describe('members', () => {
   it('refuses bad emails and removing yourself', async () => {
     const t = await testDb()
     await expect(bandOps.inviteMember(t.db, t.member, t.band, { email: 'nope', role: 'reader' })).rejects.toThrow()
-    await expect(bandOps.removeMember(t.db, t.member, t.band, { email: 'member@example.com' })).rejects.toThrow(/yourself/)
+    await expect(bandOps.removeMember(t.db, t.member, t.band, { email: 'member@example.com' })).rejects.toThrow('cannotRemoveYourself')
   })
 })
 
@@ -715,12 +715,12 @@ describe('availability', () => {
   it('allows one open request per event; closing keeps answers and allows a new request', async () => {
     const t = await testDb()
     const asked = await ask(t)
-    await expect(ask(t)).rejects.toThrow(/already/)
+    await expect(ask(t)).rejects.toThrow('alreadyAsked')
     await bandOps.closeAvailability(t.db, t.member, t.band, { event: 'summer-party' })
     expect(await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).toMatchObject({ open: false })
     await expect(bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'summer-party', answer: 'yes' })).rejects.toBeInstanceOf(NotFound)
     expect(await availabilityByToken(t.db, tokenOf(asked, 'member@example.com'))).toMatchObject({ closed: true })
-    await expect(answerByToken(t.db, tokenOf(asked, 'member@example.com'), { answer: 'yes' })).rejects.toThrow(/closed/)
+    await expect(answerByToken(t.db, tokenOf(asked, 'member@example.com'), { answer: 'yes' })).rejects.toThrow('requestClosed')
     await ask(t)
     expect(await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).toMatchObject({ open: true })
   })
@@ -785,5 +785,28 @@ describe('calendar feed', () => {
     expect(await bandOps.createEvent(t.db, t.member, t.band, { title: 'No time', date: '2031-01-01', startTime: '', endTime: '' })).toMatchObject({ startTime: null })
     await expect(bandOps.createEvent(t.db, t.member, t.band, { title: 'X', date: '2031-01-01', endTime: '01:00' })).rejects.toThrow()
     await expect(bandOps.createEvent(t.db, t.member, t.band, { title: 'X', date: '2031-01-01', startTime: '25:00' })).rejects.toThrow()
+  })
+})
+
+describe('language', () => {
+  const setLocale = (t: Awaited<ReturnType<typeof testDb>>, id: string, locale: string) => t.db.update(users).set({ locale }).where(eq(users.id, id))
+  const localeOf = async (t: Awaited<ReturnType<typeof testDb>>, email: string) =>
+    (await t.db.select({ locale: users.locale }).from(users).where(eq(users.email, email)))[0].locale
+
+  it('writes history in the viewer’s language', async () => {
+    const t = await testDb()
+    await bandOps.updateSong(t.db, t.member, t.band, { slug: 'closer', fields: { title: 'Big Closer', key: 'A' } })
+    await setLocale(t, t.reader, 'nl')
+    const [save] = await bandOps.listChanges(t.db, t.reader, t.band, {})
+    expect(save.lines).toEqual(['Nummer “Big Closer” gewijzigd: bpm, toonsoort, titel, duur'])
+    expect(save.diffs.find((d) => d.field === 'titel')).toMatchObject({ what: 'Nummer “Big Closer”', from: 'Closer', to: 'Big Closer' })
+  })
+
+  it('gives a new account the inviter’s language, and leaves an existing account’s alone', async () => {
+    const t = await testDb()
+    await setLocale(t, t.member, 'nl')
+    expect(await bandOps.inviteMember(t.db, t.member, t.band, { email: 'new@example.com', role: 'reader' })).toMatchObject({ locale: 'nl' })
+    expect(await localeOf(t, 'new@example.com')).toBe('nl')
+    expect(await bandOps.inviteMember(t.db, t.member, t.band, { email: 'reader@example.com', role: 'member' })).toMatchObject({ locale: 'en' })
   })
 })
