@@ -26,6 +26,22 @@ test.describe('member', () => {
   })
 })
 
+test.describe('search', () => {
+  test.use(asMember)
+
+  test('finds a file by name and links straight to it', async ({ page }) => {
+    await page.goto('/demo-band/songs/closer')
+    const name = `setplot-${Date.now()}.txt`
+    await page.getByLabel('Add files').setInputFiles({ name, mimeType: 'text/plain', buffer: Buffer.from('plot') })
+    await expect(page.getByRole('link', { name, exact: true })).toBeVisible()
+
+    await page.getByRole('searchbox').fill(name)
+    const files = page.locator('section', { has: page.getByRole('heading', { name: 'Files' }) })
+    await expect(files.getByRole('listitem')).toContainText(`${name} · Song · Closer`)
+    await expect(files.getByRole('link', { name })).toHaveAttribute('href', /^\/api\/files\/[0-9a-f-]{36}$/)
+  })
+})
+
 test.describe('big file', () => {
   test.use(asMember)
 

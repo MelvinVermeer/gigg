@@ -417,6 +417,18 @@ describe('search', () => {
     expect(contact.detail).toBe('pat@example.com')
   })
 
+  it('finds files by name, with what they are attached to', async () => {
+    const t = await testDb()
+    const upload = { contentType: 'application/pdf', sizeBytes: 10, blobPath: '00000000-0000-4000-8000-000000000001' }
+    const f = await bandOps.addFile(t.db, t.member, t.band, { ...upload, name: 'Closer chords.pdf', song: 'closer' })
+    await bandOps.addFile(t.db, t.member, t.band, { ...upload, name: 'Stage plot.pdf', event: 'summer-party' })
+    const hits = (await bandOps.search(t.db, t.reader, t.band, { q: 'chords' })).filter((r) => r.type === 'file')
+    expect(hits).toEqual([{ type: 'file', ref: f.id, label: 'Closer chords.pdf', detail: 'Closer', owner: 'song' }])
+    expect(await find(t, 'stage plot')).toContain('file:Stage plot.pdf')
+    await bandOps.archiveFile(t.db, t.member, t.band, { id: f.id })
+    expect(await find(t, 'chords')).not.toContain('file:Closer chords.pdf')
+  })
+
   it("leaves out archived items and other bands' data", async () => {
     const t = await testDb()
     await bandOps.archiveSong(t.db, t.member, t.band, { slug: 'closer' })

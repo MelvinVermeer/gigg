@@ -1024,16 +1024,18 @@ const setlistOps = {
 // Search ---------------------------------------------------------------------
 
 export type SearchResult = {
-  type: 'song' | 'event' | 'venue' | 'contact'
-  /** Slug (songs, events) or id (venues, contacts): what the link needs. */
+  type: 'song' | 'event' | 'venue' | 'contact' | 'file'
+  /** Slug (songs, events) or id (venues, contacts, files): what the link needs. */
   ref: string
   label: string
   detail: string | null
+  /** Files: what the file is attached to (detail is its title). */
+  owner: 'song' | 'event' | null
 }
 
 const searchOps = {
   /**
-   * Fuzzy search across songs, events (also by venue name), venues and contacts. Substring matches
+   * Fuzzy search across songs, events (also by venue name), venues, contacts and file names. Substring matches
    * (ILIKE) plus typo tolerance (pg_trgm word_similarity, `<%`); best matches first. Archived items
    * are left out. Columns are table-qualified on purpose (see listVenues).
    */
@@ -1047,21 +1049,27 @@ const searchOps = {
     const contactText = sql`concat_ws(' ', contacts.name, contacts.organisation, contacts.email)`
     const venueText = sql`concat_ws(' ', venues.name, venues.address)`
     const { rows } = (await tx.execute(sql`
-      select 'song' as type, songs.slug as ref, songs.title as label, songs.key as detail, ${score(sql`songs.title`)} as score
+      select 'song' as type, songs.slug as ref, songs.title as label, songs.key as detail, null as owner, ${score(sql`songs.title`)} as score
         from songs
         where songs.band_id = ${bandId} and songs.archived_at is null and ${matches(sql`songs.title`)}
       union all
-      select 'event', events.slug, events.title, concat_ws(' · ', to_char(events.date, 'YYYY-MM-DD'), venues.name), ${score(eventText)}
+      select 'event', events.slug, events.title, concat_ws(' · ', to_char(events.date, 'YYYY-MM-DD'), venues.name), null, ${score(eventText)}
         from events left join venues on venues.id = events.venue_id
         where events.band_id = ${bandId} and events.archived_at is null and ${matches(eventText)}
       union all
-      select 'venue', venues.id::text, venues.name, venues.address, ${score(venueText)}
+      select 'venue', venues.id::text, venues.name, venues.address, null, ${score(venueText)}
         from venues
         where venues.band_id = ${bandId} and venues.archived_at is null and ${matches(venueText)}
       union all
-      select 'contact', contacts.id::text, contacts.name, nullif(concat_ws(' · ', contacts.organisation, contacts.email), ''), ${score(contactText)}
+      select 'contact', contacts.id::text, contacts.name, nullif(concat_ws(' · ', contacts.organisation, contacts.email), ''), null, ${score(contactText)}
         from contacts
         where contacts.band_id = ${bandId} and contacts.archived_at is null and ${matches(contactText)}
+      union all
+      select 'file', files.id::text, files.name, coalesce(songs.title, events.title),
+          case when songs.id is not null then 'song' when events.id is not null then 'event' end, ${score(sql`files.name`)}
+        from files left join songs on songs.id = files.song_id left join events on events.id = files.event_id
+        where files.band_id = ${bandId} and files.archived_at is null and ${matches(sql`files.name`)}
+          and songs.archived_at is null and events.archived_at is null
       order by score desc, label
       limit 40
     `)) as unknown as { rows: (SearchResult & { score: number })[] }

@@ -17,6 +17,7 @@ const groups = (t: Dict): { type: SearchResult['type']; title: string }[] => [
   { type: 'event', title: t.common.events },
   { type: 'venue', title: t.common.venues },
   { type: 'contact', title: t.common.contacts },
+  { type: 'file', title: t.files.title },
 ]
 
 function ResultLink({ band, r }: { band: string; r: SearchResult }) {
@@ -29,6 +30,8 @@ function ResultLink({ band, r }: { band: string; r: SearchResult }) {
       return <Link to="/$band/settings/venues" params={{ band }} hash={r.ref}>{r.label}</Link>
     case 'contact':
       return <Link to="/$band/settings/contacts" params={{ band }} hash={r.ref}>{r.label}</Link>
+    case 'file':
+      return <a href={`/api/files/${r.ref}`}>{r.label}</a>
   }
 }
 
@@ -56,7 +59,13 @@ function Search() {
                     <span className="font-medium">
                       <ResultLink band={band} r={r} />
                     </span>
-                    {r.detail && <span className="text-muted-foreground"> · {r.detail}</span>}
+                    {r.detail && (
+                      <span className="text-muted-foreground">
+                        {' · '}
+                        {r.owner && `${t.history.entityTitle[r.owner]} · `}
+                        {r.detail}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
