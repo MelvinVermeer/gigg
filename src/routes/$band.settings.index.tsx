@@ -16,6 +16,7 @@ import { bandOp, inviteMember, setLocale } from '#/server/fns'
 import { currentTheme, setTheme } from '#/lib/theme'
 import type { Theme } from '#/lib/theme'
 import { dicts, errorText, locales, useT } from '#/lib/i18n'
+import { confirmDialog } from '#/components/ConfirmDialog'
 
 export const Route = createFileRoute('/$band/settings/')({
   // Readers can't list members.
@@ -47,7 +48,7 @@ function Settings() {
   }
 
   async function deletePasskey(id: string) {
-    if (!confirm(t.settings.deletePasskeyConfirm)) return
+    if (!(await confirmDialog(t.settings.deletePasskeyConfirm, t.common.delete))) return
     const res = await authClient.passkey.deletePasskey({ id })
     setStatus(res.error ? (res.error.message ?? t.settings.couldNotDelete) : t.settings.passkeyDeleted)
     passkeys.refetch()
@@ -72,7 +73,7 @@ function Settings() {
   }
 
   async function removeMember(email: string) {
-    if (!confirm(t.settings.removeConfirm(email, band.name))) return
+    if (!(await confirmDialog(t.settings.removeConfirm(email, band.name), t.common.remove))) return
     await bandOp('removeMember', band.slug, { email })
     await router.invalidate()
   }
@@ -98,7 +99,7 @@ function Settings() {
   }
 
   async function resetFeed() {
-    if (!confirm(t.settings.resetConfirm)) return
+    if (!(await confirmDialog(t.settings.resetConfirm, t.settings.resetLink))) return
     await bandOp('resetCalendarFeed', band.slug, {})
     await router.invalidate()
     setFeedStatus(t.settings.newLink)

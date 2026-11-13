@@ -7,6 +7,7 @@ import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { bandOp } from '#/server/fns'
 import { useT } from '#/lib/i18n'
+import { confirmDialog } from '#/components/ConfirmDialog'
 
 type FileRow = { id: string; name: string; sizeBytes: number; contentType: string }
 type Props = { band: string; owner: { song: string } | { event: string }; files: FileRow[]; canEdit: boolean }
@@ -76,7 +77,7 @@ export function Files({ band, owner, files, canEdit }: Props) {
   }
 
   async function remove(f: FileRow) {
-    if (!confirm(t.files.removeConfirm(f.name))) return
+    if (!(await confirmDialog(t.files.removeConfirm(f.name), t.common.remove))) return
     await bandOp('archiveFile', band, { id: f.id })
     await router.invalidate()
   }

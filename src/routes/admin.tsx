@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/com
 import { Input } from '#/components/ui/input'
 import { addBand, deleteBand, deleteBandPermanently, getAllBands, getFeedback, markFeedback } from '#/server/fns'
 import { errorText, useT } from '#/lib/i18n'
+import { confirmDialog } from '#/components/ConfirmDialog'
 
 const size = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : b < 1024 ** 3 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${(b / 1024 ** 3).toFixed(2)} GB`)
 
@@ -45,7 +46,7 @@ function Admin() {
   }
 
   async function remove(slug: string, name: string) {
-    if (!confirm(t.admin.deleteConfirm(name))) return
+    if (!(await confirmDialog(t.admin.deleteConfirm(name), t.common.delete))) return
     await deleteBand({ data: { slug } })
     await router.invalidate()
   }

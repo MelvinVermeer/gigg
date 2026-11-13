@@ -11,6 +11,7 @@ import { useT } from '#/lib/i18n'
 import { themeScript } from '#/lib/theme'
 import { getMe } from '#/server/fns'
 import appCss from '../styles.css?url'
+import { ConfirmHost } from '#/components/ConfirmDialog'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -102,6 +103,7 @@ function RootLayout() {
         </div>
       </header>
       {me && <PasskeyPrompt />}
+      <ConfirmHost />
       <Outlet />
     </>
   )

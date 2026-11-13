@@ -18,8 +18,14 @@ test.describe('member', () => {
       const res = await page.request.get((await link.getAttribute('href'))!)
       expect(await res.text()).toBe('chord chart')
 
-      page.once('dialog', (d) => d.accept())
-      await page.getByRole('listitem').filter({ hasText: `second-${name}` }).getByRole('button', { name: 'Remove' }).click()
+      // Our own confirm dialog: Cancel keeps the file, Remove removes it.
+      const remove = page.getByRole('listitem').filter({ hasText: `second-${name}` }).getByRole('button', { name: 'Remove' })
+      await remove.click()
+      await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click()
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await remove.click()
+      await expect(page.getByRole('dialog')).toContainText(`Remove second-${name}?`)
+      await page.getByRole('dialog').getByRole('button', { name: 'Remove' }).click()
       await expect(page.getByRole('link', { name: `second-${name}`, exact: true })).toHaveCount(0)
       await expect(link).toBeVisible()
     }

@@ -23,8 +23,8 @@ test('admin adds a band, its first member is invited, then the band is deleted f
   await signIn(member, email)
   await expect(member.getByRole('main').getByText(name)).toBeVisible()
 
-  page.once('dialog', (d) => d.accept())
   await row.getByRole('button', { name: 'Delete', exact: true }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
   await expect(page.getByRole('heading', { name: 'Deleted bands' })).toBeVisible()
 
   page.once('dialog', (d) => d.accept(name))
