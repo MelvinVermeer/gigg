@@ -198,3 +198,52 @@
     break-after: auto;
   }
 }
+
+/* Notes rendered from markdown. Single line breaks stay breaks, as in the plain-text notes before. */
+.markdown {
+  & > * + * {
+    margin-top: 0.75em;
+  }
+  & :is(p, li) {
+    white-space: pre-line;
+  }
+  & :is(h1, h2, h3, h4, h5, h6) {
+    @apply mb-0 text-base font-semibold;
+  }
+  & :is(ul, ol) {
+    @apply pl-5;
+  }
+  & ul {
+    @apply list-disc;
+  }
+  & ol {
+    @apply list-decimal;
+  }
+  & li:has(> input[type='checkbox']) {
+    @apply -ml-5 list-none;
+  }
+  & a {
+    @apply underline;
+  }
+  & blockquote {
+    @apply border-l-2 pl-3 text-muted-foreground;
+  }
+  & code {
+    @apply rounded bg-muted px-1 font-mono text-[0.9em];
+  }
+  & pre {
+    @apply overflow-x-auto rounded bg-muted p-2;
+  }
+  & pre code {
+    @apply bg-transparent p-0;
+  }
+  & table {
+    @apply block overflow-x-auto;
+  }
+  & :is(th, td) {
+    @apply border px-2 py-1 text-left;
+  }
+  & hr {
+    @apply border-t;
+  }
+}

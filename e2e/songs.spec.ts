@@ -14,11 +14,18 @@ test.describe('member', () => {
     await page.getByLabel('Key').fill('Am')
     await page.getByLabel('BPM').fill('120')
     await page.getByLabel(/Tags/).fill('ballad, cover')
+    await page.getByLabel('Notes').fill('Capo **2**\nslow intro\n\n- [ ] new strings\n\n<b id="raw">raw</b>')
     await page.getByRole('button', { name: 'Add song' }).click()
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
     await expect(page.locator('.fields')).toContainText('3:45')
     await expect(page.locator('.fields')).toContainText('ballad, cover')
+    // Notes render as markdown; single line breaks stay, raw HTML doesn't render.
+    const notes = page.locator('.notes')
+    await expect(notes.locator('strong')).toHaveText('2')
+    await expect(notes.locator('p').first()).toHaveText('Capo 2\nslow intro', { useInnerText: true })
+    await expect(notes.getByRole('checkbox')).toBeVisible()
+    await expect(page.locator('#raw')).toHaveCount(0)
     const oldUrl = page.url()
 
     // Rename: new URL, and the old one still leads to the song.

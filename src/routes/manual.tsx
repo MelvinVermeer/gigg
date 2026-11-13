@@ -20,7 +20,7 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
         <H>Songs</H>
         <P>
           Your repertoire: title, duration, key, BPM, tuning, notes and tags. Attach lyrics, charts or recordings as files on the song page (up to 100 MB
-          each).
+          each). Notes on songs and events can use markdown: **bold**, *italic*, # headings, - lists, - [ ] checklists, links and tables.
         </P>
         <H>Events</H>
         <P>
@@ -75,7 +75,8 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
         <H>Nummers</H>
         <P>
           Je repertoire: titel, duur, toonsoort, BPM, stemming, notities en tags. Voeg teksten, akkoordenschema's of opnames toe als bestanden op de pagina
-          van het nummer (tot 100 MB per stuk).
+          van het nummer (tot 100 MB per stuk). Notities bij nummers en optredens mogen markdown bevatten: **vet**, *cursief*, # kopjes, - lijstjes,
+          - [ ] afvinklijstjes, links en tabellen.
         </P>
         <H>Optredens</H>
         <P>

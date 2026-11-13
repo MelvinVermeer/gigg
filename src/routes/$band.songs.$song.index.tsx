@@ -5,6 +5,7 @@ import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
 import { bandOp } from '#/server/fns'
 import { Files } from '#/components/Files'
+import { Markdown } from '#/components/Markdown'
 import { useT } from '#/lib/i18n'
 
 export const Route = createFileRoute('/$band/songs/$song/')({
@@ -60,7 +61,7 @@ function Song() {
             <dt className="text-muted-foreground">{t.common.tags}</dt>
             <dd>{song.tags.length ? song.tags.join(', ') : '–'}</dd>
           </dl>
-          {song.notes && <p className="notes mt-4 border-t pt-4 text-sm whitespace-pre-wrap">{song.notes}</p>}
+          {song.notes && <Markdown className="notes mt-4 border-t pt-4 text-sm">{song.notes}</Markdown>}
         </CardContent>
       </Card>
       <Files band={band.slug} owner={{ song: song.slug }} files={files} canEdit={band.role === 'member' && !song.archivedAt} />

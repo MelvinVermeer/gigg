@@ -3,6 +3,7 @@ import { formatWhen } from '#/lib/date'
 import { formatDuration } from '#/lib/duration'
 import { Availability, AvailabilitySummary } from '#/components/Availability'
 import { Files } from '#/components/Files'
+import { Markdown } from '#/components/Markdown'
 import { ChevronDown, Pencil } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -114,7 +115,7 @@ function Event() {
               )}
             </dd>
           </dl>
-          {event.notes && <p className="notes mt-4 border-t pt-4 text-sm whitespace-pre-wrap">{event.notes}</p>}
+          {event.notes && <Markdown className="notes mt-4 border-t pt-4 text-sm">{event.notes}</Markdown>}
         </CardContent>
       </Card>
       <Availability band={band.slug} event={event.slug} info={availability} canAsk={band.role === 'member' && !event.archivedAt} />
