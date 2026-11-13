@@ -116,6 +116,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* No rubber-band bounce or pull-to-refresh: the app feels like an app, and refreshes its own data. */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
   body {
     @apply bg-background text-foreground antialiased;
   }
