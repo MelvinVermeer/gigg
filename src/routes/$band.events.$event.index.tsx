@@ -4,6 +4,7 @@ import { formatDuration } from '#/lib/duration'
 import { Availability, AvailabilitySummary } from '#/components/Availability'
 import { Files } from '#/components/Files'
 import { Markdown } from '#/components/Markdown'
+import { PhoneLink } from '#/components/PhoneLink'
 import { ChevronDown, Pencil } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -87,7 +88,7 @@ function Event() {
                       {c.phone && (
                         <>
                           {' · '}
-                          <a href={`tel:${c.phone.replace(/\s/g, '')}`}>{c.phone}</a>
+                          <PhoneLink name={c.name} phone={c.phone} />
                         </>
                       )}
                       {c.email && (

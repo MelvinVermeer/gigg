@@ -27,6 +27,8 @@ export const nl: Dict = {
     name: 'Naam',
     email: 'E-mail',
     phone: 'Telefoon',
+    call: 'Bellen',
+    whatsapp: 'WhatsApp',
     notes: 'Notities',
     tags: 'Tags',
     title: 'Titel',

@@ -1,5 +1,6 @@
 import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
 import { Button } from '#/components/ui/button'
+import { PhoneLink } from '#/components/PhoneLink'
 import { RecordList } from '#/components/RecordList'
 import type { Field } from '#/components/RecordList'
 import { bandOp } from '#/server/fns'
@@ -44,7 +45,15 @@ function Contacts() {
       <RecordList
         items={contacts}
         fields={fields(t)}
-        detail={(c) => [c.organisation, c.phone ?? c.email].filter(Boolean).join(' · ') || null}
+        detail={(c) =>
+          (c.organisation || c.phone || c.email) && (
+            <>
+              {c.organisation}
+              {c.organisation && (c.phone || c.email) && ' · '}
+              {c.phone ? <PhoneLink name={c.name} phone={c.phone} /> : c.email}
+            </>
+          )
+        }
         canEdit={band.role === 'member'}
         onSave={async (id, values) => {
           await bandOp('updateContact', band.slug, { id, fields: values as ContactFields })

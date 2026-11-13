@@ -25,6 +25,8 @@ export const en = {
     name: 'Name',
     email: 'Email',
     phone: 'Phone',
+    call: 'Call',
+    whatsapp: 'WhatsApp',
     notes: 'Notes',
     tags: 'Tags',
     title: 'Title',

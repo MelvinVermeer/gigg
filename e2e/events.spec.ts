@@ -35,7 +35,11 @@ test.describe('member', () => {
     await expect(fields).toContainText('Side Street 2')
     await expect(fields).toContainText('Confirmed')
     await expect(fields).toContainText('Pat Promoter')
-    await expect(page.getByRole('link', { name: '+31 6 1111 2222' })).toHaveAttribute('href', 'tel:+31611112222')
+    // Tapping the number asks: call or WhatsApp.
+    await page.getByRole('button', { name: '+31 6 1111 2222' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Sam Sound' })
+    await expect(dialog.getByRole('link', { name: 'Call' })).toHaveAttribute('href', 'tel:+31611112222')
+    await expect(dialog.getByRole('link', { name: 'WhatsApp' })).toHaveAttribute('href', 'https://wa.me/31611112222')
   })
 
   test('picking a known venue suggests the contacts from last time', async ({ page }) => {
@@ -53,6 +57,18 @@ test.describe('member', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
     await expect(page.locator('.fields')).toContainText('The Local Hall')
     await expect(page.locator('.fields')).toContainText('Pat Promoter')
+  })
+})
+
+test.describe('contacts list', () => {
+  test.use(asReader)
+
+  test('tapping a phone number opens call / WhatsApp, without opening the row', async ({ page }) => {
+    await page.goto('/demo-band/settings/contacts')
+    const row = page.locator('ul.records li', { hasText: 'Pat Promoter' })
+    await row.getByRole('button', { name: '+31 6 12345678' }).click()
+    await expect(page.getByRole('dialog', { name: 'Pat Promoter' }).getByRole('link', { name: 'WhatsApp' })).toHaveAttribute('href', 'https://wa.me/31612345678')
+    await expect(row.locator('details')).not.toHaveAttribute('open', '')
   })
 })
 

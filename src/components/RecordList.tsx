@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Field, FormError } from '#/components/Field'
 import { HistoryLink } from '#/components/HistoryLink'
@@ -22,7 +23,7 @@ type Props<T extends Item> = {
   items: T[]
   fields: Field[]
   /** Second line under the name, e.g. the address. */
-  detail: (item: T) => string | null
+  detail: (item: T) => ReactNode
   canEdit: boolean
   onSave: (id: string, values: Record<string, string>) => Promise<void>
   onArchive: (id: string, archived: boolean) => Promise<void>
@@ -67,7 +68,12 @@ export function RecordList<T extends Item>({ items, fields, detail, canEdit, onS
                 <span className="text-sm text-muted-foreground">
                   {[detail(item), t.records.usedIn(item.events)]
                     .filter(Boolean)
-                    .join(' · ')}
+                    .map((part, i) => (
+                      <Fragment key={i}>
+                        {i > 0 && ' · '}
+                        {part}
+                      </Fragment>
+                    ))}
                 </span>
               </span>
               <ChevronDown aria-hidden className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
