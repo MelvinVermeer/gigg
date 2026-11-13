@@ -278,6 +278,7 @@ export const en = {
     remove: (name: string) => `Remove ${name}`,
     removeConfirm: (name: string) => `Remove ${name}?`,
     none: 'No files yet.',
+    noneDrop: 'No files yet. Drag them here or use Add files.',
     add: 'Add files',
   },
 

@@ -6,6 +6,7 @@ import { FormError } from '#/components/Field'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { bandOp } from '#/server/fns'
+import { cn } from '#/lib/utils'
 import { useT } from '#/lib/i18n'
 import { confirmDialog } from '#/components/ConfirmDialog'
 
@@ -18,16 +19,16 @@ const uploadMode = () => (mode ??= fetch('/api/files').then((r) => r.json()))
 
 const size = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`)
 
-/** Files attached to a song or event: links to download, and (members) upload and remove. */
+/** Files attached to a song or event: links to download, and (members) upload, by button or drop, and remove. */
 export function Files({ band, owner, files, canEdit }: Props) {
   const router = useRouter()
   const t = useT()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
 
-  async function upload(e: React.ChangeEvent<HTMLInputElement>) {
-    const input = e.currentTarget
-    const picked = [...(input.files ?? [])]
+  const [dragging, setDragging] = useState(false)
+
+  async function upload(picked: File[]) {
     setError('')
     const { direct, maxBytes } = await uploadMode()
     for (const file of picked) {
@@ -71,7 +72,6 @@ export function Files({ band, owner, files, canEdit }: Props) {
         break
       }
     }
-    input.value = ''
     setBusy('')
     await router.invalidate()
   }
@@ -82,9 +82,34 @@ export function Files({ band, owner, files, canEdit }: Props) {
     await router.invalidate()
   }
 
+  // Members can drop files anywhere on the card; it's outlined while files are dragged over it.
+  const canDrop = canEdit && !busy
+  const dropProps = canDrop
+    ? {
+        onDragOver: (e: React.DragEvent) => {
+          if (!e.dataTransfer.types.includes('Files')) return
+          e.preventDefault()
+          setDragging(true)
+        },
+        onDragLeave: (e: React.DragEvent) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false)
+        },
+        onDrop: (e: React.DragEvent) => {
+          e.preventDefault()
+          setDragging(false)
+          upload([...e.dataTransfer.files])
+        },
+      }
+    : {}
+
   if (!files.length && !canEdit) return null
   return (
-    <Card aria-labelledby="files" role="region" className="mt-6">
+    <Card
+      aria-labelledby="files"
+      role="region"
+      className={cn('mt-6', dragging && 'outline-2 outline-offset-2 outline-primary outline-dashed')}
+      {...dropProps}
+    >
       <CardHeader>
         <CardTitle id="files" role="heading" aria-level={2}>
           {t.files.title}
@@ -115,14 +140,24 @@ export function Files({ band, owner, files, canEdit }: Props) {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">{t.files.none}</p>
+          <p className="text-sm text-muted-foreground">{canEdit ? t.files.noneDrop : t.files.none}</p>
         )}
         {canEdit && (
           <div>
             <Button asChild variant="outline" size="sm" className="has-[:disabled]:opacity-50">
               <label>
                 <Upload aria-hidden /> {t.files.add}
-                <input type="file" multiple onChange={upload} disabled={!!busy} className="sr-only" />
+                <input
+                  type="file"
+                  multiple
+                  onChange={async (e) => {
+                    const input = e.currentTarget
+                    await upload([...(input.files ?? [])])
+                    input.value = ''
+                  }}
+                  disabled={!!busy}
+                  className="sr-only"
+                />
               </label>
             </Button>
           </div>

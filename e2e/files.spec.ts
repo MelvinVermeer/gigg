@@ -32,6 +32,26 @@ test.describe('member', () => {
   })
 })
 
+test.describe('drop zone', () => {
+  test.use(asMember)
+
+  test('dropping files on the card uploads them; it is outlined while dragging', async ({ page }) => {
+    await page.goto('/demo-band/songs/closer')
+    const name = `dropped-${Date.now()}.txt`
+    const card = page.getByRole('region', { name: 'Files' })
+    const dt = await page.evaluateHandle((name) => {
+      const dt = new DataTransfer()
+      dt.items.add(new File(['dropped'], name, { type: 'text/plain' }))
+      return dt
+    }, name)
+    await card.dispatchEvent('dragover', { dataTransfer: dt })
+    await expect(card).toHaveClass(/outline-dashed/)
+    await card.dispatchEvent('drop', { dataTransfer: dt })
+    await expect(card).not.toHaveClass(/outline-dashed/)
+    await expect(page.getByRole('link', { name, exact: true })).toBeVisible()
+  })
+})
+
 test.describe('search', () => {
   test.use(asMember)
 

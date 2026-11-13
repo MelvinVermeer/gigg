@@ -277,6 +277,7 @@ export const nl: Dict = {
     remove: (name) => `${name} verwijderen`,
     removeConfirm: (name) => `${name} verwijderen?`,
     none: 'Nog geen bestanden.',
+    noneDrop: 'Nog geen bestanden. Sleep ze hierheen of gebruik Bestanden toevoegen.',
     add: 'Bestanden toevoegen',
   },
 
