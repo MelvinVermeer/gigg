@@ -68,7 +68,7 @@ export const en = {
     home: 'Gigg home',
     signIn: 'Sign in',
     search: 'Search',
-    searchPlaceholder: 'Search songs, events…',
+    searchPlaceholder: 'Songs, events…',
   },
 
   menu: {

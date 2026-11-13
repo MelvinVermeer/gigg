@@ -69,7 +69,7 @@ export const nl: Dict = {
     home: 'Gigg home',
     signIn: 'Inloggen',
     search: 'Zoeken',
-    searchPlaceholder: 'Zoek nummers, optredens…',
+    searchPlaceholder: 'Nummers, optredens…',
   },
 
   menu: {
