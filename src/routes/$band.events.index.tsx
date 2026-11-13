@@ -1,5 +1,5 @@
 import { Link, createFileRoute, getRouteApi, useNavigate, useRouter } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { formatDate, formatTimes } from '#/lib/date'
 import { ListFilter, Plus } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
@@ -16,6 +16,7 @@ import {
 } from '#/components/ui/dropdown-menu'
 import { bandOp } from '#/server/fns'
 import { useT } from '#/lib/i18n'
+import { useCanEdit } from '#/lib/online'
 
 const statuses = ['lead', 'option', 'confirmed', 'cancelled'] as const
 type Status = (typeof statuses)[number]
@@ -33,33 +34,34 @@ export const Route = createFileRoute('/$band/events/')({
     ...(typeof search.status === 'string' ? { status: search.status } : {}),
     ...(search.who === 'all' ? { who: 'all' as const } : {}),
   }),
-  loaderDeps: ({ search }) => search,
-  loader: ({ params, deps }) =>
-    bandOp(
-      'listEvents',
-      params.band,
-      deps.when === 'archived'
-        ? { when: 'archived' }
-        : { when: deps.when ?? 'upcoming', statuses: parseStatuses(deps.status), mine: deps.who !== 'all' },
-    ),
+  // Only `when` reaches the server; status and who filter in the browser, so they work offline too.
+  loaderDeps: ({ search }) => ({ when: search.when }),
+  loader: ({ params, deps }) => bandOp('listEvents', params.band, { when: deps.when ?? 'upcoming' }),
   component: Events,
 })
 
 const bandRoute = getRouteApi('/$band')
 
 function Events() {
-  const events = Route.useLoaderData()
+  const all = Route.useLoaderData()
   const search = Route.useSearch()
   const when = search.when ?? 'upcoming'
+  // Archived ignores the filter.
+  const events = useMemo(() => {
+    const chosen = parseStatuses(search.status)
+    return when === 'archived' ? all : all.filter((e) => chosen.includes(e.bookingStatus) && (search.who === 'all' || e.mine))
+  }, [all, when, search.status, search.who])
   const filtered = search.when === 'past' || search.status !== undefined || search.who === 'all'
   const band = bandRoute.useLoaderData()
+  const canEdit = useCanEdit()
   const params = { band: band.slug }
   const router = useRouter()
   const t = useT()
 
-  // Fetch the next few gigs and their setlists now, so the service worker has them for offline use.
+  // Fetch the past list and the next few gigs with their setlists now, so the service worker has them offline.
   useEffect(() => {
     if (when !== 'upcoming') return
+    router.preloadRoute({ to: '/$band/events', params: { band: band.slug }, search: { when: 'past' } }).catch(() => {})
     for (const e of events.slice(0, 3)) {
       const p = { band: band.slug, event: e.slug }
       router.preloadRoute({ to: '/$band/events/$event', params: p }).catch(() => {})
@@ -83,7 +85,7 @@ function Events() {
           ) : (
             <Filter search={search} />
           )}
-          {band.role === 'member' && when !== 'archived' && (
+          {canEdit && when !== 'archived' && (
             <Button asChild size="sm">
               <Link to="/$band/events/new" params={params}>
                 <Plus aria-hidden /> <span className="max-sm:sr-only">{t.events.add}</span>
@@ -95,11 +97,21 @@ function Events() {
       {events.length ? (
         <ul className="events divide-y rounded-xl border bg-card">
           {events.map((e) => (
-            <li key={e.slug} className="relative flex items-center gap-4 px-4 py-3 hover:bg-muted/50">
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-4">
-              <span className="date shrink-0 text-sm text-muted-foreground tabular-nums sm:w-32">
-                {formatDate(e.date, t.intl)}
-                {e.startTime && <span className="block text-xs">{formatTimes(e.startTime, e.endTime)}</span>}
+            <li key={e.slug} className="relative flex items-center gap-4 px-4 py-3 hover:bg-muted/50 max-sm:flex-wrap max-sm:gap-y-0.5">
+              {/* On mobile the wrapper dissolves: the date line spans the row, badges sit beside the title. */}
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5 max-sm:contents sm:flex-row sm:items-center sm:gap-4">
+              <span className="date shrink-0 text-sm text-muted-foreground tabular-nums max-sm:basis-full sm:w-32">
+                <span className="whitespace-nowrap">{formatDate(e.date, t.intl)}</span>
+                {/* One line on mobile (breaking only between date and time), the time under the date from sm up. */}
+                {e.startTime && (
+                  <>
+                    {' '}
+                    <span className="whitespace-nowrap sm:block sm:text-xs">
+                      <span className="sm:hidden">· </span>
+                      {formatTimes(e.startTime, e.endTime)}
+                    </span>
+                  </>
+                )}
               </span>
               <span className="grid min-w-0 flex-1 gap-0.5">
                 <Link to="/$band/events/$event" params={{ ...params, event: e.slug }} className="truncate font-medium after:absolute after:inset-0">

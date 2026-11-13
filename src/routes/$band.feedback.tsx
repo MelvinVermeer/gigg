@@ -5,6 +5,7 @@ import { Button } from '#/components/ui/button'
 import { Textarea } from '#/components/ui/textarea'
 import { bandOp } from '#/server/fns'
 import { useT } from '#/lib/i18n'
+import { useOnline } from '#/lib/online'
 
 export const Route = createFileRoute('/$band/feedback')({ component: Feedback })
 
@@ -13,6 +14,7 @@ const bandRoute = getRouteApi('/$band')
 function Feedback() {
   const band = bandRoute.useLoaderData()
   const t = useT()
+  const online = useOnline()
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
 
@@ -33,7 +35,8 @@ function Feedback() {
     <>
       <h1>{t.feedback.title}</h1>
       <p className="mb-6 text-muted-foreground">{t.feedback.intro}</p>
-      <form onSubmit={send} onChange={() => setSent(false)} className="grid gap-4">
+      {/* hidden, not removed: a half-written message survives a dropped connection. */}
+      <form hidden={!online} onSubmit={send} onChange={() => setSent(false)} className="grid gap-4">
         <Field label={t.feedback.label}>
           <Textarea name="body" required rows={6} maxLength={5000} />
         </Field>

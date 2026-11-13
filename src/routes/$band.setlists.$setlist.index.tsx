@@ -8,6 +8,7 @@ import { Separator } from '#/components/ui/separator'
 import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
 import { useT } from '#/lib/i18n'
+import { useOnline } from '#/lib/online'
 
 export const Route = createFileRoute('/$band/setlists/$setlist/')({
   loader: ({ params }) => bandOp('getStandaloneSetlist', params.band, { id: params.setlist }),
@@ -21,6 +22,7 @@ function Setlist() {
   const band = bandRoute.useLoaderData()
   const router = useRouter()
   const member = band.role === 'member'
+  const online = useOnline()
   // A new, empty setlist opens ready to build.
   const [editing, setEditing] = useState(data.sets.length === 0)
   const editable = member && editing
@@ -63,7 +65,8 @@ function Setlist() {
             name
           )}
         </h1>
-        {member && (
+        {/* Offline you can't start editing, but an edit already open stays (and can be closed). */}
+        {member && (online || editing) && (
           <Button size="sm" variant="outline" onClick={() => setEditing(!editing)}>
             {editing ? <Check aria-hidden /> : <Pencil aria-hidden />} {editing ? t.common.done : t.common.edit}
           </Button>

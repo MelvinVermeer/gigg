@@ -459,16 +459,15 @@ async function setEventContacts(tx: Tx, bandId: string, eventId: string, contact
 }
 
 const eventOps = {
-  /** Upcoming (today and later, soonest first), past (latest first) or archived. */
-  /** Events by time; optionally only these statuses, and only mine (created by me or my availability asked). Archived ignores both. */
+  /**
+   * Upcoming (today and later, soonest first), past (latest first) or archived: every status and everyone's,
+   * each marked `mine` (created by me or my availability asked). The list filters in the browser, so one
+   * cached response per `when` serves every filter offline.
+   */
   listEvents: bandOp(
     'reader',
-    z.object({
-      when: z.enum(['upcoming', 'past', 'archived']).default('upcoming'),
-      statuses: z.array(z.enum(bookingStatus.enumValues)).optional(),
-      mine: z.boolean().optional(),
-    }),
-    ({ tx, bandId, userId }, { when, statuses, mine }) =>
+    z.object({ when: z.enum(['upcoming', 'past', 'archived']).default('upcoming') }),
+    ({ tx, bandId, userId }, { when }) =>
       // ponytail: "today" is the database's date (UTC); pass the viewer's date if bands outside Europe complain.
       tx
         .select({
@@ -480,6 +479,16 @@ const eventOps = {
           venue: venues.name,
           bookingStatus: events.bookingStatus,
           paymentStatus: events.paymentStatus,
+          mine: sql<boolean>`${or(
+            eq(events.createdBy, userId),
+            exists(
+              tx
+                .select({ one: sql`1` })
+                .from(availabilityResponses)
+                .innerJoin(availabilityRequests, eq(availabilityRequests.id, availabilityResponses.requestId))
+                .where(and(eq(availabilityRequests.eventId, events.id), eq(availabilityResponses.userId, userId))),
+            ),
+          )}`,
         })
         .from(events)
         .leftJoin(venues, eq(venues.id, events.venueId))
@@ -489,19 +498,6 @@ const eventOps = {
             when === 'archived' ? isNotNull(events.archivedAt) : isNull(events.archivedAt),
             when === 'upcoming' ? gte(events.date, sql`current_date`) : undefined,
             when === 'past' ? lt(events.date, sql`current_date`) : undefined,
-            when !== 'archived' && statuses ? inArray(events.bookingStatus, statuses) : undefined,
-            when !== 'archived' && mine
-              ? or(
-                  eq(events.createdBy, userId),
-                  exists(
-                    tx
-                      .select({ one: sql`1` })
-                      .from(availabilityResponses)
-                      .innerJoin(availabilityRequests, eq(availabilityRequests.id, availabilityResponses.requestId))
-                      .where(and(eq(availabilityRequests.eventId, events.id), eq(availabilityResponses.userId, userId))),
-                  ),
-                )
-              : undefined,
           ),
         )
         .orderBy(when === 'upcoming' ? asc(events.date) : desc(events.date), asc(events.title)),

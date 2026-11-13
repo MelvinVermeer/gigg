@@ -6,6 +6,7 @@ import { bandOp } from '#/server/fns'
 import { archivedSearch } from '#/lib/archived'
 import { Blocks } from '#/components/Blocks'
 import { useT } from '#/lib/i18n'
+import { useCanEdit } from '#/lib/online'
 
 export const Route = createFileRoute('/$band/setlists/')({
   validateSearch: archivedSearch,
@@ -23,6 +24,7 @@ const bandRoute = getRouteApi('/$band')
 function Setlists() {
   const { setlists, blocks } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
+  const canEdit = useCanEdit()
   const navigate = useNavigate()
   const { archived } = Route.useSearch()
   const t = useT()
@@ -36,7 +38,7 @@ function Setlists() {
     <>
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="mb-0">{archived ? t.setlist.archivedList : t.common.setlists}</h1>
-        {!archived && band.role === 'member' && (
+        {!archived && canEdit && (
           <Button size="sm" onClick={create}>
             <Plus aria-hidden /> <span className="max-sm:sr-only">{t.setlist.create}</span>
           </Button>

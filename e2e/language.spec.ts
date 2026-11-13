@@ -20,7 +20,7 @@ test('a user switches to Dutch in Settings, and back', async ({ browser }) => {
   const page = await (await browser.newContext()).newPage()
   await signIn(page, email)
   await page.goto('/demo-band/settings')
-  await page.getByRole('radio', { name: 'Nederlands' }).click()
+  await page.getByLabel('Language', { exact: true }).selectOption('nl')
   await expect(page.getByRole('heading', { name: 'Instellingen', level: 1 })).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('lang', 'nl')
 
@@ -28,6 +28,6 @@ test('a user switches to Dutch in Settings, and back', async ({ browser }) => {
   await expect(page.getByRole('heading', { name: 'Optredens', level: 1 })).toBeVisible()
 
   await page.goto('/demo-band/settings')
-  await page.getByRole('radio', { name: 'English' }).click()
+  await page.getByLabel('Taal', { exact: true }).selectOption('en')
   await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible()
 })

@@ -5,6 +5,7 @@ import { Button } from '#/components/ui/button'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '#/components/ui/table'
 import { bandOp } from '#/server/fns'
 import { useT } from '#/lib/i18n'
+import { useCanEdit } from '#/lib/online'
 
 export const Route = createFileRoute('/$band/songs/')({
   validateSearch: (search: Record<string, unknown>): { archived?: true } =>
@@ -20,6 +21,7 @@ function Songs() {
   const songs = Route.useLoaderData()
   const { archived } = Route.useSearch()
   const band = bandRoute.useLoaderData()
+  const canEdit = useCanEdit()
   const t = useT()
   const total = songs.reduce((sum, s) => sum + (s.durationSec ?? 0), 0)
 
@@ -41,7 +43,7 @@ function Songs() {
               </Link>
             </Button>
           )}
-          {!archived && band.role === 'member' && (
+          {!archived && canEdit && (
             <Button asChild size="sm">
               <Link to="/$band/songs/new" params={{ band: band.slug }}>
                 <Plus aria-hidden /> <span className="max-sm:sr-only">{t.songs.add}</span>

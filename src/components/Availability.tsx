@@ -13,6 +13,7 @@ import { formatDate } from '#/lib/date'
 import { cn } from '#/lib/utils'
 import { askAvailability, bandOp } from '#/server/fns'
 import { errorText, label as labelOf, useT } from '#/lib/i18n'
+import { useOnline } from '#/lib/online'
 
 type Info = NonNullable<Awaited<ReturnType<typeof bandOp<'getAvailability'>>>>
 type Answer = 'yes' | 'maybe' | 'no'
@@ -157,6 +158,7 @@ export function Availability({ band, event, info, canAsk }: { band: string; even
   const t = useT()
   const { run, error } = useRun()
   const [editing, setEditing] = useState(false)
+  const online = useOnline()
   const mine = info?.responses.find((r) => r.mine)
   const [answer, setAnswer] = useState<Answer | undefined>(mine?.answer ?? undefined)
 
@@ -189,8 +191,9 @@ export function Availability({ band, event, info, canAsk }: { band: string; even
                 {t.availability.moved}
               </p>
             )}
-            <Responses info={info} onEdit={editing ? undefined : () => setEditing(true)} />
-            {mine && (!mine.answer || editing) && (
+            <Responses info={info} onEdit={editing || !online ? undefined : () => setEditing(true)} />
+            {/* Offline your answer shows read-only; a form already open stays. */}
+            {mine && (editing || (online && !mine.answer)) && (
               <form
                 className="grid gap-4"
                 onSubmit={async (e) => {

@@ -10,6 +10,7 @@ import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
 import { useT } from '#/lib/i18n'
+import { useOnline } from '#/lib/online'
 
 export const Route = createFileRoute('/$band/events/$event/setlist')({
   loader: ({ params }) => bandOp('getSetlist', params.band, { event: params.event }),
@@ -24,6 +25,7 @@ function Setlist() {
   const router = useRouter()
   const params = { band: band.slug, event: data.event.slug }
   const member = band.role === 'member'
+  const online = useOnline()
   // A new, empty setlist opens ready to build.
   const [editing, setEditing] = useState(member && data.sets.length === 0)
   const t = useT()
@@ -43,7 +45,8 @@ function Setlist() {
       </Link>
       <div className="mt-1 mb-4 flex items-center justify-between gap-3">
         <h1 className="mb-0">{t.common.setlist}</h1>
-        {member && (
+        {/* Offline you can't start editing, but an edit already open stays (and can be closed). */}
+        {member && (online || editing) && (
           <Button size="sm" variant="outline" onClick={() => setEditing(!editing)}>
             {editing ? <Check aria-hidden /> : <Pencil aria-hidden />} {editing ? t.common.done : t.common.edit}
           </Button>

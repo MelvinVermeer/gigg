@@ -2,20 +2,20 @@ import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-r
 import { useEffect, useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 import { deviceName } from '#/lib/device-name'
-import { Check, KeyRound, Plus } from 'lucide-react'
+import { Check, KeyRound, Monitor, Moon, Plus, Sun } from 'lucide-react'
+import { RadioGroup } from 'radix-ui'
 import { Field } from '#/components/Field'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
 import { Input } from '#/components/ui/input'
-import { Label } from '#/components/ui/label'
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
-import { RadioGroup, RadioGroupItem } from '#/components/ui/radio-group'
 import { Separator } from '#/components/ui/separator'
 import { bandOp, inviteMember, setLocale } from '#/server/fns'
 import { currentTheme, setTheme } from '#/lib/theme'
 import type { Theme } from '#/lib/theme'
 import { dicts, errorText, locales, useT } from '#/lib/i18n'
+import { useOnline } from '#/lib/online'
 import { confirmDialog } from '#/components/ConfirmDialog'
 
 export const Route = createFileRoute('/$band/settings/')({
@@ -29,7 +29,11 @@ export const Route = createFileRoute('/$band/settings/')({
 
 const rootRoute = getRouteApi('__root__')
 const bandRoute = getRouteApi('/$band')
-const themes: Theme[] = ['system', 'light', 'dark']
+const themes = [
+  ['light', Sun],
+  ['dark', Moon],
+  ['system', Monitor],
+] as const
 
 function Settings() {
   const { members, feed } = Route.useLoaderData()
@@ -37,6 +41,8 @@ function Settings() {
   const { user: me, locale } = rootRoute.useLoaderData()
   const t = useT()
   const band = bandRoute.useLoaderData()
+  // Offline nothing can be saved, so everything that writes hides; the theme is local and stays.
+  const online = useOnline()
   const [theme, setThemeState] = useState<Theme>('system')
   const [status, setStatus] = useState('')
   const passkeys = authClient.useListPasskeys()
@@ -119,7 +125,7 @@ function Settings() {
   return (
     <>
       <h1>{t.settings.title}</h1>
-      <div className="grid gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardHeader>
             <CardTitle role="heading" aria-level={2}>
@@ -130,6 +136,7 @@ function Settings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
+            {online && (
             <form onSubmit={saveName} className="flex flex-wrap items-end gap-2">
               <Field label={t.settings.displayName} className="min-w-48 flex-1">
                 <Input name="name" defaultValue={me?.name} maxLength={100} placeholder={me?.email} onChange={() => setNameStatus('')} />
@@ -145,7 +152,8 @@ function Settings() {
               </Button>
               {nameStatus !== 'saved' && <span className="self-center text-sm text-destructive">{nameStatus}</span>}
             </form>
-            <Separator />
+            )}
+            {online && <Separator />}
             <div className="grid gap-3">
               <h3 className="mb-0 text-sm font-medium">{t.settings.passkeys}</h3>
               {passkeys.data && passkeys.data.length > 0 && (
@@ -157,14 +165,16 @@ function Settings() {
                         {p.name || (p.deviceType === 'multiDevice' ? t.settings.synced : t.settings.device)}
                         {p.createdAt && <span className="text-muted-foreground">{t.settings.added(new Date(p.createdAt).toLocaleDateString(t.intl))}</span>}
                       </span>
-                      <Button variant="ghost" size="xs" onClick={() => deletePasskey(p.id)}>
-                        {t.common.delete}
-                      </Button>
+                      {online && (
+                        <Button variant="ghost" size="xs" onClick={() => deletePasskey(p.id)}>
+                          {t.common.delete}
+                        </Button>
+                      )}
                     </li>
                   ))}
                 </ul>
               )}
-              <div>
+              <div hidden={!online}>
                 <Button variant="outline" onClick={addPasskey}>
                   <Plus aria-hidden /> {t.settings.addPasskey}
                 </Button>
@@ -178,26 +188,39 @@ function Settings() {
             <Separator />
             <fieldset className="grid gap-3">
               <legend className="mb-3 text-sm font-medium">{t.settings.theme}</legend>
-              <RadioGroup value={theme} onValueChange={(v) => pick(v as Theme)} className="flex gap-6">
-                {themes.map((value) => (
-                  <Label key={value} className="font-normal">
-                    <RadioGroupItem value={value} /> {t.settings.themes[value]}
-                  </Label>
+              {/* A segmented control: still a radio group for keyboard and screen readers. */}
+              <RadioGroup.Root
+                value={theme}
+                onValueChange={(v) => pick(v as Theme)}
+                aria-label={t.settings.theme}
+                className="inline-flex w-fit rounded-lg bg-muted p-1"
+              >
+                {themes.map(([value, Icon]) => (
+                  <RadioGroup.Item
+                    key={value}
+                    value={value}
+                    className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[state=checked]:bg-background data-[state=checked]:text-foreground data-[state=checked]:shadow-sm"
+                  >
+                    <Icon aria-hidden className="size-4" /> {t.settings.themes[value]}
+                  </RadioGroup.Item>
                 ))}
-              </RadioGroup>
+              </RadioGroup.Root>
             </fieldset>
-            <Separator />
-            <fieldset className="grid gap-3">
-              <legend className="mb-3 text-sm font-medium">{t.settings.language}</legend>
-              <RadioGroup value={locale} onValueChange={pickLanguage} className="flex gap-6">
-                {/* Each language in its own name, so you can find yours whatever the page is in. */}
-                {locales.map((l) => (
-                  <Label key={l} lang={l} className="font-normal">
-                    <RadioGroupItem value={l} /> {dicts[l].languageName}
-                  </Label>
-                ))}
-              </RadioGroup>
-            </fieldset>
+            {online && (
+              <>
+                <Separator />
+                <Field label={t.settings.language}>
+                  <NativeSelect value={locale} onChange={(e) => pickLanguage(e.target.value)}>
+                    {/* Each language in its own name, so you can find yours whatever the page is in. */}
+                    {locales.map((l) => (
+                      <NativeSelectOption key={l} value={l} lang={l}>
+                        {dicts[l].flag} {dicts[l].languageName}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                </Field>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -227,9 +250,11 @@ function Settings() {
               <Button variant="outline" onClick={copyFeed}>
                 {t.settings.copyLink}
               </Button>
-              <Button variant="ghost" onClick={resetFeed}>
-                {t.settings.resetLink}
-              </Button>
+              {online && (
+                <Button variant="ghost" onClick={resetFeed}>
+                  {t.settings.resetLink}
+                </Button>
+              )}
             </div>
             {feedStatus && (
               <p role="status" className="text-sm text-muted-foreground">
@@ -258,14 +283,14 @@ function Settings() {
                 </Button>
               </CardAction>
             </CardHeader>
-            <CardContent className="grid gap-4">
+            <CardContent className="grid grid-cols-1 gap-4">
               <h3 className="mb-0 text-sm font-medium">{t.settings.members}</h3>
               <ul aria-label={t.settings.members} className="divide-y rounded-lg border">
                 {members.map((m) => (
                   <li key={m.email} className="flex items-center gap-3 px-3 py-2 text-sm">
-                    <span className="flex-1 truncate">{m.name || m.email}</span>
+                    <span className="min-w-0 flex-1 truncate">{m.name || m.email}</span>
                     <Badge variant={m.role === 'member' ? 'secondary' : 'outline'}>{t.role[m.role]}</Badge>
-                    {m.email !== me?.email && (
+                    {online && m.email !== me?.email && (
                       <Button variant="ghost" size="xs" onClick={() => removeMember(m.email)}>
                         {t.common.remove}
                       </Button>
@@ -273,6 +298,7 @@ function Settings() {
                   </li>
                 ))}
               </ul>
+              {online && (
               <form onSubmit={invite} onChange={() => setInviteStatus('')} className="flex flex-wrap items-end gap-2">
                 <Field label={t.settings.inviteByEmail} className="min-w-48 flex-1">
                   <Input name="email" type="email" required maxLength={200} />
@@ -294,6 +320,7 @@ function Settings() {
                 </Button>
                 {inviteStatus !== 'sent' && <span className="self-center text-sm text-destructive">{inviteStatus}</span>}
               </form>
+              )}
             </CardContent>
           </Card>
         )}

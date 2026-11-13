@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { asReader } from './helpers'
+import { asMember, asReader } from './helpers'
 
 test.use(asReader)
 
@@ -30,4 +30,37 @@ test('visited pages, show mode and preloaded gigs work offline', async ({ page, 
   await expect(page.locator('.show-bar')).toContainText(title)
   await page.getByRole('link', { name: 'Close show mode' }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Setlist')
+})
+
+test.describe('as a member', () => {
+  test.use(asMember)
+
+  test('offline hides editing, and the events filter keeps working', async ({ page, context }) => {
+    await page.goto('/demo-band/events')
+    await page.evaluate(() => navigator.serviceWorker.ready)
+    // Now controlled by the service worker: this list, the past list and the first gigs go into the cache.
+    await page.reload()
+    await page.waitForLoadState('networkidle')
+    const add = page.getByRole('link', { name: 'Add event' })
+    await expect(add).toBeVisible()
+
+    await context.setOffline(true)
+    await page.reload()
+    await expect(page.getByRole('status')).toContainText('Offline')
+    await expect(add).toHaveCount(0)
+
+    // Every filter works from the cached lists.
+    await page.getByRole('button', { name: 'Filter' }).click()
+    await page.getByRole('menuitemradio', { name: 'Everyone' }).click()
+    await page.getByRole('menuitemcheckbox', { name: 'Lead' }).click()
+    await page.getByRole('menuitemradio', { name: 'Past' }).click()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('heading', { name: 'Events', level: 1 })).toBeVisible()
+    await expect(page.locator('ul.events li').first()).toBeVisible()
+
+    await page.goto('/demo-band/events')
+    await page.locator('ul.events li a').first().click()
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Edit' })).toHaveCount(0)
+  })
 })

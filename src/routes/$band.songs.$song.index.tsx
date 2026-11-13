@@ -7,6 +7,7 @@ import { bandOp } from '#/server/fns'
 import { Files } from '#/components/Files'
 import { Markdown } from '#/components/Markdown'
 import { useT } from '#/lib/i18n'
+import { useCanEdit } from '#/lib/online'
 
 export const Route = createFileRoute('/$band/songs/$song/')({
   loader: async ({ params }) => {
@@ -22,6 +23,7 @@ const bandRoute = getRouteApi('/$band')
 function Song() {
   const { song, files } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
+  const canEdit = useCanEdit()
   const params = { band: band.slug, song: song.slug }
   const t = useT()
 
@@ -34,7 +36,7 @@ function Song() {
           </Link>
           <h1 className="mt-1 mb-0">{song.title}</h1>
         </div>
-        {band.role === 'member' && (
+        {canEdit && (
           <Button asChild variant="outline" size="sm">
             <Link to="/$band/songs/$song/edit" params={params}>
               <Pencil aria-hidden /> {t.common.edit}
@@ -64,7 +66,7 @@ function Song() {
           {song.notes && <Markdown className="notes mt-4 border-t pt-4 text-sm">{song.notes}</Markdown>}
         </CardContent>
       </Card>
-      <Files band={band.slug} owner={{ song: song.slug }} files={files} canEdit={band.role === 'member' && !song.archivedAt} />
+      <Files band={band.slug} owner={{ song: song.slug }} files={files} canEdit={canEdit && !song.archivedAt} />
     </>
   )
 }

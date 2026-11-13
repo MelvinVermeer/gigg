@@ -6,6 +6,7 @@ import { bandOp } from '#/server/fns'
 import { archivedSearch } from '#/lib/archived'
 import type { VenueFields } from '#/server/ops'
 import { useT } from '#/lib/i18n'
+import { useCanEdit } from '#/lib/online'
 import type { Dict } from '#/lib/i18n'
 
 export const Route = createFileRoute('/$band/settings/venues')({
@@ -26,6 +27,7 @@ const fields = (t: Dict): Field[] => [
 function Venues() {
   const venues = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
+  const canEdit = useCanEdit()
   const router = useRouter()
   const { archived } = Route.useSearch()
   const t = useT()
@@ -43,7 +45,7 @@ function Venues() {
         items={venues}
         fields={fields(t)}
         detail={(v) => v.address}
-        canEdit={band.role === 'member'}
+        canEdit={canEdit}
         onSave={async (id, values) => {
           await bandOp('updateVenue', band.slug, { id, fields: values as VenueFields })
           await router.invalidate()

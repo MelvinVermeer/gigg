@@ -10,6 +10,7 @@ import { Input } from '#/components/ui/input'
 import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
 import { useT } from '#/lib/i18n'
+import { useCanEdit } from '#/lib/online'
 
 const bandRoute = getRouteApi('/$band')
 
@@ -19,7 +20,7 @@ type Block = { id: string; name: string; archivedAt: Date | null; songs: SongRef
 export function Blocks({ blocks, songs, archived, }: { blocks: Block[]; songs: SongRef[]; archived: boolean }) {
   const band = bandRoute.useLoaderData()
   const router = useRouter()
-  const editable = band.role === 'member'
+  const editable = useCanEdit()
   const t = useT()
   const [newId, setNewId] = useState<string>()
 

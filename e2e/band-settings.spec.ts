@@ -55,16 +55,16 @@ test.describe('theme', () => {
     const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
     expect(await bg()).toBe('rgb(255, 255, 255)')
 
-    await page.getByLabel('Dark').check()
+    await page.getByRole('radio', { name: 'Dark' }).check()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     expect(await bg()).toBe('rgb(17, 17, 17)')
 
     await page.reload()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-    await expect(page.getByLabel('Dark')).toBeChecked()
+    await expect(page.getByRole('radio', { name: 'Dark' })).toBeChecked()
     await expect(page.getByRole('img', { name: 'Gigg' })).not.toHaveAttribute('src', /lockup-ink/) // yellow wordmark
 
-    await page.getByLabel('System').check()
+    await page.getByRole('radio', { name: 'System' }).check()
     expect(await bg()).toBe('rgb(255, 255, 255)')
   })
 })

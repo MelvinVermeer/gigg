@@ -133,17 +133,15 @@ describe('events', () => {
     ])
   })
 
-  it('filters on status and on mine: created by me or my availability asked', async () => {
+  it('marks mine: created by me or my availability asked', async () => {
     const t = await testDb()
     await bandOps.createEvent(t.db, t.member, t.band, { title: 'Lead Gig', date: day(3) })
-    const titles = async (user: string, input: object) => (await bandOps.listEvents(t.db, user, t.band, input)).map((e) => e.title)
-    expect(await titles(t.member, { statuses: ['lead'] })).toEqual(['Lead Gig'])
-    expect(await titles(t.member, { statuses: ['option', 'confirmed'] })).toEqual(['Summer Party'])
-    expect(await titles(t.member, { mine: true })).toEqual(['Lead Gig', 'Summer Party']) // the seed's creator is the member
-    expect(await titles(t.reader, { mine: true })).toEqual([])
+    const mine = async (user: string) => (await bandOps.listEvents(t.db, user, t.band, {})).map((e) => [e.title, e.bookingStatus, e.mine])
+    // Every status, everyone's; the seed's creator is the member.
+    expect(await mine(t.member)).toEqual([['Lead Gig', 'lead', true], ['Summer Party', 'confirmed', true]])
+    expect(await mine(t.reader)).toEqual([['Lead Gig', 'lead', false], ['Summer Party', 'confirmed', false]])
     await bandOps.askAvailability(t.db, t.member, t.band, { event: 'summer-party', emails: ['reader@example.com'] })
-    expect(await titles(t.reader, { mine: true })).toEqual(['Summer Party'])
-    expect(await titles(t.reader, { when: 'archived', mine: true, statuses: [] })).toEqual([])
+    expect(await mine(t.reader)).toEqual([['Lead Gig', 'lead', false], ['Summer Party', 'confirmed', true]])
   })
 
   it('creates a new venue and contacts inline and links them', async () => {

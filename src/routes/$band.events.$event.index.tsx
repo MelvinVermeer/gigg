@@ -1,5 +1,5 @@
 import { Link, createFileRoute, getRouteApi, redirect, useRouter } from '@tanstack/react-router'
-import { formatWhen } from '#/lib/date'
+import { formatDate, formatTimes } from '#/lib/date'
 import { formatDuration } from '#/lib/duration'
 import { Availability, AvailabilitySummary } from '#/components/Availability'
 import { Files } from '#/components/Files'
@@ -12,6 +12,7 @@ import { Card, CardContent } from '#/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '#/components/ui/dropdown-menu'
 import { bandOp } from '#/server/fns'
 import { useT } from '#/lib/i18n'
+import { useCanEdit } from '#/lib/online'
 
 export const Route = createFileRoute('/$band/events/$event/')({
   loader: async ({ params }) => {
@@ -28,13 +29,14 @@ function Event() {
   const { event, venue, contacts, setlist, standardName, standards, files, availability } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const params = { band: band.slug, event: event.slug }
+  const canEdit = useCanEdit()
   const t = useT()
 
   return (
     <>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <h1 className="mb-0">{event.title}</h1>
-        {band.role === 'member' && (
+        {canEdit && (
           <Button asChild variant="outline" size="sm">
             <Link to="/$band/events/$event/edit" params={params}>
               <Pencil aria-hidden /> {t.common.edit}
@@ -51,8 +53,12 @@ function Event() {
         <CardContent>
           <dl className="fields grid grid-cols-[max-content_1fr] gap-x-6 gap-y-3 text-sm">
             <dt className="text-muted-foreground">{t.common.date}</dt>
-            <dd>{formatWhen(event, t.intl)}</dd>
-            <AvailabilitySummary band={band.slug} event={event.slug} info={availability} canAsk={band.role === 'member' && !event.archivedAt} />
+            <dd>
+              {/* Breaks only between date and time, never inside either. */}
+              <span className="whitespace-nowrap">{formatDate(event.date, t.intl)}</span>
+              {event.startTime && <> <span className="whitespace-nowrap">· {formatTimes(event.startTime, event.endTime)}</span></>}
+            </dd>
+            <AvailabilitySummary band={band.slug} event={event.slug} info={availability} canAsk={canEdit && !event.archivedAt} />
             <dt className="text-muted-foreground">{t.common.venue}</dt>
             <dd>
               {venue ? (
@@ -105,7 +111,7 @@ function Event() {
             <dd>{event.tags.length ? event.tags.join(', ') : '–'}</dd>
             <dt className="text-muted-foreground">{t.common.setlist}</dt>
             <dd>
-              {setlist.songs || standardName || band.role !== 'member' ? (
+              {setlist.songs || standardName || !canEdit ? (
                 <Link to="/$band/events/$event/setlist" params={params} className="font-medium">
                   {setlist.songs || standardName
                     ? `${standardName ? `${standardName} · ` : ''}${t.common.songCount(setlist.songs)} · ${formatDuration(setlist.durationSec)}`
@@ -119,8 +125,8 @@ function Event() {
           {event.notes && <Markdown className="notes mt-4 border-t pt-4 text-sm">{event.notes}</Markdown>}
         </CardContent>
       </Card>
-      <Availability band={band.slug} event={event.slug} info={availability} canAsk={band.role === 'member' && !event.archivedAt} />
-      <Files band={band.slug} owner={{ event: event.slug }} files={files} canEdit={band.role === 'member' && !event.archivedAt} />
+      <Availability band={band.slug} event={event.slug} info={availability} canAsk={canEdit && !event.archivedAt} />
+      <Files band={band.slug} owner={{ event: event.slug }} files={files} canEdit={canEdit && !event.archivedAt} />
     </>
   )
 }

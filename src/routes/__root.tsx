@@ -2,12 +2,13 @@ import { HeadContent, Link, Outlet, Scripts, createRootRoute, useParams } from '
 
 import lockup from '../assets/gigg-lockup.svg'
 import lockupInk from '../assets/gigg-lockup-ink.svg'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { HeaderSearch } from '#/components/HeaderSearch'
 import { PasskeyPrompt } from '#/components/PasskeyPrompt'
 import { UserMenu } from '#/components/UserMenu'
 import { Button } from '#/components/ui/button'
 import { useT } from '#/lib/i18n'
+import { useOnline } from '#/lib/online'
 import { themeScript } from '#/lib/theme'
 import { getMe } from '#/server/fns'
 import appCss from '../styles.css?url'
@@ -53,27 +54,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   )
 }
 
-/** Registers the offline service worker (production only) and tracks whether we're online. */
-function useOnline() {
-  const [online, setOnline] = useState(true)
-  useEffect(() => {
-    if (import.meta.env.PROD) navigator.serviceWorker?.register('/sw.js')
-    const update = () => setOnline(navigator.onLine)
-    update()
-    addEventListener('online', update)
-    addEventListener('offline', update)
-    return () => {
-      removeEventListener('online', update)
-      removeEventListener('offline', update)
-    }
-  }, [])
-  return online
-}
-
 function RootLayout() {
   const me = Route.useLoaderData().user
   const t = useT()
   const online = useOnline()
+  // The offline service worker (production only).
+  useEffect(() => {
+    if (import.meta.env.PROD) navigator.serviceWorker?.register('/sw.js')
+  }, [])
   // Search is per band: the band you're in, otherwise your first band.
   const searchBand = useParams({ strict: false }).band ?? me?.bands[0]?.slug
   return (

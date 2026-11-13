@@ -7,6 +7,7 @@ import { bandOp } from '#/server/fns'
 import { archivedSearch } from '#/lib/archived'
 import type { ContactFields } from '#/server/ops'
 import { useT } from '#/lib/i18n'
+import { useCanEdit } from '#/lib/online'
 import type { Dict } from '#/lib/i18n'
 
 export const Route = createFileRoute('/$band/settings/contacts')({
@@ -29,6 +30,7 @@ const fields = (t: Dict): Field[] => [
 function Contacts() {
   const contacts = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
+  const canEdit = useCanEdit()
   const router = useRouter()
   const { archived } = Route.useSearch()
   const t = useT()
@@ -54,7 +56,7 @@ function Contacts() {
             </>
           )
         }
-        canEdit={band.role === 'member'}
+        canEdit={canEdit}
         onSave={async (id, values) => {
           await bandOp('updateContact', band.slug, { id, fields: values as ContactFields })
           await router.invalidate()

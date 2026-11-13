@@ -4,6 +4,7 @@ export const en = {
   /** For Intl date formatting. */
   intl: 'en-GB',
   languageName: 'English',
+  flag: '🇬🇧',
 
   common: {
     save: 'Save',
