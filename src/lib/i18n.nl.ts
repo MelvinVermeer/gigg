@@ -274,6 +274,7 @@ export const nl: Dict = {
     uploading: (name) => `${name} uploaden…`,
     tooBig: (name, mb) => `${name}: bestanden mogen maximaal ${mb} MB zijn`,
     failed: 'uploaden mislukt',
+    remove: (name) => `${name} verwijderen`,
     removeConfirm: (name) => `${name} verwijderen?`,
     none: 'Nog geen bestanden.',
     add: 'Bestanden toevoegen',

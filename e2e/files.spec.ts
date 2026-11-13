@@ -56,7 +56,10 @@ test.describe('big file', () => {
     const name = `big-${Date.now()}.bin`
     await page.getByLabel('Add files').setInputFiles({ name, mimeType: 'application/octet-stream', buffer: Buffer.alloc(6 * 1024 * 1024, 1) })
     await expect(page.getByRole('link', { name, exact: true })).toBeVisible()
-    await expect(page.getByRole('listitem').filter({ hasText: name })).toContainText('6.0 MB')
+    const row = page.getByRole('listitem').filter({ hasText: name })
+    await expect(row.getByText('(6.0 MB)')).toBeVisible()
+    await page.setViewportSize({ width: 375, height: 700 })
+    await expect(row.getByText('(6.0 MB)')).toBeHidden() // no room on a phone
   })
 })
 

@@ -275,6 +275,7 @@ export const en = {
     uploading: (name: string) => `Uploading ${name}…`,
     tooBig: (name: string, mb: number) => `${name}: files can be up to ${mb} MB`,
     failed: 'upload failed',
+    remove: (name: string) => `Remove ${name}`,
     removeConfirm: (name: string) => `Remove ${name}?`,
     none: 'No files yet.',
     add: 'Add files',

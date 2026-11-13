@@ -1,6 +1,6 @@
 import { useRouter } from '@tanstack/react-router'
 import { upload as uploadToBlob } from '@vercel/blob/client'
-import { FileText, Upload, X } from 'lucide-react'
+import { FileText, Trash2, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { FormError } from '#/components/Field'
 import { Button } from '#/components/ui/button'
@@ -99,10 +99,16 @@ export function Files({ band, owner, files, canEdit }: Props) {
                 <a href={`/api/files/${f.id}`} className="truncate font-medium underline-offset-4 hover:underline">
                   {f.name}
                 </a>
-                <span className="shrink-0 text-muted-foreground">({size(f.sizeBytes)})</span>
+                <span className="hidden shrink-0 text-muted-foreground sm:inline">({size(f.sizeBytes)})</span>
                 {canEdit && (
-                  <Button variant="ghost" size="xs" className="ml-auto" onClick={() => remove(f)}>
-                    <X aria-hidden /> {t.common.remove}
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="ml-auto text-destructive hover:text-destructive"
+                    aria-label={t.files.remove(f.name)}
+                    onClick={() => remove(f)}
+                  >
+                    <Trash2 aria-hidden />
                   </Button>
                 )}
               </li>
