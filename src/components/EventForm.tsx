@@ -1,9 +1,11 @@
-import { X } from 'lucide-react'
-import { useId, useMemo, useState } from 'react'
+import { Plus, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Combobox } from '#/components/Combobox'
 import { Field, FormError } from '#/components/Field'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { Textarea } from '#/components/ui/textarea'
 import { withLabels } from '#/lib/labels'
@@ -41,8 +43,9 @@ const paymentStatuses = ['open', 'invoiced', 'paid'] as const
 
 let nextKey = 0
 
+const matches = (label: string, text: string) => label.toLowerCase().includes(text.trim().toLowerCase())
+
 export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Props) {
-  const ids = useId()
   const t = useT()
   const venues = useMemo(() => withLabels(data.venues, (v) => v.name, (v) => v.address), [data.venues])
   const contacts = useMemo(() => withLabels(data.contacts, (c) => c.name, (c) => c.email ?? c.phone), [data.contacts])
@@ -65,12 +68,13 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
     (id) => !picked.some((p) => p.id === id),
   )
 
-  function addContact(text: string) {
-    const name = text.trim()
-    if (!name) return
-    const existing = contacts.find((c) => c.label === name)
-    if (existing && picked.some((p) => p.id === existing.id)) return setContactText('')
-    setPicked((p) => [...p, existing ? { key: existing.id, id: existing.id, name } : { key: `new${nextKey++}`, name }])
+  function addContact(c: (typeof contacts)[number]) {
+    setPicked((p) => (p.some((x) => x.id === c.id) ? p : [...p, { key: c.id, id: c.id, name: c.label }]))
+    setContactText('')
+  }
+
+  function addNewContact(text: string) {
+    setPicked((p) => [...p, { key: `new${nextKey++}`, name: text.trim() }])
     setContactText('')
   }
 
@@ -121,20 +125,20 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
         </Field>
       </div>
 
-      <Field label={t.common.venue}>
-        <Input
-          list={`${ids}-venues`}
+      {/* Not a Field: the combobox names its own input (cmdk sets the id). */}
+      <div className="grid gap-2">
+        <Label>{t.common.venue}</Label>
+        <Combobox
+          label={t.common.venue}
           value={venueText}
-          onChange={(e) => setVenueText(e.target.value)}
+          onValueChange={setVenueText}
           placeholder={t.eventForm.venuePlaceholder}
-          autoComplete="off"
+          options={[
+            ...venues.filter((v) => matches(v.label, venueText)).map((v) => ({ value: v.id, label: v.label, onSelect: () => setVenueText(v.label) })),
+            ...(venue || !venueText.trim() ? [] : [{ value: '+', label: <><Plus aria-hidden /> {t.eventForm.newVenue(venueText.trim())}</>, onSelect: () => {} }]),
+          ]}
         />
-      </Field>
-      <datalist id={`${ids}-venues`}>
-        {venues.map((v) => (
-          <option key={v.id} value={v.label} />
-        ))}
-      </datalist>
+      </div>
       {isNewVenue && (
         <Field label={t.eventForm.newVenueAddress} hint={t.common.optional} className="border-l-2 pl-4">
           <Input value={venueAddress} onChange={(e) => setVenueAddress(e.target.value)} maxLength={500} />
@@ -146,7 +150,7 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
         {suggested.length > 0 && (
           <p className="suggestion flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             {t.eventForm.lastTimeAt(venue!.name, suggested.map((id) => contactById(id).label).join(', '))}{' '}
-            <Button type="button" size="xs" variant="secondary" onClick={() => suggested.forEach((id) => addContact(contactById(id).label))}>
+            <Button type="button" size="xs" variant="secondary" onClick={() => suggested.forEach((id) => addContact(contactById(id)))}>
               {t.common.add}
             </Button>
           </p>
@@ -191,30 +195,20 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
             ))}
           </ul>
         )}
-        <span className="flex gap-2">
-          <Input
-            aria-label={t.eventForm.addContact}
-            list={`${ids}-contacts`}
-            value={contactText}
-            onChange={(e) => setContactText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                addContact(contactText)
-              }
-            }}
-            placeholder={t.eventForm.contactPlaceholder}
-            autoComplete="off"
-          />
-          <Button type="button" variant="outline" onClick={() => addContact(contactText)}>
-            {t.eventForm.addContact}
-          </Button>
-        </span>
-        <datalist id={`${ids}-contacts`}>
-          {contacts.map((c) => (
-            <option key={c.id} value={c.label} />
-          ))}
-        </datalist>
+        <Combobox
+          label={t.eventForm.addContact}
+          value={contactText}
+          onValueChange={setContactText}
+          placeholder={t.eventForm.contactPlaceholder}
+          options={[
+            ...contacts
+              .filter((c) => !picked.some((p) => p.id === c.id) && matches(c.label, contactText))
+              .map((c) => ({ value: c.id, label: c.label, onSelect: () => addContact(c) })),
+            ...(contacts.some((c) => c.label.toLowerCase() === contactText.trim().toLowerCase())
+              ? []
+              : [{ value: '+', label: <><Plus aria-hidden /> {t.eventForm.newContact(contactText.trim())}</>, onSelect: () => addNewContact(contactText) }]),
+          ]}
+        />
       </fieldset>
 
       <div className="grid grid-cols-2 gap-4">

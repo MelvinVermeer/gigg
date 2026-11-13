@@ -24,6 +24,8 @@ test.describe('member', () => {
     await page.getByLabel('Add contact').fill('Sam Sound')
     await page.getByLabel('Add contact').press('Enter')
     await page.getByLabel('Phone for Sam Sound').fill('+31 6 1111 2222')
+    await page.getByLabel('Add contact').fill('pat')
+    await page.getByRole('option', { name: 'Pat Promoter' }).click()
     await page.getByLabel('Booking').selectOption('confirmed')
     await page.getByRole('button', { name: 'Add event' }).click()
 
@@ -32,6 +34,7 @@ test.describe('member', () => {
     await expect(fields).toContainText(`Club ${title}`)
     await expect(fields).toContainText('Side Street 2')
     await expect(fields).toContainText('Confirmed')
+    await expect(fields).toContainText('Pat Promoter')
     await expect(page.getByRole('link', { name: '+31 6 1111 2222' })).toHaveAttribute('href', 'tel:+31611112222')
   })
 

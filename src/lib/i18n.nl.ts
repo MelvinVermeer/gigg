@@ -192,6 +192,8 @@ export const nl: Dict = {
     emailOptional: 'E-mail (optioneel)',
     phoneOptional: 'Telefoon (optioneel)',
     addContact: 'Contact toevoegen',
+    newVenue: (name) => `Nieuwe locatie “${name}”`,
+    newContact: (name) => `Nieuw contact “${name}”`,
     contactPlaceholder: 'Zoek of typ een nieuw contact',
     notesHint: '(opbouw, soundcheck, parkeren, …)',
   },

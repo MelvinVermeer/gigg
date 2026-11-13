@@ -216,3 +216,12 @@ Each of these needs a **grill-me session** before building: the open questions b
 - **B. Event types and money.** Event types such as *repetitie* (rehearsal) besides gigs. A fee field (*vergoeding*) per event, with free events as an empty or zero fee; later, totals per year. Open: which fields (booking/payment status, fee) apply to which type.
 - **D. Setlists and songs.** Drag and drop to reorder songs (the up/down arrows already exist; native drag and drop is flaky on mobile). Personal notes per song, visible only to you (different from per-song notes in a setlist). A setting for which song fields a setlist shows (key, BPM, duration…), tied in with the other PDFs.
 - **Styled invite emails.** HTML emails with branding instead of plain text.
+
+### From feedback (2026-11-12, second batch)
+
+Already covered above: C (availability vs. assignment, non-availability), A (iCal "only my events"), B (event types, fee, free events), D (drag and drop, personal song notes, setlist fields), styled invite emails.
+
+- **Mobile date/time layout.** In the past events list on mobile, show date and time side by side. On the event view, when date and time don't fit on one line, break between date and time.
+- **Theme and language controls.** Theme as a three-way toggle (light/dark/system); language as a dropdown with flags.
+- **Setlist header buttons.** The buttons above a setlist don't feel right yet; rethink their layout.
+- **Offline = reader.** When offline, behave as a reader: hide all edit buttons. Also fix the events filter, which fails in offline mode.

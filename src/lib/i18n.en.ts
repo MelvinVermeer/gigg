@@ -193,6 +193,8 @@ export const en = {
     emailOptional: 'Email (optional)',
     phoneOptional: 'Phone (optional)',
     addContact: 'Add contact',
+    newVenue: (name: string) => `New venue “${name}”`,
+    newContact: (name: string) => `New contact “${name}”`,
     contactPlaceholder: 'Search or type a new contact',
     notesHint: '(load-in, soundcheck, parking, …)',
   },

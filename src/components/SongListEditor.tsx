@@ -2,7 +2,7 @@ import { Link, useRouter } from '@tanstack/react-router'
 import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button } from '#/components/ui/button'
-import { Command, CommandInput, CommandItem, CommandList } from '#/components/ui/command'
+import { Combobox } from '#/components/Combobox'
 import { formatDuration } from '#/lib/duration'
 import { withLabels } from '#/lib/labels'
 import { bandOp } from '#/server/fns'
@@ -29,7 +29,6 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
   const router = useRouter()
   const t = useT()
   const [text, setText] = useState('')
-  const [focused, setFocused] = useState(false)
   const options = useMemo(() => withLabels(repertoire, (s) => s.title, (s) => s.key), [repertoire])
 
   const blockLabel = (b: { name: string; songs: SongRef[] }) => t.songList.block(b.name, b.songs.length)
@@ -98,41 +97,17 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
         <p className="text-sm text-muted-foreground">{t.common.noSongsYet}</p>
       )}
       {editable && (
-        // Typing opens the matches below; tapping one or pressing Enter adds the highlighted one.
-        <Command label={t.songList.addTo(label)} shouldFilter={false} className="add-song relative overflow-visible bg-transparent">
-          <CommandInput
-            value={text}
-            onValueChange={setText}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            onKeyDown={(e) => e.key === 'Escape' && setText('')}
-            placeholder={blocks.length ? t.songList.searchSongOrBlock : t.songList.searchSong}
-            className="h-9 rounded-md border border-input px-3 text-base shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
-          />
-          {focused && query && (
-            <CommandList
-              // Keep focus (and the phone keyboard) on the input while picking.
-              onMouseDown={(e) => e.preventDefault()}
-              className="absolute inset-x-0 top-full z-50 mt-1 rounded-md border bg-popover p-1 shadow-md"
-            >
-              {blocks.filter((b) => matches(blockLabel(b))).map((b) => (
-                <CommandItem key={b.id} value={blockLabel(b)} onSelect={() => add(b.songs)}>
-                  {blockLabel(b)}
-                </CommandItem>
-              ))}
-              {options.filter((o) => matches(o.label)).map((o) => (
-                <CommandItem key={o.id} value={o.label} onSelect={() => add([o])}>
-                  {o.label}
-                </CommandItem>
-              ))}
-              {!exact && (
-                <CommandItem value="+" onSelect={addNew}>
-                  <Plus aria-hidden /> {t.songList.addNew(query)}
-                </CommandItem>
-              )}
-            </CommandList>
-          )}
-        </Command>
+        <Combobox
+          label={t.songList.addTo(label)}
+          value={text}
+          onValueChange={setText}
+          placeholder={blocks.length ? t.songList.searchSongOrBlock : t.songList.searchSong}
+          options={[
+            ...blocks.filter((b) => matches(blockLabel(b))).map((b) => ({ value: `b${b.id}`, label: blockLabel(b), onSelect: () => add(b.songs) })),
+            ...options.filter((o) => matches(o.label)).map((o) => ({ value: o.id, label: o.label, onSelect: () => add([o]) })),
+            ...(exact ? [] : [{ value: '+', label: <><Plus aria-hidden /> {t.songList.addNew(query)}</>, onSelect: addNew }]),
+          ]}
+        />
       )}
     </div>
   )
