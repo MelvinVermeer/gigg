@@ -18,6 +18,7 @@ function NewEvent() {
       <h1>{t.events.add}</h1>
       <EventForm
         data={data}
+        withParticipants
         submitLabel={t.events.add}
         onSubmit={async (fields) => (await bandOp('createEvent', band, fields)).slug}
         onSaved={(slug) => navigate({ to: '/$band/events/$event', params: { band, event: slug } })}

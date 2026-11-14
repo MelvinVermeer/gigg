@@ -6,41 +6,42 @@ const inDays = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString(
 
 test.use(asMember)
 
-test('people are added in the form, asked one by one or all at once, and answer from the emailed link', async ({ page, browser }) => {
+const mails = async (to: string, title: string) =>
+  (await readFile('.outbox.jsonl', 'utf8'))
+    .trim()
+    .split('\n')
+    .map((l) => JSON.parse(l) as { to: string; subject: string; text: string })
+    .filter((m) => m.to === to && m.subject.includes(title))
+
+test('participants are picked in a dialog, asked from it, and answer from the emailed link', async ({ page, browser }) => {
   const title = `Availability ${Date.now()}`
   await page.goto('/demo-band/events/new')
   await page.getByLabel('Title').fill(title)
   await page.getByLabel('Date').fill(inDays(40))
-  // The participants field starts closed and empty.
-  const participants = page.getByRole('button', { name: /Participants/ })
-  await expect(participants).toHaveAccessibleName(/Nobody selected/)
-  await participants.click()
-  await page.getByRole('checkbox', { name: /Dev Member/ }).check()
-  await page.getByRole('checkbox', { name: /Dev Reader/ }).check()
+  // The field starts empty: "Select" opens the dialog.
+  await page.getByRole('button', { name: 'Select' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Participants' })
+  await dialog.getByRole('checkbox', { name: /Dev Member/ }).check()
+  await dialog.getByRole('checkbox', { name: /Dev Reader/ }).check()
+  await dialog.getByRole('button', { name: 'Done' }).click()
   await page.getByRole('button', { name: 'Add event' }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
 
-  // Adding sends nothing: both are on the list, not asked.
+  // Adding sends nothing; no availability card until someone is asked.
   const region = page.getByRole('region', { name: 'Availability' })
-  await expect(region.getByText('not asked', { exact: true })).toHaveCount(2)
-  await region.getByRole('button', { name: 'Ask Dev Reader' }).click()
-  await expect(region.getByText('waiting', { exact: true })).toBeVisible()
-  await expect(region.getByText('not asked', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: /^2 participants/ })).toBeVisible()
+  await expect(region).toHaveCount(0)
+  await page.getByRole('button', { name: /^2 participants/ }).click()
+  await dialog.getByRole('button', { name: 'Ask availability' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(region.getByText('waiting', { exact: true })).toHaveCount(2)
+  await expect(page.getByRole('button', { name: /2 participants.*2 waiting/ })).toBeVisible()
 
-  const mails = async () =>
-    (await readFile('.outbox.jsonl', 'utf8'))
-      .trim()
-      .split('\n')
-      .map((l) => JSON.parse(l) as { to: string; subject: string; text: string })
-      .filter((m) => m.to === 'reader@example.com' && m.subject.includes(title))
-  const maybeLink = (await mails()).at(-1)!.text.match(/Maybe: (\S+)/)![1]
-
+  const maybeLink = (await mails('reader@example.com', title)).at(-1)!.text.match(/Maybe: (\S+)/)![1]
   // A logged-out visitor: opening the link records nothing until they confirm.
   const guest = await (await browser.newContext()).newPage()
   await guest.goto(maybeLink)
   await expect(guest.getByRole('radio', { name: 'Maybe' })).toBeChecked()
-  await page.reload()
-  await expect(region.getByText('waiting', { exact: true })).toBeVisible()
   // A note is only asked for with a maybe.
   await guest.getByRole('radio', { name: 'Yes' }).check()
   await expect(guest.getByRole('textbox', { name: 'Why maybe? (optional)' })).toBeHidden()
@@ -51,37 +52,39 @@ test('people are added in the form, asked one by one or all at once, and answer 
 
   await page.reload()
   await expect(region.getByText('“after 9pm”')).toBeVisible()
-  // Checking availability asks only who wasn't asked yet: the member, not the reader again.
-  await region.getByRole('button', { name: 'Check availability' }).click()
-  await expect(region.getByText('waiting', { exact: true })).toBeVisible()
-  await expect(region.getByText('not asked', { exact: true })).toHaveCount(0)
-  await expect(region.getByRole('button', { name: 'Check availability' })).toHaveCount(0)
-  expect(await mails()).toHaveLength(1)
+  await expect(page.getByRole('button', { name: /2 participants.*1 maybe.*1 waiting/ })).toBeVisible()
+  expect(await mails('reader@example.com', title)).toHaveLength(1)
 })
 
-test('participants: select all, ask from the form, and offer to ask someone added later', async ({ page }) => {
+test('ask from the new-event form; someone added later is offered a check, someone removed loses their answer', async ({ page }) => {
   const title = `Participants ${Date.now()}`
   await page.goto('/demo-band/events/new')
   await page.getByLabel('Title').fill(title)
   await page.getByLabel('Date').fill(inDays(41))
-  await page.getByRole('button', { name: /Participants/ }).click()
-  await page.getByRole('checkbox', { name: 'Select all' }).check()
-  await expect(page.getByRole('checkbox', { name: /Dev Reader/ })).toBeChecked()
-  await page.getByRole('checkbox', { name: /Dev Reader/ }).uncheck()
-  // Saves the event and asks the selected participants.
-  await page.getByRole('button', { name: 'Ask availability' }).click()
+  await page.getByRole('button', { name: 'Select' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Participants' })
+  await dialog.getByRole('checkbox', { name: 'Select all' }).check()
+  await expect(dialog.getByRole('checkbox', { name: /Dev Reader/ })).toBeChecked()
+  await dialog.getByRole('checkbox', { name: /Dev Reader/ }).uncheck()
+  // Saves the event, then asks.
+  await dialog.getByRole('button', { name: 'Ask availability' }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
   const region = page.getByRole('region', { name: 'Availability' })
-  await expect(region.getByText('waiting', { exact: true })).toBeVisible()
-  await expect(region.getByText('Dev Reader')).toHaveCount(0)
+  await expect(region.getByText('waiting', { exact: true })).toHaveCount(1)
 
-  // Adding someone after asking started offers to ask them too.
-  await page.getByRole('link', { name: 'Edit' }).click()
-  await page.getByRole('button', { name: /Participants/ }).click()
-  await page.getByRole('checkbox', { name: /Dev Reader/ }).check()
-  await expect(page.getByRole('dialog')).toContainText('Do you also want to check availability with this person?')
-  await page.getByRole('button', { name: 'Yes' }).click()
-  await page.getByRole('button', { name: 'Save' }).first().click()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
+  await page.getByRole('button', { name: /^1 participant/ }).click()
+  await dialog.getByRole('checkbox', { name: /Dev Reader/ }).check()
+  await expect(dialog.getByRole('alert')).toContainText('Do you also want to check availability with this person?')
+  await dialog.getByRole('button', { name: 'Yes' }).click()
+  await expect(dialog.getByRole('alert')).toBeHidden()
+  await expect(dialog.getByText('waiting', { exact: true })).toHaveCount(2)
+  await dialog.getByRole('button', { name: 'Done' }).click()
   await expect(region.getByText('waiting', { exact: true })).toHaveCount(2)
+  expect(await mails('reader@example.com', title)).toHaveLength(1)
+
+  await page.getByRole('button', { name: /^2 participants/ }).click()
+  await dialog.getByRole('checkbox', { name: /Dev Reader/ }).uncheck()
+  await dialog.getByRole('button', { name: 'Done' }).click()
+  await expect(page.getByRole('button', { name: /^1 participant/ })).toBeVisible()
+  await expect(region.getByText('Dev Reader')).toHaveCount(0)
 })

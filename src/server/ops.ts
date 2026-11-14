@@ -443,6 +443,15 @@ async function resolveRefs(tx: Tx, bandId: string, fields: z.output<typeof event
   return { venueId, contactIds: [...new Set(contactIds)] }
 }
 
+/** The band's members and readers: who can be a participant. */
+const bandPeople = (tx: Tx, bandId: string) =>
+  tx
+    .select({ id: users.id, name: users.name, email: users.email, role: memberships.role })
+    .from(memberships)
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(and(eq(memberships.bandId, bandId), isNull(memberships.archivedAt)))
+    .orderBy(asc(users.name), asc(users.email))
+
 /** Put exactly these band people on the event. New ones are not asked yet; removed ones lose their answer and link. */
 async function setEventPeople(tx: Tx, bandId: string, eventId: string, userIds: string[] | undefined) {
   if (!userIds) return
@@ -607,14 +616,7 @@ const eventOps = {
       .from(events)
       .where(and(eq(events.bandId, bandId), isNull(events.archivedAt), ne(events.bookingStatus, 'cancelled')))
 
-    const people = await tx
-      .select({ id: users.id, name: users.name, email: users.email, role: memberships.role })
-      .from(memberships)
-      .innerJoin(users, eq(users.id, memberships.userId))
-      .where(and(eq(memberships.bandId, bandId), isNull(memberships.archivedAt)))
-      .orderBy(asc(users.name), asc(users.email))
-
-    return { venues: venueRows, contacts: contactRows, lastContactsByVenue, events: dated, people }
+    return { venues: venueRows, contacts: contactRows, lastContactsByVenue, events: dated, people: await bandPeople(tx, bandId) }
   }),
 
   /** Create an event. Its setlist is chosen afterwards, on the event page. */
@@ -1465,6 +1467,15 @@ const availabilityOps = {
       stale: !!askedFor && askedFor !== event.date,
       mine: p.userId === userId,
     }))
+  }),
+
+  /** Who can be on an event: everyone in the band (for the participants dialog). */
+  listBandPeople: bandOp('reader', z.object({}), ({ tx, bandId }) => bandPeople(tx, bandId)),
+
+  /** Put exactly these people on the event (the participants dialog saves each change right away). */
+  setParticipants: bandOp('member', z.object({ event: z.string(), people: z.array(z.uuid()).max(100) }), async ({ tx, bandId }, { event: slug, people }) => {
+    const event = await availabilityEvent(tx, bandId, slug)
+    await setEventPeople(tx, bandId, event.id, people)
   }),
 
   /**

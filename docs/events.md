@@ -23,7 +23,7 @@ The term is **events** (URL `/<band>/events/<slug>`).
 - Event page: the venue name links to the venue's page. Each contact shows just the name; tapping it opens a pop-up with phone, email and organisation, plus Call · WhatsApp · Mail (only for the filled fields) and a "View contact" link to the contact's page. A contact with neither phone nor email links straight to that page.
 - Contacts list (settings): tapping a phone number asks: call or WhatsApp.
 - An event has one setlist (see [setlists.md](setlists.md)), chosen or copied in the event form.
-- Participants: the event form has a Participants field (a checklist of the band's members and readers, with Select all and Ask availability); their availability is shown on the event. See [availability.md](availability.md).
+- Participants: a field on the event page (and in the new-event form) that opens a dialog to add and remove band members and readers and ask their availability. See [availability.md](availability.md).
 
 ## Calendar feed
 

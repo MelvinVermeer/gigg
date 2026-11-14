@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { FormError } from '#/components/Field'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Input } from '#/components/ui/input'
 import { cn } from '#/lib/utils'
 import { askAvailability, bandOp } from '#/server/fns'
@@ -14,7 +14,7 @@ import { useOnline } from '#/lib/online'
 type Person = Awaited<ReturnType<typeof bandOp<'getAvailability'>>>[number]
 type Answer = 'yes' | 'maybe' | 'no'
 const answers: Answer[] = ['yes', 'maybe', 'no']
-const answerColor = { yes: 'bg-green-600 text-white', maybe: 'bg-amber-400 text-amber-950', no: 'bg-red-600 text-white' }
+export const answerColor = { yes: 'bg-green-600 text-white', maybe: 'bg-amber-400 text-amber-950', no: 'bg-red-600 text-white' }
 const pickerColor = {
   yes: 'data-[state=off]:hover:bg-green-600/10 data-[state=on]:bg-green-600 data-[state=on]:text-white',
   maybe: 'data-[state=off]:hover:bg-amber-400/15 data-[state=on]:bg-amber-400 data-[state=on]:text-amber-950',
@@ -66,7 +66,10 @@ function useRun() {
   return { run, error }
 }
 
-/** The event's people with their availability. Members ask everyone not asked yet, or one person at a time. */
+/**
+ * The participants' availability, once asking has started (it starts from the Participants dialog).
+ * Members can ask one person at a time here.
+ */
 export function Availability({ band, event, people, canAsk }: { band: string; event: string; people: Person[]; canAsk: boolean }) {
   const t = useT()
   const { run, error } = useRun()
@@ -74,32 +77,23 @@ export function Availability({ band, event, people, canAsk }: { band: string; ev
   const online = useOnline()
   const mine = people.find((p) => p.mine)
   const [answer, setAnswer] = useState<Answer | undefined>(mine?.answer ?? undefined)
-  const ask = (user?: string) => run(() => askAvailability({ data: { band, event, user } }))
+  const ask = (user: string) => run(() => askAvailability({ data: { band, event, user } }))
 
-  if (!people.length && !canAsk) return null
+  if (!people.some((p) => p.asked)) return null
   return (
     <Card aria-labelledby="availability" role="region" className="mt-6">
       <CardHeader>
         <CardTitle id="availability" role="heading" aria-level={2}>
           {t.availability.title}
         </CardTitle>
-        {canAsk && people.some((p) => !p.asked) && (
-          <CardAction>
-            <Button variant="outline" size="sm" onClick={() => ask()}>
-              {t.availability.check}
-            </Button>
-          </CardAction>
-        )}
       </CardHeader>
       <CardContent className="grid gap-4">
-        {!people.length && <p className="text-sm text-muted-foreground">{t.availability.noPeople}</p>}
         {people.some((p) => p.stale) && (
           <p role="status" className="text-sm text-muted-foreground">
             {t.availability.moved}
           </p>
         )}
-        {people.length > 0 && (
-          <ul className="divide-y">
+        <ul className="divide-y">
             {[...people].sort((a, b) => rank(a) - rank(b)).map((p) => (
               <li key={p.userId} className="flex flex-wrap items-center gap-2 py-2 text-sm">
                 <span className="font-medium">{p.name || p.email}:</span>
@@ -125,7 +119,6 @@ export function Availability({ band, event, people, canAsk }: { band: string; ev
               </li>
             ))}
           </ul>
-        )}
         {/* Offline your answer shows read-only; a form already open stays. */}
         {mine && (editing || (online && !mine.answer)) && (
           <form

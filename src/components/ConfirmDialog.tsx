@@ -3,16 +3,12 @@ import { Button } from '#/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '#/components/ui/dialog'
 import { useT } from '#/lib/i18n'
 
-type Options = { cancel?: string; destructive?: boolean }
-type Ask = { text: string; action: string; options: Options; resolve: (ok: boolean) => void }
+type Ask = { text: string; action: string; resolve: (ok: boolean) => void }
 let show: ((ask: Ask) => void) | undefined
 
-/**
- * window.confirm in our own dialog: resolves true when `action` is picked (a red button, unless `destructive: false`).
- * Needs <ConfirmHost /> mounted.
- */
-export const confirmDialog = (text: string, action: string, options: Options = {}) =>
-  new Promise<boolean>((resolve) => (show ? show({ text, action, options, resolve }) : resolve(false)))
+/** window.confirm in our own dialog: resolves true when `action` (a red button) is picked. Needs <ConfirmHost /> mounted. */
+export const confirmDialog = (text: string, action: string) =>
+  new Promise<boolean>((resolve) => (show ? show({ text, action, resolve }) : resolve(false)))
 
 /** Mounted once, in the root layout. */
 export function ConfirmHost() {
@@ -38,9 +34,9 @@ export function ConfirmHost() {
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => close(false)}>
-            {ask?.options.cancel ?? t.common.cancel}
+            {t.common.cancel}
           </Button>
-          <Button variant={ask?.options.destructive === false ? 'default' : 'destructive'} onClick={() => close(true)}>
+          <Button variant="destructive" onClick={() => close(true)}>
             {ask?.action}
           </Button>
         </DialogFooter>

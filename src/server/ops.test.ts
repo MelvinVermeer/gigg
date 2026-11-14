@@ -731,6 +731,20 @@ describe('availability', () => {
     await expect(bandOps.updateEvent(t.db, t.member, t.band, { slug: 'gig', fields: { ...fields, people: [t.outsider] } })).rejects.toBeInstanceOf(NotFound)
   })
 
+  it('the participants dialog sets the list right away; only members can, and only band people', async () => {
+    const t = await testDb()
+    await gig(t)
+    expect((await bandOps.listBandPeople(t.db, t.reader, t.band, {})).map((p) => p.email)).toEqual(['member@example.com', 'reader@example.com'])
+    await ask(t, t.reader)
+    await bandOps.setParticipants(t.db, t.member, t.band, { event: 'gig', people: [t.member] })
+    expect(await people(t)).toEqual([['member@example.com', false, null, false]])
+    // Added again, the reader starts over: not asked.
+    await bandOps.setParticipants(t.db, t.member, t.band, { event: 'gig', people: [t.member, t.reader] })
+    expect(await people(t)).toContainEqual(['reader@example.com', false, null, true])
+    await expect(bandOps.setParticipants(t.db, t.reader, t.band, { event: 'gig', people: [] })).rejects.toBeInstanceOf(Forbidden)
+    await expect(bandOps.setParticipants(t.db, t.member, t.band, { event: 'gig', people: [t.outsider] })).rejects.toBeInstanceOf(NotFound)
+  })
+
   it('checking availability asks only people not asked yet', async () => {
     const t = await testDb()
     await gig(t)
