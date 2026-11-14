@@ -40,7 +40,7 @@ test('a member invites someone, who signs in and sees the band, then is removed'
   await guest.goto('/demo-band/settings')
   await expect(guest.getByLabel('Invite by email')).toHaveCount(0)
 
-  await row.getByRole('button', { name: 'Remove' }).click()
+  await row.getByRole('button', { name: `Remove ${email}` }).click()
   await member.getByRole('dialog').getByRole('button', { name: 'Remove' }).click()
   await expect(row).toHaveCount(0)
   expect((await guest.request.get('/demo-band/songs')).status()).toBe(404)

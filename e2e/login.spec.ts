@@ -45,7 +45,7 @@ test('sign in with an email link, add a passkey, sign back in with it', async ({
   const list = page.getByRole('list', { name: 'Your passkeys' })
   await expect(list.getByRole('listitem')).toHaveCount(1)
   await expect(list.getByRole('listitem')).toContainText(/Chrome on \w+, added/)
-  await list.getByRole('button', { name: 'Delete' }).click()
+  await list.getByRole('button', { name: 'Delete passkey' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
   await expect(page.getByRole('status')).toHaveText('Passkey deleted')
   await expect(list).toHaveCount(0)

@@ -2,7 +2,7 @@ import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-r
 import { useEffect, useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 import { deviceName } from '#/lib/device-name'
-import { Check, KeyRound, Monitor, Moon, Plus, Sun } from 'lucide-react'
+import { Check, KeyRound, Monitor, Moon, Plus, Sun, Trash2 } from 'lucide-react'
 import { RadioGroup } from 'radix-ui'
 import { Field } from '#/components/Field'
 import { Badge } from '#/components/ui/badge'
@@ -166,8 +166,8 @@ function Settings() {
                         {p.createdAt && <span className="text-muted-foreground">{t.settings.added(new Date(p.createdAt).toLocaleDateString(t.intl))}</span>}
                       </span>
                       {online && (
-                        <Button variant="ghost" size="xs" onClick={() => deletePasskey(p.id)}>
-                          {t.common.delete}
+                        <Button variant="ghost" size="icon-sm" aria-label={t.settings.deletePasskey} onClick={() => deletePasskey(p.id)}>
+                          <Trash2 aria-hidden />
                         </Button>
                       )}
                     </li>
@@ -291,8 +291,8 @@ function Settings() {
                     <span className="min-w-0 flex-1 truncate">{m.name || m.email}</span>
                     <Badge variant={m.role === 'member' ? 'secondary' : 'outline'}>{t.role[m.role]}</Badge>
                     {online && m.email !== me?.email && (
-                      <Button variant="ghost" size="xs" onClick={() => removeMember(m.email)}>
-                        {t.common.remove}
+                      <Button variant="ghost" size="icon-sm" aria-label={t.settings.removeMember(m.name || m.email)} onClick={() => removeMember(m.email)}>
+                        <Trash2 aria-hidden />
                       </Button>
                     )}
                   </li>
