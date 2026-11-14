@@ -32,14 +32,16 @@ test('visited pages, show mode and preloaded gigs work offline', async ({ page, 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Setlist')
 })
 
-test('opening a band preloads the songs and every song for offline', async ({ page, context }) => {
-  await page.goto('/demo-band/setlists')
+test('opening a band preloads setlists, songs and every song for offline', async ({ page, context }) => {
+  await page.goto('/demo-band/events')
   await page.evaluate(() => navigator.serviceWorker.ready)
-  // Now controlled by the service worker: the band preloads its songs list and every song.
+  // Now controlled by the service worker: the band preloads setlists, its songs list and every song.
   await page.reload()
   await page.waitForLoadState('networkidle')
 
   await context.setOffline(true)
+  await page.getByRole('link', { name: 'Setlists' }).click()
+  await expect(page.getByRole('heading', { name: 'Setlists', level: 1 })).toBeVisible()
   await page.getByRole('link', { name: 'All songs' }).click()
   await expect(page.getByRole('heading', { name: 'Songs', level: 1 })).toBeVisible()
   const song = page.locator('table.songs tbody a').last()

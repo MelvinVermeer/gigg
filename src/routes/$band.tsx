@@ -17,7 +17,8 @@ function BandLayout() {
   const t = useT()
   useEffect(() => rememberBand(band.slug), [band.slug])
 
-  // Once per band opened online: fetch the songs list and every song (text only, no files), so the
+  // Once per band opened online: fetch the setlists list (with its blocks), the songs list and
+  // every song (text only, no files), so the
   // service worker has them offline. The same requests the route loaders make (same cache keys),
   // called directly so the router's own state is left alone.
   // One song at a time, after the page rendered.
@@ -26,6 +27,8 @@ function BandLayout() {
     if (!navigator.onLine) return
     let stop = false
     bandOp('getBand', band.slug, {}).catch(() => {})
+    bandOp('listSetlists', band.slug, { archived: false }).catch(() => {})
+    bandOp('listBlocks', band.slug, { archived: false }).catch(() => {})
     bandOp('listSongs', band.slug, { archived: false })
       .then(async (songs) => {
         for (const s of songs) {
