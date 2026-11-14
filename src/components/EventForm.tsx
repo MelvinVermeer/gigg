@@ -1,4 +1,5 @@
 import { Plus, X } from 'lucide-react'
+import { Link, useParams } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { Combobox } from '#/components/Combobox'
 import { Field, FormError } from '#/components/Field'
@@ -19,9 +20,13 @@ export type EventFormData = {
   venues: Venue[]
   contacts: Contact[]
   lastContactsByVenue: Record<string, string[]>
+  /** Non-cancelled, non-archived events, for the same-date warning */
+  events: { slug: string; title: string; date: string; bookingStatus: NonNullable<EventFields['bookingStatus']> }[]
 }
 
 type Initial = Partial<Omit<EventFields, 'venue' | 'contacts'>> & {
+  /** In edit: the event itself, left out of the same-date warning */
+  slug?: string
   venueId?: string | null
   contacts?: { id: string; name: string }[]
 }
@@ -47,6 +52,7 @@ const matches = (label: string, text: string) => label.toLowerCase().includes(te
 
 export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Props) {
   const t = useT()
+  const { band } = useParams({ strict: false }) as { band: string }
   const venues = useMemo(() => withLabels(data.venues, (v) => v.name, (v) => v.address), [data.venues])
   const contacts = useMemo(() => withLabels(data.contacts, (c) => c.name, (c) => c.email ?? c.phone), [data.contacts])
   const contactById = (id: string) => contacts.find((c) => c.id === id)!
@@ -57,6 +63,8 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
     (initial.contacts ?? []).map((c) => ({ key: c.id, id: c.id, name: contacts.find((x) => x.id === c.id)?.label ?? c.name })),
   )
   const [contactText, setContactText] = useState('')
+  const [date, setDate] = useState(initial.date ?? '')
+  const sameDate = data.events.filter((e) => e.date === date && e.slug !== initial.slug)
   const [startTime, setStartTime] = useState(initial.startTime?.slice(0, 5) ?? '')
   const [endTime, setEndTime] = useState(initial.endTime?.slice(0, 5) ?? '')
   const [error, setError] = useState('')
@@ -114,8 +122,22 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
         <Input name="title" required maxLength={200} defaultValue={initial.title ?? ''} />
       </Field>
       <Field label={t.common.date}>
-        <Input name="date" type="date" required defaultValue={initial.date ?? ''} />
+        <Input name="date" type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
       </Field>
+      {sameDate.length > 0 && (
+        <p role="status" className="-mt-3 text-sm text-amber-700 dark:text-amber-400">
+          {t.eventForm.sameDate}{' '}
+          {sameDate.map((e, i) => (
+            <span key={e.slug}>
+              {i > 0 && ', '}
+              <Link to="/$band/events/$event" params={{ band, event: e.slug }} className="underline">
+                {e.title}
+              </Link>{' '}
+              ({t.booking[e.bookingStatus].toLowerCase()})
+            </span>
+          ))}
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={t.eventForm.start} hint={t.common.optional}>
           <Input name="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required={!!endTime} />

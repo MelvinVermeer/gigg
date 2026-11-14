@@ -199,6 +199,7 @@ export const en = {
     newVenue: (name: string) => `New venue “${name}”`,
     newContact: (name: string) => `New contact “${name}”`,
     contactPlaceholder: 'Search or type a new contact',
+    sameDate: 'Heads up: there is already an event on this date:',
     notesHint: '(load-in, soundcheck, parking, …)',
   },
 

@@ -6,6 +6,7 @@ The term is **events** (URL `/<band>/events/<slug>`).
 - Slug: slugified title; if taken, the date in front (`2026-12-05-agnietenhof`), only then `-2`.
 - Linked **venue** (own record, reusable)
 - Linked **contact(s)** (own record, reusable)
+- Picking a date that already has another event (not cancelled, not archived; times ignored) shows a non-blocking warning under the date field, linking to those events.
 - Venue and contacts are **search boxes** in the event form. A new name creates the venue/contact right there (a “+ New …” row in the dropdown), without leaving the form. Picking a venue suggests the contacts used last time at that venue.
 - Band start page = upcoming events. Past events are behind a filter.
 - One filter menu on the events list: upcoming/past, statuses, mine/everyone.

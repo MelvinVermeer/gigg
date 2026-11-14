@@ -191,6 +191,18 @@ describe('events', () => {
     expect(sam.venueId).toBe(hall.id)
   })
 
+  it('lists the events per date for the same-date warning, without cancelled or archived ones', async () => {
+    const t = await testDb()
+    await bandOps.createEvent(t.db, t.member, t.band, { title: 'Off', date: day(5), bookingStatus: 'cancelled' })
+    const gone = await bandOps.createEvent(t.db, t.member, t.band, { title: 'Gone', date: day(5) })
+    await bandOps.archiveEvent(t.db, t.member, t.band, { slug: gone.slug })
+    const kept = await bandOps.createEvent(t.db, t.member, t.band, { title: 'Kept', date: day(5), bookingStatus: 'option' })
+    const data = await bandOps.eventFormData(t.db, t.member, t.band, {})
+    expect(data.events.filter((e) => e.date === day(5))).toEqual([
+      { slug: kept.slug, title: 'Kept', date: day(5), bookingStatus: 'option' },
+    ])
+  })
+
   it('replaces contacts on update and redirects the old slug after a rename', async () => {
     const t = await testDb()
     const updated = await bandOps.updateEvent(t.db, t.member, t.band, {

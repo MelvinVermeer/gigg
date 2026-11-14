@@ -584,7 +584,14 @@ const eventOps = {
     for (const l of latest)
       lastContactsByVenue[l.venueId!] = links.filter((x) => x.eventId === l.eventId).map((x) => x.contactId)
 
-    return { venues: venueRows, contacts: contactRows, lastContactsByVenue }
+    // For the same-date warning; the form filters by date in the browser.
+    // ponytail: every non-cancelled event of the band; limit to a date window if bands get thousands.
+    const dated = await tx
+      .select({ slug: events.slug, title: events.title, date: events.date, bookingStatus: events.bookingStatus })
+      .from(events)
+      .where(and(eq(events.bandId, bandId), isNull(events.archivedAt), ne(events.bookingStatus, 'cancelled')))
+
+    return { venues: venueRows, contacts: contactRows, lastContactsByVenue, events: dated }
   }),
 
   /** Create an event. Its setlist is chosen afterwards, on the event page. */

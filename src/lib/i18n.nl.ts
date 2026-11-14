@@ -198,6 +198,7 @@ export const nl: Dict = {
     newVenue: (name) => `Nieuwe locatie “${name}”`,
     newContact: (name) => `Nieuw contact “${name}”`,
     contactPlaceholder: 'Zoek of typ een nieuw contact',
+    sameDate: 'Let op: er is al een event op deze datum:',
     notesHint: '(opbouw, soundcheck, parkeren, …)',
   },
 
