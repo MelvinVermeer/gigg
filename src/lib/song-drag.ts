@@ -71,7 +71,8 @@ function begin(row: HTMLElement, x0: number, y0: number, pointerId: number, onDr
   const fromZone = row.closest('[data-drop-zone]')!
   const from = { list: zones.indexOf(fromZone as HTMLElement), index: rowsOf(fromZone).indexOf(row) }
   dragging = true
-  haptic()
+  // A short tick on Android. iPhone has no way: since iOS 26.5 only a real tap on an `<input switch>` ticks, and a long-press drag never is one.
+  navigator.vibrate?.(10)
 
   const rect = row.getBoundingClientRect()
   const ghost = row.cloneNode(true) as HTMLElement
@@ -161,25 +162,3 @@ function begin(row: HTMLElement, x0: number, y0: number, pointerId: number, onDr
 /** lucide trash-2 */
 const BIN =
   '<svg class="drag-bin" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>'
-
-let hapticLabel: HTMLLabelElement | undefined
-/**
- * A short tick. Android: the Vibration API. iOS Safari has none, so we click a hidden `<input switch>`, which ticks on iOS 18+.
- * ponytail: the switch trick is undocumented iOS behaviour; if it stops ticking, the lifted row is still the cue.
- */
-function haptic() {
-  if (typeof navigator.vibrate === 'function') {
-    navigator.vibrate(10)
-    return
-  }
-  if (!hapticLabel) {
-    hapticLabel = document.createElement('label')
-    const input = document.createElement('input')
-    input.type = 'checkbox'
-    input.setAttribute('switch', '')
-    hapticLabel.append(input)
-    hapticLabel.style.display = 'none'
-    document.body.append(hapticLabel)
-  }
-  hapticLabel.click()
-}
