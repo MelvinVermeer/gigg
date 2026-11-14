@@ -7,6 +7,7 @@ test.describe('user menu', () => {
 
   test('shows the email, the band and settings', async ({ page }) => {
     await page.goto('/')
+    await expect(page).toHaveURL(/\/demo-band\/events$/) // `/` opens your band
     const avatar = page.getByRole('button', { name: 'Account menu for Dev Reader' })
     await expect(avatar).toHaveText('D')
     await expect(page.getByRole('link', { name: 'Sign in' })).toHaveCount(0)
