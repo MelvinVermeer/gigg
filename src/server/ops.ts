@@ -478,7 +478,6 @@ const eventOps = {
           endTime: events.endTime,
           venue: venues.name,
           bookingStatus: events.bookingStatus,
-          paymentStatus: events.paymentStatus,
           mine: sql<boolean>`${or(
             eq(events.createdBy, userId),
             exists(

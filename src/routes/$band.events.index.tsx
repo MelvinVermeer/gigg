@@ -122,7 +122,6 @@ function Events() {
               </span>
               <span className="status flex shrink-0 gap-1">
                 <Badge variant={e.bookingStatus === 'confirmed' ? 'default' : 'outline'}>{t.booking[e.bookingStatus]}</Badge>
-                {e.paymentStatus !== 'open' && <Badge variant="secondary">{t.payment[e.paymentStatus]}</Badge>}
               </span>
             </li>
           ))}
