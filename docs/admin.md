@@ -10,4 +10,4 @@ Anyone in a band sends feedback from the account menu (`/<band>/feedback`); the 
 
 ## Manual
 
-A short static in-app manual at `/manual`, linked from the account menu.
+A short static in-app manual at `/manual`, linked from the account menu. Its archive section links to the archived items of the current band (the last-opened one).

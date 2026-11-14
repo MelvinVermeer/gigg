@@ -1,5 +1,7 @@
 import { Link, createFileRoute, getRouteApi } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { currentBand } from '#/lib/current-band'
 import type { Locale } from '#/lib/i18n'
 
 export const Route = createFileRoute('/manual')({ component: Manual })
@@ -129,9 +131,11 @@ function Manual() {
   const bands = root.user?.bands ?? []
   const m = text[root.locale]
   const [songs, events, setlists, blocks, venues, contacts] = m.links
-  const archive = bands.map((b) => (
-    <section key={b.slug} aria-label={m.archived(b.name)}>
-      {bands.length > 1 && <h3>{b.name}</h3>}
+  // The current band comes from a cookie; read it after mount, like `/` does, so the page stays cacheable.
+  const [b, setBand] = useState<(typeof bands)[number]>()
+  useEffect(() => setBand(currentBand(bands, document.cookie)), [bands])
+  const archive = b && (
+    <section aria-label={m.archived(b.name)}>
       <ul className="mt-3 grid gap-1 text-sm">
         <li>
           <Link to="/$band/songs" params={{ band: b.slug }} search={{ archived: true }}>
@@ -165,7 +169,7 @@ function Manual() {
         </li>
       </ul>
     </section>
-  ))
+  )
   return (
     <main className="mx-auto w-full max-w-3xl px-4 pt-8 pb-16">
       <h1>{m.title}</h1>
