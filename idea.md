@@ -23,7 +23,6 @@ Backlog only. What's built is described in [docs/](docs/).
 - Feedback: optional push to GitHub Issues via backend API (users don't need a GitHub account); GitHub Issues should not show factory-related labels
 - Privacy: anonymise a user record when someone leaves
 - Styled invite emails: HTML with branding instead of plain text
-- Setlist header buttons: the buttons above a setlist don't feel right yet; rethink their layout
 - Tests: accessibility check per page (`@axe-core/playwright`), public file link works then is revoked, smoke test against the Vercel preview deploy
 - Contact search: results show which events/venues the contact is linked to
 - Setlist edit: drag and drop in blocks doesn't work yet, and the edit view doesn't feel right

@@ -69,7 +69,8 @@ test.describe('member', () => {
 
     // Show mode: one set per screen, next set by button or key.
     await page.getByRole('link', { name: '3 songs · 12:50' }).click()
-    await page.getByRole('link', { name: 'Show mode' }).click()
+    await page.getByRole('button', { name: 'Download' }).click()
+    await page.getByRole('menuitem', { name: 'Show mode' }).click()
     const set = (name: string) => page.getByRole('article', { name })
     await expect(set('Set 1')).toBeInViewport()
     await expect(set('Set 1').locator('li')).toHaveText(['Slow One Am', 'Opening Song E'])
@@ -82,8 +83,16 @@ test.describe('member', () => {
     await page.getByRole('link', { name: 'Close show mode' }).click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Setlist')
 
-    // Stage-floor PDF: one page per set.
-    await page.getByRole('link', { name: 'Stage-floor PDF' }).click()
+    // Excel: a CSV built in the browser.
+    const download = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download' }).click()
+    await page.getByRole('menuitem', { name: 'Excel' }).click()
+    expect((await download).suggestedFilename()).toMatch(/show-.*\.csv$/)
+    await expect(page.getByRole('menu')).toHaveCount(0)
+
+    // Print (stage-floor PDF): one page per set.
+    await page.getByRole('button', { name: 'Download' }).click()
+    await page.getByRole('menuitem', { name: 'Print' }).click()
     await expect(page.locator('.stage-page').first()).toContainText('Slow One')
     const pdf = (await page.pdf({ preferCSSPageSize: true })).toString('latin1')
     expect(pdf.match(/\/Type\s*\/Page\b(?!s)/g)).toHaveLength(2)
@@ -94,7 +103,7 @@ test.describe('member', () => {
     await page.getByLabel('Add song to Set 2').fill('Neon')
     await page.getByRole('option', { name: /Neon Harbour/ }).click()
     await expect(songsIn(page, 1)).toHaveText(['Closer', 'Neon Harbour'])
-    await expect(page.getByRole('link', { name: 'Show mode' })).toHaveCount(0) // not while editing
+    await expect(page.getByRole('button', { name: 'Download' })).toHaveCount(0) // not while editing
     await expect(page.getByRole('option', { name: `Add “Brand new ${ts}” as a new song` })).toHaveCount(0)
     await addSong(page, 'Set 2', `Brand new ${ts}`) // only match is "add as new", so Enter creates it
     await expect(songsIn(page, 1)).toHaveText(['Closer', 'Neon Harbour', `Brand new ${ts}`])
@@ -158,10 +167,12 @@ test.describe('standalone setlists', () => {
     await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeVisible() // a filled setlist opens to view
 
     // Show mode and stage-floor PDF, like an event's setlist.
-    await page.getByRole('link', { name: 'Show mode' }).click()
+    await page.getByRole('button', { name: 'Download' }).click()
+    await page.getByRole('menuitem', { name: 'Show mode' }).click()
     await expect(page.getByRole('article', { name: 'Set 1' })).toContainText('Neon Harbour')
     await page.getByRole('link', { name: 'Close show mode' }).click()
-    await page.getByRole('link', { name: 'Stage-floor PDF' }).click()
+    await page.getByRole('button', { name: 'Download' }).click()
+    await page.getByRole('menuitem', { name: 'Print' }).click()
     await expect(page.locator('.stage-page').first()).toContainText(`Set 1 · Festival ${ts}`)
     await page.getByRole('link', { name: '← Setlist' }).click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Festival ${ts}`)

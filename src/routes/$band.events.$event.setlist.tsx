@@ -1,8 +1,9 @@
 import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { SetlistBuilder } from '#/components/SetlistBuilder'
+import { SetlistDownload } from '#/components/SetlistDownload'
 import { formatWhen } from '#/lib/date'
-import { Check, MonitorPlay, Pencil, Printer } from 'lucide-react'
+import { Check, Pencil } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '#/components/ui/dialog'
 import { Separator } from '#/components/ui/separator'
@@ -47,25 +48,15 @@ function Setlist() {
         <h1 className="mb-0">{t.common.setlist}</h1>
         {/* Offline you can't start editing, but an edit already open stays (and can be closed). */}
         {member && (online || editing) && (
-          <Button size="sm" variant="outline" onClick={() => setEditing(!editing)}>
+          // Done refetches, so downloads include what was just edited.
+          <Button size="sm" variant="outline" onClick={() => {
+            setEditing(!editing)
+            if (editing) router.invalidate()
+          }}>
             {editing ? <Check aria-hidden /> : <Pencil aria-hidden />} {editing ? t.common.done : t.common.edit}
           </Button>
         )}
       </div>
-      {data.sets.length > 0 && !editing && (
-        <div className="mb-6 flex flex-wrap gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link to="/$band/events/$event/show" params={params}>
-              <MonitorPlay aria-hidden /> {t.setlist.showMode}
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/$band/events/$event/print" params={params}>
-              <Printer aria-hidden /> {t.setlist.stagePdf}
-            </Link>
-          </Button>
-        </div>
-      )}
       {member && editing && data.standards.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
           <NativeSelect
@@ -123,7 +114,22 @@ function Setlist() {
       <SetlistBuilder
         // A fresh builder when switching between standard and custom.
         key={data.standard?.id ?? 'custom'}
-        band={band.slug} target={{ event: data.event.slug }} data={data} editable={member && editing && !data.standard} />
+        band={band.slug}
+        target={{ event: data.event.slug }}
+        data={data}
+        editable={member && editing && !data.standard}
+        actions={
+          data.sets.length > 0 &&
+          !editing && (
+            <SetlistDownload
+              file={data.event.slug}
+              sets={data.sets}
+              show={<Link to="/$band/events/$event/show" params={params} />}
+              print={<Link to="/$band/events/$event/print" params={params} />}
+            />
+          )
+        }
+      />
       {member && editing && (
         <>
           <Separator className="my-8" />

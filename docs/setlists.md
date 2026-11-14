@@ -17,5 +17,7 @@ Setlist
 - Blocks are managed on the Setlists page (`/<band>/setlists`).
 - Clonable.
 - Total duration per set / setlist.
+- **Download menu** (right of the song count, not while editing): Excel, Print, Show mode.
+- **Excel**: a CSV built in the browser (works offline): `# ; Title ; Key ; BPM ; Tuning ; Duration`, numbered per set, a blank row between sets, semicolons, UTF-8 with BOM. Named after the setlist (or event). A real .xlsx is still on the list.
 - **Show mode** (single person): one whole set per screen in big type, swipe to the next set, screen stays on, per-song notes visible, works offline. Also for standalone setlists.
 - **Stage-floor PDF export**: one page per set, via the print stylesheet. Blocks are not shown as headings, only their songs. Also for standalone setlists.

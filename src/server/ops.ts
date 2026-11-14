@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { formatDuration } from '#/lib/duration'
 import { dicts, label, locales, localeOf } from '#/lib/i18n'
 import type { Dict } from '#/lib/i18n'
+import { slugify } from '#/lib/slug'
 import type { Db } from './db'
 import {
   availabilityAnswer,
@@ -84,15 +85,7 @@ function bandOp<S extends z.ZodType, O>(
 
 // Slugs --------------------------------------------------------------------
 
-export function slugify(text: string) {
-  const slug = text
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-  return slug || 'untitled'
-}
+export { slugify }
 
 /** Slugs that collide with fixed routes such as /songs/new and /events/new. */
 const reserved = ['new']

@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react'
 import { useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -24,13 +25,15 @@ type Props = {
     blocks: { id: string; name: string; songs: SongRef[] }[]
   }
   editable: boolean
+  /** Shown at the end of the song-count line, e.g. the download menu. */
+  actions?: ReactNode
 }
 
 /**
  * Sets with songs and blocks. Every change saves the whole setlist right away.
  * Local state wins over refetched data (a refetch can land before a save); remount with a new `key` to start over from the server.
  */
-export function SetlistBuilder({ band, target, data, editable }: Props) {
+export function SetlistBuilder({ band, target, data, editable, actions }: Props) {
   const t = useT()
   const [sets, setSets] = useState<Set[]>(data.sets)
   const [status, setStatus] = useState<'saved' | 'saving' | 'error' | ''>('')
@@ -72,6 +75,7 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
             {{ saving: t.setlist.saving, saved: t.common.saved, error: t.setlist.notSaved }[status]}
           </Badge>
         )}
+        {actions}
       </p>
 
       {shown.length === 0 && <p className="text-muted-foreground">{t.common.noSetlistYet}</p>}
