@@ -9,6 +9,8 @@ import type { SongRef } from '#/components/SongListEditor'
 import { formatDuration } from '#/lib/duration'
 import { bandOp } from '#/server/fns'
 import { useT } from '#/lib/i18n'
+import { applyDrop } from '#/lib/drop'
+import type { OnDrop } from '#/lib/song-drag'
 
 type Set = { name: string; songs: SongRef[] }
 
@@ -51,10 +53,18 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
   const shown: Set[] = editable && sets.length === 0 ? [{ name: t.setlist.setN(1), songs: [] }] : sets
   const updateSet = (i: number, patch: Partial<Set>) => shown.map((s, j) => (j === i ? { ...s, ...patch } : s))
 
+  /** A drag moved or removed a song; sets it emptied disappear, like removing their last song. */
+  const drop: OnDrop = (from, to) => {
+    const lists = shown.map((s) => s.songs)
+    const next = applyDrop(lists, from, to)
+    if (next === lists) return
+    persist(shown.map((s, i) => ({ ...s, songs: next[i] })).filter((s, i) => s.songs.length || !shown[i].songs.length))
+  }
+
   const total = totalDuration(sets.flatMap((s) => s.songs))
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4" {...(editable && { 'data-drag-scope': '' })}>
       <p className="setlist-meta flex items-center gap-3 text-sm text-muted-foreground">
         {t.common.songCount(sets.flatMap((s) => s.songs).length)} · {formatDuration(total) || '0:00'}
         {status && (
@@ -67,7 +77,7 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
       {shown.length === 0 && <p className="text-muted-foreground">{t.common.noSetlistYet}</p>}
 
       {shown.map((set, i) => (
-        <section key={i} className="set rounded-xl border bg-card p-4">
+        <section key={i} className="set rounded-xl border bg-card p-4" data-drop-zone>
           <h2 className="flex items-center gap-3">
             {editable ? (
               <Input
@@ -91,6 +101,7 @@ export function SetlistBuilder({ band, target, data, editable }: Props) {
             blocks={data.blocks}
             editable={editable}
             // Removing the last song removes the set.
+            onDrop={drop}
             onChange={(songs) => persist(songs.length || !set.songs.length ? updateSet(i, { songs }) : shown.filter((_, j) => j !== i))}
           />
         </section>

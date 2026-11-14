@@ -1,12 +1,16 @@
 import { Link, useRouter } from '@tanstack/react-router'
-import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { ArrowDown, ArrowUp, GripVertical, Plus, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Combobox } from '#/components/Combobox'
 import { formatDuration } from '#/lib/duration'
 import { withLabels } from '#/lib/labels'
 import { bandOp } from '#/server/fns'
 import { useT } from '#/lib/i18n'
+import { applyDrop } from '#/lib/drop'
+import { onHandlePointerDown, onRowPointerDown, preventScrollWhileDragging } from '#/lib/song-drag'
+import type { OnDrop } from '#/lib/song-drag'
+import { cn } from '#/lib/utils'
 
 export type SongRef = { id: string; slug: string; title: string; key: string | null; durationSec: number | null }
 
@@ -20,12 +24,17 @@ type Props = {
   blocks?: { id: string; name: string; songs: SongRef[] }[]
   editable: boolean
   onChange: (songs: SongRef[]) => void
+  /** Drops handled by a parent with several lists (a setlist's sets). Without it this list is its own drag scope. */
+  onDrop?: OnDrop
 }
 
 export const totalDuration = (songs: SongRef[]) => songs.reduce((sum, s) => sum + (s.durationSec ?? 0), 0)
 
-/** An ordered list of songs: move up/down, remove, add from the repertoire. Used for sets and blocks. */
-export function SongListEditor({ band, label, songs, repertoire, blocks = [], editable, onChange }: Props) {
+/**
+ * An ordered list of songs: drag to reorder or out to remove (long-press on touch, grip handle with a mouse), remove, add from the repertoire.
+ * Up/down buttons stay for the keyboard, visible on focus. Used for sets and blocks.
+ */
+export function SongListEditor({ band, label, songs, repertoire, blocks = [], editable, onChange, onDrop }: Props) {
   const router = useRouter()
   const t = useT()
   const [text, setText] = useState('')
@@ -49,6 +58,15 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
     add([song])
   }
 
+  const drop: OnDrop = onDrop ?? ((from, to) => onChange(applyDrop([songs], from, to)[0]))
+  // Non-passive, so a drag can stop the page from scrolling (React's touch listeners are passive).
+  const root = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = root.current!
+    el.addEventListener('touchmove', preventScrollWhileDragging, { passive: false })
+    return () => el.removeEventListener('touchmove', preventScrollWhileDragging)
+  }, [])
+
   const move = (i: number, by: number) => {
     const next = [...songs]
     ;[next[i], next[i + by]] = [next[i + by], next[i]]
@@ -56,11 +74,27 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
   }
 
   return (
-    <div className="grid gap-3">
+    <div ref={root} className="grid gap-3" {...(editable && !onDrop && { 'data-drag-scope': '', 'data-drop-zone': '' })}>
       {songs.length ? (
-        <ol className="song-list divide-y">
+        <ol className={cn('song-list divide-y', editable && 'editable')}>
           {songs.map((s, i) => (
-            <li key={`${s.id}-${i}`} className="grid grid-cols-[1.75rem_1fr_2.5rem_3.25rem_auto] items-center gap-1 py-1.5 text-sm">
+            <li
+              key={`${s.id}-${i}`}
+              className={cn(
+                'grid grid-cols-[1.75rem_1fr_2.5rem_3.25rem_auto] items-center gap-1 py-1.5 text-sm',
+                editable && 'pointer-fine:grid-cols-[1.25rem_1.75rem_1fr_2.5rem_3.25rem_auto]',
+              )}
+              {...(editable && { 'data-drag-row': '', onPointerDown: (e) => onRowPointerDown(e, drop) })}
+            >
+              {editable && (
+                <span
+                  aria-hidden
+                  className="drag-handle hidden cursor-grab text-muted-foreground pointer-fine:flex"
+                  onPointerDown={(e) => onHandlePointerDown(e, drop)}
+                >
+                  <GripVertical className="size-4" />
+                </span>
+              )}
               <span className="text-muted-foreground tabular-nums">{i + 1}.</span>
               <span className="title font-medium [overflow-wrap:anywhere]">
                 <Link to="/$band/songs/$song" params={{ band, song: s.slug }} className="underline-offset-4 hover:underline">
@@ -71,12 +105,20 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
               <span className="text-muted-foreground tabular-nums">{formatDuration(s.durationSec)}</span>
               {editable ? (
                 <span className="flex gap-0.5">
-                  <Button variant="ghost" size="icon-sm" aria-label={t.songList.moveUp(s.title)} disabled={i === 0} onClick={() => move(i, -1)}>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="sr-only focus-visible:not-sr-only"
+                    aria-label={t.songList.moveUp(s.title)}
+                    disabled={i === 0}
+                    onClick={() => move(i, -1)}
+                  >
                     <ArrowUp />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon-sm"
+                    className="sr-only focus-visible:not-sr-only"
                     aria-label={t.songList.moveDown(s.title)}
                     disabled={i === songs.length - 1}
                     onClick={() => move(i, 1)}
@@ -94,7 +136,9 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
           ))}
         </ol>
       ) : (
-        <p className="text-sm text-muted-foreground">{t.common.noSongsYet}</p>
+        <p data-drop-empty className="text-sm text-muted-foreground">
+          {t.common.noSongsYet}
+        </p>
       )}
       {editable && (
         <Combobox

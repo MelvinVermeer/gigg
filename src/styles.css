@@ -252,3 +252,39 @@
     @apply border-t;
   }
 }
+
+/* Dragging songs (src/lib/song-drag.ts). Long-press must not select text or open the iOS link preview. */
+.song-list.editable > li {
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.dragging,
+.dragging * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+.drag-source {
+  opacity: 0.4;
+}
+.drag-ghost {
+  @apply fixed z-50 m-0 list-none rounded-md border bg-card px-2 shadow-lg;
+  pointer-events: none;
+  & .drag-bin {
+    @apply absolute top-1/2 right-2 hidden -translate-y-1/2;
+  }
+}
+.drag-ghost.drag-remove {
+  @apply border-destructive bg-destructive text-white;
+  & * {
+    color: inherit;
+  }
+  & .drag-bin {
+    display: block;
+  }
+  & button {
+    visibility: hidden;
+  }
+}
+.drag-line {
+  @apply pointer-events-none fixed z-40 -mt-px h-[3px] rounded-full bg-stage;
+}

@@ -51,7 +51,7 @@ test.describe('member', () => {
     await chooseNew(page) // opens in edit mode, on an empty Set 1
     await addSong(page, 'Set 1', 'Opening Song')
     await addSong(page, 'Set 1', 'Slow One')
-    await page.getByRole('button', { name: 'Move Slow One up' }).click()
+    await page.getByRole('button', { name: 'Move Slow One up' }).press('Enter') // keyboard-only: shown on focus
     await expect(songsIn(page, 0)).toHaveText(['Slow One', 'Opening Song'])
 
     await page.getByRole('button', { name: 'Add set' }).click()
@@ -98,6 +98,43 @@ test.describe('member', () => {
     await expect(page.getByRole('option', { name: `Add “Brand new ${ts}” as a new song` })).toHaveCount(0)
     await addSong(page, 'Set 2', `Brand new ${ts}`) // only match is "add as new", so Enter creates it
     await expect(songsIn(page, 1)).toHaveText(['Closer', 'Neon Harbour', `Brand new ${ts}`])
+  })
+})
+
+test.describe('drag and drop', () => {
+  test.use(asMember)
+
+  /** Mouse drag by the grip handle to (x, y); waits for the drop indicator before letting go. */
+  async function drag(page: Page, title: string, to: { x: number; y: number }, remove = false) {
+    const row = page.locator('ol.song-list li', { hasText: title })
+    await row.locator('.drag-handle').hover()
+    await page.mouse.down()
+    await page.mouse.move(to.x, to.y, { steps: 8 })
+    await expect(page.locator(remove ? '.drag-ghost.drag-remove' : '.drag-line')).toBeVisible()
+    await page.mouse.up()
+  }
+
+  test('moves a song between sets and removes one dragged out', async ({ page }) => {
+    await newEvent(page, `Drag ${Date.now()}`)
+    await chooseNew(page)
+    await addSong(page, 'Set 1', 'Opening Song')
+    await addSong(page, 'Set 1', 'Slow One')
+    await page.getByRole('button', { name: 'Add set' }).click()
+    await addSong(page, 'Set 2', 'Closer')
+    await expect(songsIn(page, 1)).toHaveText(['Closer'])
+
+    // Closer to the top of Set 1; Set 2 is left empty, so it goes.
+    const first = (await songsIn(page, 0).first().boundingBox())!
+    await drag(page, 'Closer', { x: first.x + 10, y: first.y + 2 })
+    await expect(songsIn(page, 0)).toHaveText(['Closer', 'Opening Song', 'Slow One'])
+    await expect(page.locator('section.set')).toHaveCount(1)
+
+    // Out to the screen's edge: removed.
+    await drag(page, 'Slow One', { x: 5, y: first.y }, true)
+    await expect(songsIn(page, 0)).toHaveText(['Closer', 'Opening Song'])
+    await expect(page.getByRole('status')).toHaveText('Saved')
+    await page.reload()
+    await expect(songsIn(page, 0)).toHaveText(['Closer', 'Opening Song'])
   })
 })
 

@@ -81,7 +81,7 @@ Setlist
 
 - Linked to an event (one setlist per event), at `/<band>/events/<event>/setlist`
 - **Standalone setlists** (no event: "Standard 2 sets", "Short club set") at `/<band>/setlists`. A new event can start from a copy of one (picked in the event form); copies, never live links, like blocks.
-- Builder: every change saves immediately; songs move with ↑ ↓ (no drag and drop, works on phones); new setlist starts empty or as a copy of another setlist (standalone or an event's)
+- Builder: every change saves immediately; songs move by drag and drop, within a set or between sets (long-press on touch with a small haptic tick, a grip handle with a mouse; a yellow line shows where it lands); dragged out of the setlist (above/below the sets, or to the screen's side edge) removes it. Blocks reorder the same way. ↑ ↓ stay for the keyboard, visible on focus; new setlist starts empty or as a copy of another setlist (standalone or an event's)
 - Blocks are managed at `/<band>/blocks` (linked from Songs and the builder)
 - Clonable
 - Total duration per set / setlist
@@ -214,7 +214,7 @@ Each of these needs a **grill-me session** before building: the open questions b
 - **C. Availability vs. assignment (decide first, A and B depend on it).** Find the balance between asking everyone whether they can make it and just assigning the people who are relevant to an event. Also: log your non-availability ahead of time (holidays, blocked dates), maybe pre-filling answers to availability checks. Open: does an event get a list of assigned people, and how does that relate to availability answers?
 - **A. Event filtering and default view.** Filter the events list; by default show only confirmed gigs you're part of. Remember the chosen view per user or device. The same filter for the iCal feed ("only my events/gigs"). Open: what "part of" means (see C).
 - **B. Event types and money.** Event types such as *repetitie* (rehearsal) besides gigs. A fee field (*vergoeding*) per event, with free events as an empty or zero fee; later, totals per year. Open: which fields (booking/payment status, fee) apply to which type.
-- **D. Setlists and songs.** Drag and drop to reorder songs (the up/down arrows already exist; native drag and drop is flaky on mobile). Personal notes per song, visible only to you (different from per-song notes in a setlist). A setting for which song fields a setlist shows (key, BPM, duration…), tied in with the other PDFs.
+- **D. Setlists and songs.** ~~Drag and drop~~ (done). Personal notes per song, visible only to you (different from per-song notes in a setlist). A setting for which song fields a setlist shows (key, BPM, duration…), tied in with the other PDFs.
 - **Styled invite emails.** HTML emails with branding instead of plain text.
 
 ### From feedback (2026-11-12, second batch)
