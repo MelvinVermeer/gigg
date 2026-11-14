@@ -8,6 +8,7 @@ import {
   blocks,
   contacts,
   eventContacts,
+  eventPeople,
   events,
   memberships,
   setItems,
@@ -59,6 +60,8 @@ export async function seed(db: Db) {
     { bandId: band.id, eventId: summer.id, contactId: promoter.id },
     { bandId: band.id, eventId: spring.id, contactId: promoter.id },
   ])
+  // The member is on both (not asked yet), so they show under "Mine".
+  await db.insert(eventPeople).values([summer, spring].map((e) => ({ bandId: band.id, eventId: e.id, userId: member.id })))
   return true
 }
 
@@ -235,6 +238,9 @@ export async function seedDemo(db: Db) {
       ] as const
     ).map(([e, c]) => ({ bandId, eventId: e.id, contactId: c.id })),
   )
+  await db.insert(eventPeople).values(
+    (await db.select({ id: events.id }).from(events).where(eq(events.bandId, bandId))).map((e) => ({ bandId, eventId: e.id, userId: member.id })),
+  ).onConflictDoNothing()
 
   const run = (titles: string[]) => titles.map((t) => song[t])
   const acoustic = ['Paper Lanterns', 'Little Fires', 'Lighthouse Keeper']

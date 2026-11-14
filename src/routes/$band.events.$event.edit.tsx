@@ -13,13 +13,14 @@ export const Route = createFileRoute('/$band/events/$event/edit')({
       bandOp('eventFormData', params.band, {}),
     ])
     if (res.moved) throw redirect({ to: '/$band/events/$event/edit', params: { ...params, event: res.slug } })
-    return { ...res, data }
+    const people = await bandOp('getAvailability', params.band, { event: res.event.slug })
+    return { ...res, data, people: people.map((p) => p.userId) }
   },
   component: EditEvent,
 })
 
 function EditEvent() {
-  const { event, contacts, data } = Route.useLoaderData()
+  const { event, contacts, data, people } = Route.useLoaderData()
   const { band } = Route.useParams()
   const navigate = useNavigate()
   const t = useT()
@@ -47,7 +48,7 @@ function EditEvent() {
       <EventForm
         id="event-form"
         data={data}
-        initial={{ ...event, contacts }}
+        initial={{ ...event, contacts, people }}
         submitLabel={t.common.save}
         onSubmit={async (fields) => {
           const saved = await bandOp('updateEvent', band, { slug: event.slug, fields })

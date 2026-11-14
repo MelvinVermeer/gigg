@@ -1,7 +1,7 @@
 import { Link, createFileRoute, getRouteApi, redirect, useRouter } from '@tanstack/react-router'
 import { formatDate, formatTimes } from '#/lib/date'
 import { formatDuration } from '#/lib/duration'
-import { Availability, AvailabilitySummary } from '#/components/Availability'
+import { Availability } from '#/components/Availability'
 import { Files } from '#/components/Files'
 import { Markdown } from '#/components/Markdown'
 import { ContactLink } from '#/components/PhoneLink'
@@ -58,7 +58,6 @@ function Event() {
               <span className="whitespace-nowrap">{formatDate(event.date, t.intl)}</span>
               {event.startTime && <> <span className="whitespace-nowrap">· {formatTimes(event.startTime, event.endTime)}</span></>}
             </dd>
-            <AvailabilitySummary band={band.slug} event={event.slug} info={availability} canAsk={canEdit && !event.archivedAt} />
             <dt className="text-muted-foreground">{t.common.venue}</dt>
             <dd>
               {venue ? (
@@ -109,7 +108,7 @@ function Event() {
           {event.notes && <Markdown className="notes mt-4 border-t pt-4 text-sm">{event.notes}</Markdown>}
         </CardContent>
       </Card>
-      <Availability band={band.slug} event={event.slug} info={availability} canAsk={canEdit && !event.archivedAt} />
+      <Availability band={band.slug} event={event.slug} people={availability} canAsk={canEdit && !event.archivedAt} />
       <Files band={band.slug} owner={{ event: event.slug }} files={files} canEdit={canEdit && !event.archivedAt} />
     </>
   )

@@ -62,13 +62,7 @@ function Answer() {
                 {t.availability.staleLink}
               </p>
             )}
-            {r.closed ? (
-              <p role="status" className="rounded-md bg-muted px-3 py-2 text-sm">
-                {t.availability.closed}
-                {r.answer && t.availability.yourAnswerWas(labels[r.answer])}
-              </p>
-            ) : (
-              <form onSubmit={submit} className="grid gap-5">
+            <form onSubmit={submit} className="grid gap-5">
                 <fieldset>
                   <legend className="mb-3 text-sm font-medium">{t.availability.yourAnswer}</legend>
                   <AnswerPicker value={choice} onChange={setChoice} />
@@ -88,7 +82,6 @@ function Answer() {
                 )}
                 <FormError>{error}</FormError>
               </form>
-            )}
           </CardContent>
         </Card>
       </main>

@@ -1,5 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, onTestFinished } from 'vitest'
 import { bands, changes, contacts, events, memberships, setlists, songs, users, venues } from './db/schema'
 import { answerByToken, archiveBand, availabilityByToken, bandOps, calendarByToken, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, setFeedbackDone, slugify } from './ops'
 import type { BandOpName } from './ops'
@@ -133,15 +133,17 @@ describe('events', () => {
     ])
   })
 
-  it('marks mine: created by me or my availability asked', async () => {
+  it("marks mine: I'm on the event's list and didn't answer no", async () => {
     const t = await testDb()
-    await bandOps.createEvent(t.db, t.member, t.band, { title: 'Lead Gig', date: day(3) })
+    await bandOps.createEvent(t.db, t.member, t.band, { title: 'Lead Gig', date: day(3), people: [t.reader] })
     const mine = async (user: string) => (await bandOps.listEvents(t.db, user, t.band, {})).map((e) => [e.title, e.bookingStatus, e.mine])
-    // Every status, everyone's; the seed's creator is the member.
-    expect(await mine(t.member)).toEqual([['Lead Gig', 'lead', true], ['Summer Party', 'confirmed', true]])
-    expect(await mine(t.reader)).toEqual([['Lead Gig', 'lead', false], ['Summer Party', 'confirmed', false]])
-    await bandOps.askAvailability(t.db, t.member, t.band, { event: 'summer-party', emails: ['reader@example.com'] })
-    expect(await mine(t.reader)).toEqual([['Lead Gig', 'lead', false], ['Summer Party', 'confirmed', true]])
+    // Every status, everyone's; creating an event doesn't make it yours (the seed puts the member on Summer Party).
+    expect(await mine(t.member)).toEqual([['Lead Gig', 'lead', false], ['Summer Party', 'confirmed', true]])
+    expect(await mine(t.reader)).toEqual([['Lead Gig', 'lead', true], ['Summer Party', 'confirmed', false]])
+    await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'lead-gig', answer: 'maybe' })
+    expect((await mine(t.reader))[0]).toEqual(['Lead Gig', 'lead', true])
+    await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'lead-gig', answer: 'no' })
+    expect((await mine(t.reader))[0]).toEqual(['Lead Gig', 'lead', false])
   })
 
   it('creates a new venue and contacts inline and links them', async () => {
@@ -700,99 +702,125 @@ describe('members', () => {
 })
 
 describe('availability', () => {
-  const ask = (t: Awaited<ReturnType<typeof testDb>>, emails = ['member@example.com', 'reader@example.com']) =>
-    bandOps.askAvailability(t.db, t.member, t.band, { event: 'summer-party', emails })
-  const tokenOf = (a: Awaited<ReturnType<typeof ask>>, email: string) => a.recipients.find((r) => r.email === email)!.token
+  type T = Awaited<ReturnType<typeof testDb>>
+  /** An event with the member and the reader on it. */
+  const gig = (t: T) => bandOps.createEvent(t.db, t.member, t.band, { title: 'Gig', date: day(20), people: [t.member, t.reader] })
+  const ask = (t: T, user?: string) => bandOps.askAvailability(t.db, t.member, t.band, { event: 'gig', user })
+  const people = async (t: T) =>
+    (await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'gig' })).map((p) => [p.email, p.asked, p.answer, p.mine])
+  const lines = async (t: T) => (await bandOps.listChanges(t.db, t.reader, t.band, {})).flatMap((s) => s.lines)
 
-  it('shows asking, answering and closing in the history', async () => {
+  it('adds people from the event form without asking them; removing shows in the history', async () => {
     const t = await testDb()
-    await ask(t)
-    await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'summer-party', answer: 'maybe', note: 'after 9pm' })
-    await bandOps.closeAvailability(t.db, t.member, t.band, { event: 'summer-party' })
-    const saves = await bandOps.listChanges(t.db, t.reader, t.band, {})
-    const lines = saves.flatMap((s) => s.lines)
-    expect(lines.slice(0, 3)).toEqual([
-      expect.stringMatching(/^Closed the availability request for event/),
-      expect.stringMatching(/^“Dev Reader” answered maybe for event/),
-      expect.stringMatching(/^Asked availability for event/),
+    await gig(t)
+    expect(await people(t)).toEqual([
+      ['member@example.com', false, null, false],
+      ['reader@example.com', false, null, true],
     ])
-    expect(saves.flatMap((s) => s.diffs).some((d) => d.field === 'note' && d.to === 'after 9pm')).toBe(true)
+    expect(await lines(t)).toContainEqual('Added “Dev Reader” to event “Gig”')
+    const fields = { title: 'Gig', date: day(20) }
+    await bandOps.updateEvent(t.db, t.member, t.band, { slug: 'gig', fields }) // no `people`: list unchanged
+    expect(await people(t)).toHaveLength(2)
+    await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'gig', answer: 'yes' })
+    await bandOps.updateEvent(t.db, t.member, t.band, { slug: 'gig', fields: { ...fields, people: [t.member] } })
+    expect(await people(t)).toEqual([['member@example.com', false, null, false]])
+    expect((await lines(t))[0]).toBe('Removed “Dev Reader” from event “Gig”')
+    // Only band people can be added.
+    await expect(bandOps.updateEvent(t.db, t.member, t.band, { slug: 'gig', fields: { ...fields, people: [t.outsider] } })).rejects.toBeInstanceOf(NotFound)
   })
 
-  it('asks people, who answer in the app or from a link, with a note', async () => {
+  it('checking availability asks only people not asked yet', async () => {
     const t = await testDb()
-    const asked = await ask(t)
-    expect(asked.recipients).toHaveLength(2)
-    await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'summer-party', answer: 'maybe', note: 'after 9pm' })
-    expect(await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).toMatchObject({ open: true })
-    await answerByToken(t.db, tokenOf(asked, 'member@example.com'), { answer: 'yes', note: 'dropped: only a maybe explains itself' })
-    const info = await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })
-    expect(info).toMatchObject({ open: false, stale: false }) // everyone answered, so it closed itself
-    expect(info!.responses.map((r) => [r.email, r.answer, r.note, r.mine])).toEqual([
-      ['member@example.com', 'yes', null, false],
-      ['reader@example.com', 'maybe', 'after 9pm', true],
+    await gig(t)
+    const first = await ask(t)
+    expect(first.recipients.map((r) => r.email).sort()).toEqual(['member@example.com', 'reader@example.com'])
+    expect(await people(t)).toEqual([
+      ['member@example.com', true, null, false],
+      ['reader@example.com', true, null, true],
     ])
+    expect((await ask(t)).recipients).toEqual([]) // waiting people aren't asked again
+    expect(await lines(t)).toContainEqual('Asked availability for event “Gig”')
   })
 
-  it('only members ask or close; only people asked can answer; only band members can be asked', async () => {
+  it('asks one person at a time, while others wait', async () => {
     const t = await testDb()
-    await expect(bandOps.askAvailability(t.db, t.reader, t.band, { event: 'summer-party', emails: ['member@example.com'] })).rejects.toBeInstanceOf(Forbidden)
-    await expect(ask(t, ['outsider@example.com'])).rejects.toBeInstanceOf(NotFound)
-    await ask(t, ['member@example.com'])
-    await expect(bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'summer-party', answer: 'yes' })).rejects.toBeInstanceOf(NotFound)
-    await expect(bandOps.closeAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).rejects.toBeInstanceOf(Forbidden)
+    await gig(t)
+    expect((await ask(t, t.reader)).recipients.map((r) => r.email)).toEqual(['reader@example.com'])
+    await expect(ask(t, t.reader)).rejects.toBeInstanceOf(NotFound) // already waiting
+    await expect(ask(t, t.outsider)).rejects.toBeInstanceOf(NotFound)
+    expect((await ask(t)).recipients.map((r) => r.email)).toEqual(['member@example.com'])
   })
 
-  it('reopens the latest request with its answers and links', async () => {
+  it('answers from the emailed link, which reads without writing and can be changed', async () => {
     const t = await testDb()
-    const asked = await ask(t)
-    await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'summer-party', answer: 'no' })
-    await bandOps.closeAvailability(t.db, t.member, t.band, { event: 'summer-party' })
-    await expect(bandOps.reopenAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).rejects.toBeInstanceOf(Forbidden)
-    await bandOps.reopenAvailability(t.db, t.member, t.band, { event: 'summer-party' })
-    await expect(bandOps.reopenAvailability(t.db, t.member, t.band, { event: 'summer-party' })).rejects.toBeInstanceOf(NotFound)
-    const info = await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })
-    expect(info).toMatchObject({ open: true })
-    expect(info!.responses.find((r) => r.mine)).toMatchObject({ answer: 'no' })
-    await answerByToken(t.db, tokenOf(asked, 'member@example.com'), { answer: 'yes' })
-    const lines = (await bandOps.listChanges(t.db, t.reader, t.band, {})).flatMap((s) => s.lines)
-    expect(lines).toContainEqual(expect.stringMatching(/^Reopened the availability request for event/))
-  })
-
-  it('allows one open request per event; closing keeps answers and allows a new request', async () => {
-    const t = await testDb()
-    const asked = await ask(t)
-    await expect(ask(t)).rejects.toThrow('alreadyAsked')
-    await bandOps.closeAvailability(t.db, t.member, t.band, { event: 'summer-party' })
-    expect(await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).toMatchObject({ open: false })
-    await expect(bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'summer-party', answer: 'yes' })).rejects.toBeInstanceOf(NotFound)
-    expect(await availabilityByToken(t.db, tokenOf(asked, 'member@example.com'))).toMatchObject({ closed: true })
-    await expect(answerByToken(t.db, tokenOf(asked, 'member@example.com'), { answer: 'yes' })).rejects.toThrow('requestClosed')
-    await ask(t)
-    expect(await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).toMatchObject({ open: true })
-  })
-
-  it('flags answers as stale when the event moved', async () => {
-    const t = await testDb()
-    await ask(t)
-    await t.db.update(events).set({ date: '2031-01-01' }).where(eq(events.slug, 'summer-party'))
-    expect(await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'summer-party' })).toMatchObject({ stale: true })
-  })
-
-  it('link tokens: unknown tokens fail, reading changes nothing, the audit trail names the person, left members lose access', async () => {
-    const t = await testDb()
-    const asked = await ask(t)
-    const token = tokenOf(asked, 'reader@example.com')
+    await gig(t)
+    const token = (await ask(t, t.reader)).recipients[0].token
     await expect(availabilityByToken(t.db, 'nope')).rejects.toBeInstanceOf(NotFound)
-    expect(await availabilityByToken(t.db, token)).toMatchObject({ answer: null, closed: false, event: 'Summer Party' })
-    expect((await bandOps.getAvailability(t.db, t.member, t.band, { event: 'summer-party' }))!.responses.every((r) => !r.answer)).toBe(true)
-    await answerByToken(t.db, token, { answer: 'no', note: 'working' })
-    const [change] = await t.db.select().from(changes).where(and(eq(changes.tableName, 'availability_responses'), eq(changes.action, 'update')))
-    expect(change.userId).toBe(t.reader)
-    await expect(answerByToken(t.db, token, { answer: 'maybe' })).resolves.not.toThrow() // changing is allowed
+    expect(await availabilityByToken(t.db, token)).toMatchObject({ answer: null, stale: false, event: 'Gig' })
+    await answerByToken(t.db, token, { answer: 'maybe', note: 'after 9pm' })
+    const [change] = await t.db.select().from(changes).where(and(eq(changes.tableName, 'event_people'), sql`${changes.after}->>'answer' = 'maybe'`))
+    expect(change.userId).toBe(t.reader) // the audit trail names the person
+    await answerByToken(t.db, token, { answer: 'yes', note: 'dropped: only a maybe explains itself' })
+    expect(await availabilityByToken(t.db, token)).toMatchObject({ answer: 'yes', note: null })
     await expect(answerByToken(t.db, token, { answer: 'sure' })).rejects.toThrow()
+    expect(await lines(t)).toContainEqual('“Dev Reader” answered maybe for event “Gig”')
     await t.db.update(memberships).set({ archivedAt: new Date() }).where(eq(memberships.userId, t.reader))
-    await expect(availabilityByToken(t.db, token)).rejects.toBeInstanceOf(NotFound)
+    await expect(availabilityByToken(t.db, token)).rejects.toBeInstanceOf(NotFound) // left the band
+  })
+
+  it('a moved event makes answers stale; those people can be asked again', async () => {
+    const t = await testDb()
+    await gig(t)
+    await ask(t, t.reader)
+    await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'gig', answer: 'no' })
+    await t.db.update(events).set({ date: '2031-01-01' }).where(eq(events.slug, 'gig'))
+    expect((await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'gig' })).find((p) => p.mine)).toMatchObject({ stale: true, answer: 'no' })
+    await ask(t, t.reader)
+    expect((await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'gig' })).find((p) => p.mine)).toMatchObject({ stale: false, answer: null, asked: true })
+  })
+
+  it('readers answer only for themselves and cannot ask', async () => {
+    const t = await testDb()
+    await bandOps.createEvent(t.db, t.member, t.band, { title: 'Gig', date: day(20), people: [t.member] })
+    await expect(bandOps.askAvailability(t.db, t.reader, t.band, { event: 'gig' })).rejects.toBeInstanceOf(Forbidden)
+    await expect(bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'gig', answer: 'yes' })).rejects.toBeInstanceOf(NotFound) // not on the list
+  })
+
+  it('migration 0010 moves everyone asked onto the event with their latest answer', async () => {
+    // Migrate to 0009, add old-style checks, then run 0010.
+    const { mkdtemp, cp, readFile, writeFile } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+    const { PGlite } = await import('@electric-sql/pglite')
+    const { pg_trgm } = await import('@electric-sql/pglite/contrib/pg_trgm')
+    const { drizzle } = await import('drizzle-orm/pglite')
+    const { migrate } = await import('drizzle-orm/pglite/migrator')
+    const dir = await mkdtemp(`${tmpdir()}/gigg-mig-`)
+    await cp('drizzle', dir, { recursive: true })
+    const journal = JSON.parse(await readFile(`${dir}/meta/_journal.json`, 'utf8'))
+    journal.entries = journal.entries.filter((e: { idx: number }) => e.idx < 10)
+    await writeFile(`${dir}/meta/_journal.json`, JSON.stringify(journal))
+    const client = new PGlite({ extensions: { pg_trgm } })
+    onTestFinished(() => client.close())
+    const db = drizzle(client)
+    await migrate(db, { migrationsFolder: dir })
+    await client.exec(`
+      insert into users (id, name, email) values
+        ('00000000-0000-0000-0000-00000000000a', 'A', 'a@x'), ('00000000-0000-0000-0000-00000000000b', 'B', 'b@x');
+      insert into bands (id, slug, name) values ('00000000-0000-0000-0000-0000000000b1', 'b', 'B');
+      insert into events (id, band_id, slug, title, date) values ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000b1', 'e', 'E', '2030-01-01');
+      insert into availability_requests (id, band_id, event_id, date, asked_by, closed_at, created_at) values
+        ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000e1', '2029-12-01', '00000000-0000-0000-0000-00000000000a', now(), now() - interval '1 day'),
+        ('00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000e1', '2030-01-01', '00000000-0000-0000-0000-00000000000a', null, now());
+      insert into availability_responses (band_id, request_id, user_id, answer, note, token_hash) values
+        ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-00000000000a', 'no', null, 'old-a'),
+        ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-00000000000b', 'maybe', 'late', 'old-b'),
+        ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-00000000000a', null, null, 'new-a');`)
+    await migrate(db, { migrationsFolder: 'drizzle' })
+    const { rows } = await client.query('select u.name, p.answer, p.note, p.token_hash, p.asked_for::text from event_people p join users u on u.id = p.user_id order by u.name')
+    expect(rows).toEqual([
+      { name: 'A', answer: null, note: null, token_hash: 'new-a', asked_for: '2030-01-01' }, // latest check: waiting
+      { name: 'B', answer: 'maybe', note: 'late', token_hash: 'old-b', asked_for: '2029-12-01' }, // only in the old one
+    ])
   })
 })
 

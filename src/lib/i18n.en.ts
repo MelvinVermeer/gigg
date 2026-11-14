@@ -55,8 +55,6 @@ export const en = {
   /** Messages for errors the server throws by key. */
   errors: {
     cannotRemoveYourself: 'You cannot remove yourself',
-    alreadyAsked: 'This event is already being asked. Close that request first.',
-    requestClosed: 'This request is closed',
     startTimeNeeded: 'Add a start time too',
   },
 
@@ -135,6 +133,8 @@ export const en = {
     closedAvailability: (event: string) => `Closed the availability request for event “${event}”`,
     reopenedAvailability: (event: string) => `Reopened the availability request for event “${event}”`,
     removedMember: (who: string) => `Removed member “${who}”`,
+    addedToEvent: (who: string, event: string) => `Added “${who}” to event “${event}”`,
+    removedFromEvent: (who: string, event: string) => `Removed “${who}” from event “${event}”`,
     addedPerson: (role: string, who: string) => `Added ${role} “${who}”`,
     changedRole: (who: string, from: string, to: string) => `Changed “${who}” from ${from} to ${to}`,
     answered: (who: string, answer: string, event: string) => `“${who}” answered ${answer} for event “${event}”`,
@@ -202,6 +202,8 @@ export const en = {
     contactPlaceholder: 'Search or type a new contact',
     sameDate: 'Heads up: there is already an event on this date:',
     notesHint: '(load-in, soundcheck, parking, …)',
+    people: 'People',
+    peopleHint: 'Adding sends nothing: ask them on the event page.',
   },
 
   setlist: {
@@ -290,31 +292,24 @@ export const en = {
   availability: {
     title: 'Availability',
     yourAnswer: 'Your answer',
-    count: { yes: 'yes', no: 'no', maybe: 'maybe', waiting: 'waiting' },
     waiting: 'waiting',
+    notAsked: 'not asked',
     check: 'Check availability',
-    newCheck: 'New availability check',
-    askWho: 'Ask who?',
-    selectAll: 'Select all',
-    send: 'Send request',
-    asking: (date: string) => `Asking for ${date}`,
-    close: 'Close request',
-    moved: 'The event has moved since people were asked.',
+    ask: 'Ask',
+    askPerson: (name: string) => `Ask ${name}`,
+    noPeople: 'Nobody on this event yet. Add people via Edit.',
+    moved: 'The event has moved since some people were asked.',
+    movedShort: 'moved since',
     note: 'Note',
     whyMaybe: 'Why maybe?',
-    reopen: 'Reopen request',
-    askedFor: (date: string) => `Asked for ${date}`,
-    movedSince: ' (the event has moved since)',
     // The page behind the emailed links
     canYouMakeIt: 'Can you make it?',
     at: (venue: string) => ` at ${venue}`,
     staleLink: 'This event has moved since you were asked. Ask the band before answering.',
-    closed: 'This request is closed.',
-    yourAnswerWas: (answer: string) => ` Your answer was: ${answer}.`,
     whyMaybeOptional: 'Why maybe? (optional)',
     change: 'Change my answer',
     confirm: 'Confirm',
-    recorded: (answer: string) => `Recorded: ${answer}. You can change it until the request is closed.`,
+    recorded: (answer: string) => `Recorded: ${answer}. You can change it later with the same link.`,
   },
 
   records: {
@@ -408,7 +403,7 @@ export const en = {
     askSubject: (event: string, when: string) => `Can you make ${event} on ${when}?`,
     askIntro: (band: string, event: string, venue: string | null, when: string) =>
       `${band} is checking who can make ${event}${venue ? ` at ${venue}` : ''} on ${when}.`,
-    askOutro: 'You confirm on the next page, and can change your answer until the request is closed.',
+    askOutro: 'You confirm on the next page, and can change your answer later with the same link.',
   },
 
   calendar: { option: '(option)' },

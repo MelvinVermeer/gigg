@@ -144,12 +144,12 @@ export const inviteMember = createServerFn({ method: 'POST' })
     return invited
   })
 
-/** Ask people whether they can make an event: record the request (ops.ts), then mail each person their one-tap links. */
+/** Ask whether people can make an event (everyone not asked yet, or one `user`): record it (ops.ts), then mail each their one-tap links. */
 export const askAvailability = createServerFn({ method: 'POST' })
   .middleware([authed])
-  .validator((data: { band: string; event: string; emails: string[] }) => data)
+  .validator((data: { band: string; event: string; user?: string }) => data)
   .handler(async ({ context, data }) => {
-    const asked = await run(context.userId, { band: data.band, op: 'askAvailability', input: { event: data.event, emails: data.emails } }, false)
+    const asked = await run(context.userId, { band: data.band, op: 'askAvailability', input: { event: data.event, user: data.user } }, false)
     const { band, event } = asked
     for (const r of asked.recipients) {
       const t = dicts[localeOf(r.locale)]

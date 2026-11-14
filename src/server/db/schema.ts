@@ -178,8 +178,8 @@ export const calendarFeeds = pgTable(
 
 export const availabilityAnswer = pgEnum('availability_answer', ['yes', 'no', 'maybe'])
 
-// "Can you make it?" for an event. `date` is the date that was asked; if the event moves, the answers are stale.
-// At most one open request per event; closing it allows a new one.
+// Legacy: the old per-check model, replaced by `event_people` (migration 0010 copied it over).
+// Kept read-only so old history lines still name their event.
 export const availabilityRequests = pgTable(
   'availability_requests',
   {
@@ -209,6 +209,26 @@ export const availabilityResponses = pgTable(
     createdAt: createdAt(),
   },
   (t) => [unique().on(t.requestId, t.userId)],
+)
+
+// The people on an event, each with an availability state: not asked (asked_for null) → waiting (answer null)
+// → yes / maybe / no. `asked_for` is the event date they were asked about; if the event moves, the answer is stale.
+// Asking gives a new emailed link: a random token, only its hash is stored.
+export const eventPeople = pgTable(
+  'event_people',
+  {
+    id: id(),
+    bandId: bandId(),
+    eventId: uuid('event_id').notNull().references(() => events.id),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    answer: availabilityAnswer('answer'),
+    note: text('note'),
+    tokenHash: text('token_hash').unique(),
+    askedFor: date('asked_for'),
+    answeredAt: timestamp('answered_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [unique().on(t.eventId, t.userId)],
 )
 
 // Setlists ----------------------------------------------------------------

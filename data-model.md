@@ -17,12 +17,12 @@ Source of truth: [`src/server/db/schema.ts`](src/server/db/schema.ts) (app table
 
 Tables: `bands`, `memberships`, `slug_redirects`, `songs`, `venues`, `contacts`, `events`,
 `event_contacts`, `setlists`, `sets`, `set_items`, `blocks`, `block_songs`, `files`, `feedback`,
-`availability_requests`, `availability_responses`, `calendar_feeds`, `changes`.
+`event_people`, `availability_requests` / `availability_responses` (legacy, read only), `calendar_feeds`, `changes`.
 
 Decisions made while building:
 - **Child tables have `band_id` too** (`sets`, `set_items`, `event_contacts`, `block_songs`), so every audit entry has a band and every query can filter on band.
 - `slug_redirects` has its own `id`; uniqueness is `(band_id, type, old_slug)` with nulls not distinct (band slugs have no band).
-- **Availability**: an event has at most one *open* `availability_requests` row (partial unique index); it stores the date asked, so a moved event shows as stale. `availability_responses` has one row per person asked (`answer` null = waiting) and a `token_hash` for the emailed link. Only the hash is stored; answering by link sets the audit user to the responder. Requests are closed, never deleted.
+- **Availability**: `event_people` is one row per person on an event (unique `(event_id, user_id)`). `asked_for` null = not asked; set (the event date asked about, so a moved event shows as stale) with `answer` null = waiting. Each ask writes a new `token_hash` for the emailed link; only the hash is stored. Answering by link sets the audit user to the responder. Removing someone deletes the row. The old `availability_requests` / `availability_responses` were copied into it (migration 0010) and are kept only so old history lines still resolve.
 - **Event times**: `start_time` / `end_time` are optional `time` columns (wall clock in the band's time zone). An end before the start means the next day; no end = 3 hours in the calendar feed. No times = an all-day event.
 - **Calendar feed**: `calendar_feeds` holds one random token per person per band (stored as is, so settings can show the link again; reset replaces it). `/api/calendar/<token>.ics` serves option and confirmed events from a year ago on, as UTC times. Leaving the band (archived membership) makes the token return 404. Not audited: history would show the token.
 - `users` comes from Better Auth, plus `locale` (`en` | `nl`, the user's language; an `additionalField` in auth.ts). Anonymisation (`anonymised_at`) is added when member removal is built.

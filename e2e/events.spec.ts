@@ -108,7 +108,7 @@ test.describe('reader', () => {
   test('sees only their own events by default; the filter shows everyone and the past', async ({ page }) => {
     await page.goto('/demo-band')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Events')
-    await expect(page.getByRole('link', { name: 'Summer Party' })).toHaveCount(0) // created by the member, reader not asked
+    await expect(page.getByRole('link', { name: 'Summer Party' })).toHaveCount(0) // the reader isn't on its list
     await expect(page.getByRole('link', { name: 'Add event' })).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Filter' }).click()

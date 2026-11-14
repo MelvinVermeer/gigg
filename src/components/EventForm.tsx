@@ -5,13 +5,14 @@ import { Combobox } from '#/components/Combobox'
 import { Field, FormError } from '#/components/Field'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { Checkbox } from '#/components/ui/checkbox'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { Textarea } from '#/components/ui/textarea'
 import { withLabels } from '#/lib/labels'
 import type { EventFields } from '#/server/ops'
-import { errorText, useT } from '#/lib/i18n'
+import { errorText, label, useT } from '#/lib/i18n'
 
 type Venue = { id: string; name: string; address: string | null }
 type Contact = { id: string; name: string; email: string | null; phone: string | null }
@@ -22,9 +23,13 @@ export type EventFormData = {
   lastContactsByVenue: Record<string, string[]>
   /** Non-cancelled, non-archived events, for the same-date warning */
   events: { slug: string; title: string; date: string; bookingStatus: NonNullable<EventFields['bookingStatus']> }[]
+  /** Band members and readers, to put on the event */
+  people: { id: string; name: string; email: string; role: string }[]
 }
 
-type Initial = Partial<Omit<EventFields, 'venue' | 'contacts'>> & {
+type Initial = Partial<Omit<EventFields, 'venue' | 'contacts' | 'people'>> & {
+  /** User ids on the event */
+  people?: string[]
   /** In edit: the event itself, left out of the same-date warning */
   slug?: string
   venueId?: string | null
@@ -67,6 +72,7 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
   const sameDate = data.events.filter((e) => e.date === date && e.slug !== initial.slug)
   const [startTime, setStartTime] = useState(initial.startTime?.slice(0, 5) ?? '')
   const [endTime, setEndTime] = useState(initial.endTime?.slice(0, 5) ?? '')
+  const [people, setPeople] = useState(() => new Set(initial.people ?? []))
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -102,6 +108,7 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
         endTime,
         venue: venue ? { id: venue.id } : isNewVenue ? { name: venueText.trim(), address: venueAddress } : null,
         contacts: picked.map((c) => (c.id ? { id: c.id } : { name: c.name, email: c.email, phone: c.phone })),
+        people: [...people],
         bookingStatus: f.get('bookingStatus') as EventFields['bookingStatus'],
         paymentStatus: f.get('paymentStatus') as EventFields['paymentStatus'],
         notes: String(f.get('notes')),
@@ -231,6 +238,27 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
               : [{ value: '+', label: <><Plus aria-hidden /> {t.eventForm.newContact(contactText.trim())}</>, onSelect: () => addNewContact(contactText) }]),
           ]}
         />
+      </fieldset>
+
+      <fieldset className="grid gap-3 rounded-lg border p-4">
+        <legend className="px-1 text-sm font-medium">{t.eventForm.people}</legend>
+        <p className="-mt-1 text-sm text-muted-foreground">{t.eventForm.peopleHint}</p>
+        {data.people.map((p) => (
+          <Label key={p.id} className="font-normal">
+            <Checkbox
+              checked={people.has(p.id)}
+              onCheckedChange={(c) =>
+                setPeople((s) => {
+                  const next = new Set(s)
+                  if (c === true) next.add(p.id)
+                  else next.delete(p.id)
+                  return next
+                })
+              }
+            />
+            {p.name || p.email} <span className="text-muted-foreground">({label(t.role, p.role)})</span>
+          </Label>
+        ))}
       </fieldset>
 
       <div className="grid grid-cols-2 gap-4">

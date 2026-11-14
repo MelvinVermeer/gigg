@@ -56,8 +56,6 @@ export const nl: Dict = {
 
   errors: {
     cannotRemoveYourself: 'Je kunt jezelf niet verwijderen',
-    alreadyAsked: 'Voor dit optreden loopt al een vraag. Sluit die eerst.',
-    requestClosed: 'Deze vraag is gesloten',
     startTimeNeeded: 'Vul ook een begintijd in',
   },
 
@@ -135,6 +133,8 @@ export const nl: Dict = {
     closedAvailability: (event) => `Beschikbaarheidsvraag gesloten voor optreden “${event}”`,
     reopenedAvailability: (event) => `Beschikbaarheidsvraag heropend voor optreden “${event}”`,
     removedMember: (who) => `Lid “${who}” verwijderd`,
+    addedToEvent: (who, event) => `“${who}” toegevoegd aan optreden “${event}”`,
+    removedFromEvent: (who, event) => `“${who}” verwijderd van optreden “${event}”`,
     addedPerson: (role, who) => cap(`${role} “${who}” toegevoegd`),
     changedRole: (who, from, to) => `“${who}” van ${from} naar ${to} gezet`,
     answered: (who, answer, event) => `“${who}” antwoordde ${answer} voor optreden “${event}”`,
@@ -201,6 +201,8 @@ export const nl: Dict = {
     contactPlaceholder: 'Zoek of typ een nieuw contact',
     sameDate: 'Let op: er is al een event op deze datum:',
     notesHint: '(opbouw, soundcheck, parkeren, …)',
+    people: 'Mensen',
+    peopleHint: 'Toevoegen verstuurt niets: vraag ze op de pagina van het optreden.',
   },
 
   setlist: {
@@ -289,30 +291,23 @@ export const nl: Dict = {
   availability: {
     title: 'Beschikbaarheid',
     yourAnswer: 'Je antwoord',
-    count: { yes: 'ja', no: 'nee', maybe: 'misschien', waiting: 'wacht' },
     waiting: 'wacht',
+    notAsked: 'niet gevraagd',
     check: 'Beschikbaarheid vragen',
-    newCheck: 'Opnieuw beschikbaarheid vragen',
-    askWho: 'Wie vragen?',
-    selectAll: 'Iedereen',
-    send: 'Vraag versturen',
-    asking: (date) => `Vraag voor ${date}`,
-    close: 'Vraag sluiten',
-    moved: 'Het optreden is verplaatst sinds de vraag is gesteld.',
+    ask: 'Vragen',
+    askPerson: (name) => `${name} vragen`,
+    noPeople: 'Nog niemand bij dit optreden. Voeg mensen toe via Bewerken.',
+    moved: 'Het optreden is verplaatst sinds sommigen het gevraagd werden.',
+    movedShort: 'sindsdien verplaatst',
     note: 'Toelichting',
     whyMaybe: 'Waarom misschien?',
-    reopen: 'Vraag heropenen',
-    askedFor: (date) => `Gevraagd voor ${date}`,
-    movedSince: ' (het optreden is sindsdien verplaatst)',
     canYouMakeIt: 'Kun je erbij zijn?',
     at: (venue) => ` in ${venue}`,
     staleLink: 'Dit optreden is verplaatst sinds je het gevraagd werd. Overleg met de band voor je antwoordt.',
-    closed: 'Deze vraag is gesloten.',
-    yourAnswerWas: (answer) => ` Je antwoord was: ${answer}.`,
     whyMaybeOptional: 'Waarom misschien? (optioneel)',
     change: 'Antwoord wijzigen',
     confirm: 'Bevestigen',
-    recorded: (answer) => `Genoteerd: ${answer}. Je kunt het wijzigen tot de vraag gesloten is.`,
+    recorded: (answer) => `Genoteerd: ${answer}. Je kunt het later wijzigen via dezelfde link.`,
   },
 
   records: {
@@ -405,7 +400,7 @@ export const nl: Dict = {
       `Je bent nu ${role === 'reader' ? 'lezer' : 'lid'} van ${band} op Gigg: optredens, setlists en riders voor bands.\n\nLog in met ${email}: ${url}`,
     askSubject: (event, when) => `Kun je bij ${event} op ${when}?`,
     askIntro: (band, event, venue, when) => `${band} wil weten wie er kan bij ${event}${venue ? ` in ${venue}` : ''} op ${when}.`,
-    askOutro: 'Je bevestigt op de volgende pagina, en kunt je antwoord wijzigen tot de vraag gesloten is.',
+    askOutro: 'Je bevestigt op de volgende pagina, en kunt je antwoord later wijzigen via dezelfde link.',
   },
 
   calendar: { option: '(optie)' },

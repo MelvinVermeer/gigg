@@ -21,6 +21,7 @@ import {
   changes,
   contacts,
   eventContacts,
+  eventPeople,
   events,
   feedback,
   files,
@@ -397,6 +398,8 @@ const eventFields = z.object({
   endTime: time,
   venue: venueRef.nullish().transform((v) => v ?? null),
   contacts: z.array(contactRef).max(20).default([]),
+  /** Band members/readers on the event (user ids). Left out = unchanged. */
+  people: z.array(z.uuid()).max(100).optional(),
   bookingStatus: z.enum(bookingStatus.enumValues).default('lead'),
   paymentStatus: z.enum(paymentStatus.enumValues).default('open'),
   tags,
@@ -440,6 +443,27 @@ async function resolveRefs(tx: Tx, bandId: string, fields: z.output<typeof event
   return { venueId, contactIds: [...new Set(contactIds)] }
 }
 
+/** Put exactly these band people on the event. New ones are not asked yet; removed ones lose their answer and link. */
+async function setEventPeople(tx: Tx, bandId: string, eventId: string, userIds: string[] | undefined) {
+  if (!userIds) return
+  const ids = [...new Set(userIds)]
+  if (ids.length) {
+    const found = await tx
+      .select({ id: memberships.userId })
+      .from(memberships)
+      .where(and(eq(memberships.bandId, bandId), isNull(memberships.archivedAt), inArray(memberships.userId, ids)))
+    if (found.length !== ids.length) throw new NotFound()
+  }
+  await tx
+    .delete(eventPeople)
+    .where(and(eq(eventPeople.eventId, eventId), ids.length ? notInArray(eventPeople.userId, ids) : undefined))
+  if (ids.length)
+    await tx
+      .insert(eventPeople)
+      .values(ids.map((userId) => ({ bandId, eventId, userId })))
+      .onConflictDoNothing()
+}
+
 async function setEventContacts(tx: Tx, bandId: string, eventId: string, contactIds: string[]) {
   // Only touch links that changed: rewriting them all would show up in history as a contact change.
   await tx
@@ -455,7 +479,7 @@ async function setEventContacts(tx: Tx, bandId: string, eventId: string, contact
 const eventOps = {
   /**
    * Upcoming (today and later, soonest first), past (latest first) or archived: every status and everyone's,
-   * each marked `mine` (created by me or my availability asked). The list filters in the browser, so one
+   * each marked `mine` (I'm on its list and didn't answer no). The list filters in the browser, so one
    * cached response per `when` serves every filter offline.
    */
   listEvents: bandOp(
@@ -472,15 +496,17 @@ const eventOps = {
           endTime: events.endTime,
           venue: venues.name,
           bookingStatus: events.bookingStatus,
-          mine: sql<boolean>`${or(
-            eq(events.createdBy, userId),
-            exists(
-              tx
-                .select({ one: sql`1` })
-                .from(availabilityResponses)
-                .innerJoin(availabilityRequests, eq(availabilityRequests.id, availabilityResponses.requestId))
-                .where(and(eq(availabilityRequests.eventId, events.id), eq(availabilityResponses.userId, userId))),
-            ),
+          mine: sql<boolean>`${exists(
+            tx
+              .select({ one: sql`1` })
+              .from(eventPeople)
+              .where(
+                and(
+                  eq(eventPeople.eventId, events.id),
+                  eq(eventPeople.userId, userId),
+                  or(isNull(eventPeople.answer), ne(eventPeople.answer, 'no')),
+                ),
+              ),
           )}`,
         })
         .from(events)
@@ -584,19 +610,27 @@ const eventOps = {
       .from(events)
       .where(and(eq(events.bandId, bandId), isNull(events.archivedAt), ne(events.bookingStatus, 'cancelled')))
 
-    return { venues: venueRows, contacts: contactRows, lastContactsByVenue, events: dated }
+    const people = await tx
+      .select({ id: users.id, name: users.name, email: users.email, role: memberships.role })
+      .from(memberships)
+      .innerJoin(users, eq(users.id, memberships.userId))
+      .where(and(eq(memberships.bandId, bandId), isNull(memberships.archivedAt)))
+      .orderBy(asc(users.name), asc(users.email))
+
+    return { venues: venueRows, contacts: contactRows, lastContactsByVenue, events: dated, people }
   }),
 
   /** Create an event. Its setlist is chosen afterwards, on the event page. */
   createEvent: bandOp('member', eventFieldsChecked, async ({ tx, bandId, userId }, fields) => {
     const { venueId, contactIds } = await resolveRefs(tx, bandId, fields)
-    const { venue: _v, contacts: _c, ...rest } = fields
+    const { venue: _v, contacts: _c, people, ...rest } = fields
     const slug = await freeSlug(tx, events, bandId, eventSlugs(fields.title, fields.date))
     const [event] = await tx
       .insert(events)
       .values({ ...rest, bandId, slug, venueId, createdBy: userId })
       .returning()
     await setEventContacts(tx, bandId, event.id, contactIds)
+    await setEventPeople(tx, bandId, event.id, people)
     return event
   }),
 
@@ -604,7 +638,7 @@ const eventOps = {
   updateEvent: bandOp('member', bySlug.extend({ fields: eventFieldsChecked }), async ({ tx, bandId }, { slug, fields }) => {
     const old = await rowBySlug(tx, events, bandId, slug)
     const { venueId, contactIds } = await resolveRefs(tx, bandId, fields)
-    const { venue: _v, contacts: _c, ...rest } = fields
+    const { venue: _v, contacts: _c, people, ...rest } = fields
     const newSlug =
       slugify(fields.title) === slugify(old.title)
         ? slug
@@ -616,6 +650,7 @@ const eventOps = {
       .where(eq(events.id, old.id))
       .returning()
     await setEventContacts(tx, bandId, event.id, contactIds)
+    await setEventPeople(tx, bandId, event.id, people)
     return event
   }),
 
@@ -1118,21 +1153,26 @@ const entities: Record<string, string> = {
 /** A column as a word in the viewer's language: "duration_sec" → "duration" / "duur". */
 const human = (t: Dict, column: string) => label(t.history.field, column.replace(/_(id|sec)$/, '')).replaceAll('_', ' ')
 
-/** Event title per availability request, for history lines. */
+/** Event title for availability rows, for history lines: by event id (event_people) or old request id. */
 async function requestEvents(tx: Tx, t: Dict, rows: Change[]) {
   const ids = new Set<string>()
+  const eventIds = new Set<string>()
   for (const c of rows) {
     const r = (c.after ?? c.before) as Row
     if (c.tableName === 'availability_requests') ids.add(r.id as string)
     else if (c.tableName === 'availability_responses') ids.add(r.request_id as string)
+    else if (c.tableName === 'event_people') eventIds.add(r.event_id as string)
   }
-  const found = ids.size
-    ? await tx
-        .select({ id: availabilityRequests.id, title: events.title })
-        .from(availabilityRequests)
-        .innerJoin(events, eq(events.id, availabilityRequests.eventId))
-        .where(inArray(availabilityRequests.id, [...ids]))
-    : []
+  const found = [
+    ...(ids.size
+      ? await tx
+          .select({ id: availabilityRequests.id, title: events.title })
+          .from(availabilityRequests)
+          .innerJoin(events, eq(events.id, availabilityRequests.eventId))
+          .where(inArray(availabilityRequests.id, [...ids]))
+      : []),
+    ...(eventIds.size ? await tx.select({ id: events.id, title: events.title }).from(events).where(inArray(events.id, [...eventIds])) : []),
+  ]
   return (id: unknown) => found.find((f) => f.id === id)?.title ?? t.history.deleted
 }
 
@@ -1146,6 +1186,7 @@ async function describe(tx: Tx, t: Dict, rows: Change[]) {
   const people: { userId: string; before: Row | null; after: Row | null }[] = []
   const requestEvent = await requestEvents(tx, t, rows)
   const answerers: Row[] = [] // response rows that got an answer, named below with the members
+  const listed: { row: Row; added: boolean }[] = [] // people put on or taken off an event
   for (const c of rows) {
     const before = c.before as Row | null
     const after = c.after as Row | null
@@ -1158,6 +1199,10 @@ async function describe(tx: Tx, t: Dict, rows: Change[]) {
       else if (after?.closed_at && !before?.closed_at) lines.push(h.closedAvailability(event))
       else if (before?.closed_at && !after?.closed_at) lines.push(h.reopenedAvailability(event))
     } else if (c.tableName === 'availability_responses') {
+      if (after?.answer && (before?.answer !== after.answer || before?.note !== after.note)) answerers.push(after)
+    } else if (c.tableName === 'event_people') {
+      if (c.action !== 'update') listed.push({ row: r, added: c.action === 'insert' })
+      else if (after!.token_hash !== before!.token_hash) lines.push(h.askedAvailability(requestEvent(r.event_id)))
       if (after?.answer && (before?.answer !== after.answer || before?.note !== after.note)) answerers.push(after)
     } else if (entity) {
       const name = `${label(h.entity, entity)} “${r.title ?? r.name}”`
@@ -1172,8 +1217,8 @@ async function describe(tx: Tx, t: Dict, rows: Change[]) {
     else if (c.tableName === 'block_songs') blockIds.add(r.block_id as string)
     else if (c.tableName === 'event_contacts') eventIds.add(r.event_id as string)
   }
-  if (people.length || answerers.length) {
-    const wanted = [...people.map((p) => p.userId), ...answerers.map((a) => a.user_id as string)]
+  if (people.length || answerers.length || listed.length) {
+    const wanted = [...people.map((p) => p.userId), ...[...answerers, ...listed.map((l) => l.row)].map((a) => a.user_id as string)]
     const found = await tx.select({ id: users.id, email: users.email, name: users.name }).from(users).where(inArray(users.id, wanted))
     const email = (id: string) => found.find((u) => u.id === id)?.name || found.find((u) => u.id === id)?.email || h.someone
     const roleOf = (r: Row) => label(t.role, r.role as string)
@@ -1184,8 +1229,10 @@ async function describe(tx: Tx, t: Dict, rows: Change[]) {
       else if (after.archived_at && !before.archived_at) lines.push(h.removedMember(who))
       else if (before.role !== after.role) lines.push(h.changedRole(who, roleOf(before), roleOf(after)))
     }
+    for (const { row, added } of listed)
+      lines.push((added ? h.addedToEvent : h.removedFromEvent)(email(row.user_id as string), requestEvent(row.event_id)))
     for (const a of answerers)
-      lines.push(h.answered(email(a.user_id as string), label(t.answer, a.answer as string).toLowerCase(), requestEvent(a.request_id)))
+      lines.push(h.answered(email(a.user_id as string), label(t.answer, a.answer as string).toLowerCase(), requestEvent(a.request_id ?? a.event_id)))
   }
   const names = async (table: typeof setlists | typeof blocks, ids: Set<string>) =>
     ids.size ? (await tx.select({ name: table.name }).from(table).where(inArray(table.id, [...ids]))).map((x) => x.name) : []
@@ -1270,11 +1317,11 @@ async function diff(tx: Tx, t: Dict, rows: Change[]): Promise<Diff[]> {
         const to = show(k, after?.[k])
         if (from !== to) out.push({ what, field: human(t, k), from, to })
       }
-    } else if (c.tableName === 'availability_responses' && after) {
-      const what = h.availabilityOf(name(r.user_id), requestEvent(r.request_id))
+    } else if (c.tableName === 'availability_responses' || c.tableName === 'event_people') {
+      const what = h.availabilityOf(name(r.user_id), requestEvent(r.request_id ?? r.event_id))
       for (const k of ['answer', 'note']) {
         const from = show(k, before?.[k])
-        const to = show(k, after[k])
+        const to = show(k, after?.[k])
         if (from !== to) out.push({ what, field: human(t, k), from, to })
       }
     } else if (c.tableName === 'event_contacts') {
@@ -1389,147 +1436,98 @@ async function availabilityEvent(tx: Tx, bandId: string, slug: string) {
 // Notes only explain a maybe.
 const answered = (answer: 'yes' | 'no' | 'maybe', note: string | null) => ({ answer, note: answer === 'maybe' ? note : null, answeredAt: new Date() })
 
-/** Record an answer; the request closes itself once everyone asked has answered. */
-async function saveAnswer(tx: Tx, responseId: string, requestId: string, answer: 'yes' | 'no' | 'maybe', note: string | null) {
-  await tx.update(availabilityResponses).set(answered(answer, note)).where(eq(availabilityResponses.id, responseId))
-  const [waiting] = await tx
-    .select({ id: availabilityResponses.id })
-    .from(availabilityResponses)
-    .where(and(eq(availabilityResponses.requestId, requestId), isNull(availabilityResponses.answer)))
-    .limit(1)
-  if (!waiting) await tx.update(availabilityRequests).set({ closedAt: new Date() }).where(eq(availabilityRequests.id, requestId))
-}
+/** The event's people who are still in the band (a left member drops off the list). */
+const onEvent = (tx: Tx, eventId: string, where?: SQL) =>
+  tx
+    .select({
+      id: eventPeople.id,
+      userId: eventPeople.userId,
+      name: users.name,
+      email: users.email,
+      locale: users.locale,
+      answer: eventPeople.answer,
+      note: eventPeople.note,
+      askedFor: eventPeople.askedFor,
+    })
+    .from(eventPeople)
+    .innerJoin(users, eq(users.id, eventPeople.userId))
+    .innerJoin(memberships, and(eq(memberships.bandId, eventPeople.bandId), eq(memberships.userId, eventPeople.userId), isNull(memberships.archivedAt)))
+    .where(and(eq(eventPeople.eventId, eventId), where))
+    .orderBy(asc(users.name), asc(users.email))
 
 const availabilityOps = {
-  /** The event's latest request (open, or the last closed one) with everyone's answer; null if never asked. */
+  /**
+   * The event's people, each with their state: not asked (`asked` false), waiting (no answer) or their answer.
+   * `stale`: asked for a date the event has since moved from.
+   */
   getAvailability: bandOp('reader', z.object({ event: z.string() }), async ({ tx, bandId, userId }, { event: slug }) => {
     const event = await availabilityEvent(tx, bandId, slug)
-    const [request] = await tx
-      .select()
-      .from(availabilityRequests)
-      .where(eq(availabilityRequests.eventId, event.id))
-      .orderBy(desc(availabilityRequests.createdAt))
-      .limit(1)
-    if (!request) return null
-    const responses = await tx
-      .select({
-        userId: availabilityResponses.userId,
-        name: users.name,
-        email: users.email,
-        answer: availabilityResponses.answer,
-        note: availabilityResponses.note,
-      })
-      .from(availabilityResponses)
-      .innerJoin(users, eq(users.id, availabilityResponses.userId))
-      .where(eq(availabilityResponses.requestId, request.id))
-      .orderBy(asc(users.name), asc(users.email))
-    return {
-      open: !request.closedAt,
-      date: request.date,
-      stale: request.date !== event.date, // the event moved after people were asked
-      responses: responses.map(({ userId: id, ...r }) => ({ ...r, mine: id === userId })),
-    }
+    return (await onEvent(tx, event.id)).map(({ id: _, locale: _l, askedFor, ...p }) => ({
+      ...p,
+      asked: !!askedFor,
+      stale: !!askedFor && askedFor !== event.date,
+      mine: p.userId === userId,
+    }))
   }),
 
   /**
-   * Ask these members/readers (by email) whether they can make the event. Returns what the caller
-   * needs to mail each person their personal link; the tokens exist nowhere else (only hashes are stored).
+   * Ask everyone on the event who wasn't asked yet, or with `user` just that person (also when their answer is
+   * stale). Returns what the caller needs to mail each person their personal link; the tokens exist nowhere
+   * else (only hashes are stored).
    */
-  askAvailability: bandOp(
-    'member',
-    z.object({ event: z.string(), emails: z.array(z.string().trim().toLowerCase()).min(1).max(100) }),
-    async ({ tx, bandId, userId }, { event: slug, emails }) => {
-      const event = await availabilityEvent(tx, bandId, slug)
-      const people = await tx
-        .select({ id: users.id, email: users.email, locale: users.locale })
-        .from(memberships)
-        .innerJoin(users, eq(users.id, memberships.userId))
-        .where(and(eq(memberships.bandId, bandId), isNull(memberships.archivedAt), inArray(users.email, emails)))
-      if (people.length !== new Set(emails).size) throw new NotFound()
-      const [open] = await tx
-        .select({ id: availabilityRequests.id })
-        .from(availabilityRequests)
-        .where(and(eq(availabilityRequests.eventId, event.id), isNull(availabilityRequests.closedAt)))
-      if (open) throw new Error('alreadyAsked')
-      const [request] = await tx
-        .insert(availabilityRequests)
-        .values({ bandId, eventId: event.id, date: event.date, askedBy: userId })
-        .returning({ id: availabilityRequests.id })
-      const recipients = people.map((p) => ({ ...p, token: randomBytes(32).toString('base64url') }))
+  askAvailability: bandOp('member', z.object({ event: z.string(), user: z.uuid().optional() }), async ({ tx, bandId }, { event: slug, user }) => {
+    const event = await availabilityEvent(tx, bandId, slug)
+    const people = await onEvent(
+      tx,
+      event.id,
+      user ? and(eq(eventPeople.userId, user), or(isNull(eventPeople.askedFor), ne(eventPeople.askedFor, event.date))) : isNull(eventPeople.askedFor),
+    )
+    if (user && !people.length) throw new NotFound()
+    const recipients = people.map((p) => ({ id: p.id, email: p.email, locale: p.locale, token: randomBytes(32).toString('base64url') }))
+    for (const r of recipients)
       await tx
-        .insert(availabilityResponses)
-        .values(recipients.map((r) => ({ bandId, requestId: request.id, userId: r.id, tokenHash: sha256(r.token) })))
-      const [band] = await tx.select({ name: bands.name, slug: bands.slug }).from(bands).where(eq(bands.id, bandId))
-      return { band, event, recipients }
-    },
-  ),
-
-  /** Stop asking. The answers stay visible. */
-  closeAvailability: bandOp('member', z.object({ event: z.string() }), async ({ tx, bandId }, { event: slug }) => {
-    const event = await availabilityEvent(tx, bandId, slug)
-    const [closed] = await tx
-      .update(availabilityRequests)
-      .set({ closedAt: new Date() })
-      .where(and(eq(availabilityRequests.eventId, event.id), isNull(availabilityRequests.closedAt)))
-      .returning({ id: availabilityRequests.id })
-    if (!closed) throw new NotFound()
+        .update(eventPeople)
+        .set({ tokenHash: sha256(r.token), askedFor: event.date, answer: null, note: null, answeredAt: null })
+        .where(eq(eventPeople.id, r.id))
+    const [band] = await tx.select({ name: bands.name, slug: bands.slug }).from(bands).where(eq(bands.id, bandId))
+    return { band, event, recipients }
   }),
 
-  /** Ask again with the latest request: the same people, their answers kept, their links working again. */
-  reopenAvailability: bandOp('member', z.object({ event: z.string() }), async ({ tx, bandId }, { event: slug }) => {
-    const event = await availabilityEvent(tx, bandId, slug)
-    const [latest] = await tx
-      .select({ id: availabilityRequests.id, closedAt: availabilityRequests.closedAt })
-      .from(availabilityRequests)
-      .where(eq(availabilityRequests.eventId, event.id))
-      .orderBy(desc(availabilityRequests.createdAt))
-      .limit(1)
-    if (!latest?.closedAt) throw new NotFound()
-    await tx.update(availabilityRequests).set({ closedAt: null }).where(eq(availabilityRequests.id, latest.id))
-  }),
-
-  /** Answer (or change your answer to) the open request, from inside the app. */
+  /** Answer (or change your answer) from inside the app: any time you're on the event, asked or not. */
   answerAvailability: bandOp('reader', answerInput.extend({ event: z.string() }), async ({ tx, bandId, userId }, { event: slug, answer, note }) => {
     const event = await availabilityEvent(tx, bandId, slug)
-    const [mine] = await tx
-      .select({ id: availabilityResponses.id, requestId: availabilityResponses.requestId })
-      .from(availabilityResponses)
-      .innerJoin(availabilityRequests, eq(availabilityRequests.id, availabilityResponses.requestId))
-      .where(and(eq(availabilityRequests.eventId, event.id), isNull(availabilityRequests.closedAt), eq(availabilityResponses.userId, userId)))
-    if (!mine) throw new NotFound()
-    await saveAnswer(tx, mine.id, mine.requestId, answer, note)
+    const rows = await tx
+      .update(eventPeople)
+      .set({ ...answered(answer, note), askedFor: event.date }) // answered for the date shown now
+      .where(and(eq(eventPeople.eventId, event.id), eq(eventPeople.userId, userId)))
+      .returning({ id: eventPeople.id })
+    if (!rows.length) throw new NotFound()
   }),
 }
 
-/** The response behind an emailed link, if the person is still in the band. */
-async function responseByToken(tx: Tx, token: string) {
+/** The person behind an emailed link, if they're still on the event and in the band. */
+async function personByToken(tx: Tx, token: string) {
   const [row] = await tx
     .select({
-      id: availabilityResponses.id,
-      requestId: availabilityResponses.requestId,
-      userId: availabilityResponses.userId,
-      answer: availabilityResponses.answer,
-      note: availabilityResponses.note,
+      id: eventPeople.id,
+      userId: eventPeople.userId,
+      answer: eventPeople.answer,
+      note: eventPeople.note,
       name: users.name,
       locale: users.locale,
-      closed: availabilityRequests.closedAt,
-      date: availabilityRequests.date,
+      date: eventPeople.askedFor,
       eventDate: events.date,
       eventTitle: events.title,
       venue: venues.name,
       bandName: bands.name,
     })
-    .from(availabilityResponses)
-    .innerJoin(availabilityRequests, eq(availabilityRequests.id, availabilityResponses.requestId))
-    .innerJoin(events, eq(events.id, availabilityRequests.eventId))
+    .from(eventPeople)
+    .innerJoin(events, eq(events.id, eventPeople.eventId))
     .leftJoin(venues, eq(venues.id, events.venueId))
-    .innerJoin(bands, eq(bands.id, availabilityRequests.bandId))
-    .innerJoin(users, eq(users.id, availabilityResponses.userId))
-    .innerJoin(
-      memberships,
-      and(eq(memberships.bandId, availabilityRequests.bandId), eq(memberships.userId, availabilityResponses.userId), isNull(memberships.archivedAt)),
-    )
-    .where(and(eq(availabilityResponses.tokenHash, sha256(token)), isNull(bands.archivedAt)))
+    .innerJoin(bands, eq(bands.id, eventPeople.bandId))
+    .innerJoin(users, eq(users.id, eventPeople.userId))
+    .innerJoin(memberships, and(eq(memberships.bandId, eventPeople.bandId), eq(memberships.userId, eventPeople.userId), isNull(memberships.archivedAt)))
+    .where(and(eq(eventPeople.tokenHash, sha256(token)), isNull(bands.archivedAt)))
   if (!row) throw new NotFound()
   return row
 }
@@ -1541,16 +1539,15 @@ async function responseByToken(tx: Tx, token: string) {
 export function availabilityByToken(db: Db, token: string) {
   return db.transaction(async (tx) => {
     await tx.execute(sql`set transaction read only`)
-    const r = await responseByToken(tx, token)
+    const r = await personByToken(tx, token)
     return {
       band: r.bandName,
       name: r.name,
       locale: localeOf(r.locale),
       event: r.eventTitle,
       venue: r.venue,
-      date: r.date,
+      date: r.date ?? r.eventDate,
       stale: r.date !== r.eventDate,
-      closed: !!r.closed,
       answer: r.answer,
       note: r.note,
     }
@@ -1560,10 +1557,9 @@ export function availabilityByToken(db: Db, token: string) {
 export async function answerByToken(db: Db, token: string, rawInput: unknown) {
   const input = answerInput.parse(rawInput)
   return db.transaction(async (tx) => {
-    const r = await responseByToken(tx, token)
-    if (r.closed) throw new Error('requestClosed')
+    const r = await personByToken(tx, token)
     await tx.execute(sql`select set_config('app.user_id', ${r.userId}, true)`) // the audit trail shows who answered
-    await saveAnswer(tx, r.id, r.requestId, input.answer, input.note)
+    await tx.update(eventPeople).set(answered(input.answer, input.note)).where(eq(eventPeople.id, r.id))
   })
 }
 
@@ -1754,7 +1750,7 @@ export async function deleteBandForever(db: Db, slug: string) {
       .where(and(eq(bands.slug, slug), isNotNull(bands.archivedAt)))
     if (!band) throw new NotFound()
     // Children before parents (foreign keys).
-    for (const table of [calendarFeeds, availabilityResponses, availabilityRequests, files, feedback, setItems, sets, setlists, blockSongs, blocks, eventContacts, events, contacts, venues, songs, slugRedirects, memberships])
+    for (const table of [calendarFeeds, eventPeople, availabilityResponses, availabilityRequests, files, feedback, setItems, sets, setlists, blockSongs, blocks, eventContacts, events, contacts, venues, songs, slugRedirects, memberships])
       await tx.delete(table).where(eq(table.bandId, band.id))
     await tx.delete(slugRedirects).where(and(eq(slugRedirects.type, 'band'), eq(slugRedirects.entityId, band.id)))
     await tx.delete(bands).where(eq(bands.id, band.id))

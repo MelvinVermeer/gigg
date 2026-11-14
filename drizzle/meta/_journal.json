@@ -71,6 +71,13 @@
       "when": 1794520835166,
       "tag": "0009_brave_thunderbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794668834006,
+      "tag": "0010_first_black_tom",
+      "breakpoints": true
     }
   ]
 }
