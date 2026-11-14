@@ -1,0 +1,3 @@
+# Offline
+
+**Read-only.** Offline hides every control that writes (member edits, availability answer, passkeys, language, feedback, invite); forms already open stay. A small service worker (`public/sw.js`) caches every GET network-first: pages, the single client bundle, and read operations (`get*`/`list*`/`search` go over GET, in a read-only transaction). Offline, the last cached copy is served; writes fail. The events list returns all statuses with a per-row `mine` flag and filters in the browser, so one cached response per period serves every filter, offline too. It preloads the next three gigs and their setlists. Logging out clears the cache. No sync engine, no conflict handling.
