@@ -63,7 +63,9 @@ function Event() {
             <dd>
               {venue ? (
                 <>
-                  {venue.name}
+                  <Link to="/$band/venues/$venue" params={{ band: band.slug, venue: venue.slug }} className="font-medium">
+                    {venue.name}
+                  </Link>
                   {venue.address && (
                     <>
                       <br />
@@ -87,7 +89,7 @@ function Event() {
             </dd>
             <dt className="text-muted-foreground">{t.common.contacts}</dt>
             <dd className={contacts.length ? "-my-3" : undefined}>
-              {contacts.length ? contacts.map((c) => <ContactLink key={c.id} contact={c} />) : '–'}
+              {contacts.length ? contacts.map((c) => <ContactLink key={c.id} band={band.slug} contact={c} />) : '–'}
             </dd>
             <dt className="text-muted-foreground">{t.common.tags}</dt>
             <dd>{event.tags.length ? event.tags.join(', ') : '–'}</dd>

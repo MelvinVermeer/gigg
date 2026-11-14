@@ -1,5 +1,6 @@
 import { Mail, MessageCircle, Phone } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { Button } from '#/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '#/components/ui/dialog'
 import { useT } from '#/lib/i18n'
@@ -45,13 +46,19 @@ export function PhoneLink({ name, phone }: { name: string; phone: string }) {
   )
 }
 
-type Contact = { name: string; phone: string | null; email: string | null; organisation?: string | null }
+type Contact = { id: string; name: string; phone: string | null; email: string | null; organisation?: string | null }
 
-/** A contact's name; tapping it opens their details with Call / WhatsApp / Mail. Plain text without phone or email. */
-export function ContactLink({ contact: c }: { contact: Contact }) {
+/** A contact's name; tapping it opens their details with Call / WhatsApp / Mail. Without phone or email it links to their page. */
+export function ContactLink({ band, contact: c }: { band: string; contact: Contact }) {
   const t = useT()
   const [open, setOpen] = useState(false)
-  if (!c.phone && !c.email) return <span className="flex min-h-11 items-center">{c.name}</span>
+  const page = { to: '/$band/contacts/$contact', params: { band, contact: c.id } } as const
+  if (!c.phone && !c.email)
+    return (
+      <Link {...page} className="flex min-h-11 items-center font-medium underline-offset-4 hover:underline">
+        {c.name}
+      </Link>
+    )
   return (
     <>
       <button type="button" className="flex min-h-11 items-center text-left font-medium underline-offset-4 hover:underline" onClick={() => setOpen(true)}>
@@ -90,6 +97,9 @@ export function ContactLink({ contact: c }: { contact: Contact }) {
               </Button>
             )}
           </div>
+          <Link {...page} className="text-center text-sm text-muted-foreground underline-offset-4 hover:underline">
+            {t.records.viewContact}
+          </Link>
         </DialogContent>
       </Dialog>
     </>

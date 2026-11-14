@@ -15,7 +15,6 @@ test('search as you type, with typos; results link to the right place', async ({
   await songs.getByRole('link', { name: 'Closer' }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Closer')
 
-  // A venue result opens its row on the venues page.
   await page.goBack()
   await expect(box).toHaveValue('closr')
 
@@ -27,8 +26,9 @@ test('search as you type, with typos; results link to the right place', async ({
   const events = page.locator('section', { has: page.getByRole('heading', { name: 'Events' }) })
   await expect(events.getByRole('link', { name: 'Summer Party' })).toBeVisible()
   await page.locator('section', { has: page.getByRole('heading', { name: 'Venues' }) }).getByRole('link', { name: 'The Local Hall' }).click()
-  await expect(page).toHaveURL(/\/settings\/venues#[0-9a-f-]{36}$/)
-  await expect(page.locator('ul.records li', { hasText: 'The Local Hall' }).locator('details')).toHaveAttribute('open', '')
+  // A venue result opens the venue's page.
+  await expect(page).toHaveURL(/\/demo-band\/venues\/the-local-hall$/)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('The Local Hall')
 
   await page.goto('/demo-band/search?q=zzzzqqq')
   await expect(page.getByText('Nothing found for “zzzzqqq”.')).toBeVisible()

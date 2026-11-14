@@ -266,6 +266,20 @@ describe('venues & contacts', () => {
     expect([after.venues.length, after.contacts.length]).toEqual([1, 1])
   })
 
+  it('shows a venue or contact with its events, newest first', async () => {
+    const t = await testDb()
+    const { venue, events: venueEvents } = await bandOps.getVenue(t.db, t.reader, t.band, { slug: 'the-local-hall' })
+    expect(venue.name).toBe('The Local Hall')
+    expect(venueEvents.map((e) => e.slug)).toEqual(['summer-party', 'spring-show'])
+    const [pat] = await bandOps.listContacts(t.db, t.reader, t.band, {})
+    const { contact, events: contactEvents } = await bandOps.getContact(t.db, t.reader, t.band, { id: pat.id })
+    expect(contact.email).toBe('pat@example.com')
+    expect(contactEvents.map((e) => e.slug)).toEqual(['summer-party', 'spring-show'])
+    // Archived ones still open (old events link to them).
+    await bandOps.archiveContact(t.db, t.member, t.band, { id: pat.id })
+    await expect(bandOps.getContact(t.db, t.reader, t.band, { id: pat.id })).resolves.toMatchObject({ contact: { archivedAt: expect.any(Date) } })
+  })
+
   it("refuses to touch another band's venues and contacts", async () => {
     const t = await testDb()
     const [other] = await t.db.insert(bands).values({ slug: 'other-band', name: 'Other' }).returning()
@@ -279,6 +293,8 @@ describe('venues & contacts', () => {
       bandOps.updateContact(t.db, t.member, t.band, { id: contact.id, fields: { name: 'Mine now' } }),
     ).rejects.toBeInstanceOf(NotFound)
     await expect(bandOps.restoreContact(t.db, t.member, t.band, { id: contact.id })).rejects.toBeInstanceOf(NotFound)
+    await expect(bandOps.getVenue(t.db, t.member, t.band, { slug: 'theirs' })).rejects.toBeInstanceOf(NotFound)
+    await expect(bandOps.getContact(t.db, t.member, t.band, { id: contact.id })).rejects.toBeInstanceOf(NotFound)
   })
 })
 
@@ -418,13 +434,15 @@ describe('search', () => {
     expect(results).toEqual(expect.arrayContaining(['venue:The Local Hall', 'event:Summer Party', 'event:Spring Show']))
   })
 
-  it('returns refs the links need: slugs for songs/events, ids for venues/contacts', async () => {
+  it('returns refs the links need: slugs for songs/events/venues, ids for contacts', async () => {
     const t = await testDb()
     const [song] = await bandOps.search(t.db, t.reader, t.band, { q: 'closer' })
     expect(song).toMatchObject({ type: 'song', ref: 'closer', detail: 'G' })
     const contact = (await bandOps.search(t.db, t.reader, t.band, { q: 'pat' })).find((r) => r.type === 'contact')!
     expect(contact.ref).toMatch(/^[0-9a-f-]{36}$/)
     expect(contact.detail).toBe('pat@example.com')
+    const venue = (await bandOps.search(t.db, t.reader, t.band, { q: 'local hall' })).find((r) => r.type === 'venue')!
+    expect(venue.ref).toBe('the-local-hall')
   })
 
   it('finds files by name, with what they are attached to', async () => {

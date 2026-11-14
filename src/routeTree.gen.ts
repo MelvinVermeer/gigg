@@ -33,6 +33,8 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiCalendarTokenRouteImport } from './routes/api/calendar.$token'
 import { Route as ApiFilesIdRouteImport } from './routes/api/files.$id'
 import { Route as ApiFilesUploadRouteImport } from './routes/api/files.upload'
+import { Route as BandContactsContactIndexRouteImport } from './routes/$band.contacts.$contact.index'
+import { Route as BandContactsContactEditRouteImport } from './routes/$band.contacts.$contact.edit'
 import { Route as BandEventsEventIndexRouteImport } from './routes/$band.events.$event.index'
 import { Route as BandEventsEventEditRouteImport } from './routes/$band.events.$event.edit'
 import { Route as BandEventsEventPrintRouteImport } from './routes/$band.events.$event.print'
@@ -43,6 +45,8 @@ import { Route as BandSetlistsSetlistPrintRouteImport } from './routes/$band.set
 import { Route as BandSetlistsSetlistShowRouteImport } from './routes/$band.setlists.$setlist.show'
 import { Route as BandSongsSongIndexRouteImport } from './routes/$band.songs.$song.index'
 import { Route as BandSongsSongEditRouteImport } from './routes/$band.songs.$song.edit'
+import { Route as BandVenuesVenueIndexRouteImport } from './routes/$band.venues.$venue.index'
+import { Route as BandVenuesVenueEditRouteImport } from './routes/$band.venues.$venue.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -164,6 +168,17 @@ const ApiFilesUploadRoute = ApiFilesUploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => ApiFilesRoute,
 } as any)
+const BandContactsContactIndexRoute =
+  BandContactsContactIndexRouteImport.update({
+    id: '/contacts/$contact/',
+    path: '/contacts/$contact/',
+    getParentRoute: () => BandRoute,
+  } as any)
+const BandContactsContactEditRoute = BandContactsContactEditRouteImport.update({
+  id: '/contacts/$contact/edit',
+  path: '/contacts/$contact/edit',
+  getParentRoute: () => BandRoute,
+} as any)
 const BandEventsEventIndexRoute = BandEventsEventIndexRouteImport.update({
   id: '/events/$event/',
   path: '/events/$event/',
@@ -216,6 +231,16 @@ const BandSongsSongEditRoute = BandSongsSongEditRouteImport.update({
   path: '/songs/$song/edit',
   getParentRoute: () => BandRoute,
 } as any)
+const BandVenuesVenueIndexRoute = BandVenuesVenueIndexRouteImport.update({
+  id: '/venues/$venue/',
+  path: '/venues/$venue/',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandVenuesVenueEditRoute = BandVenuesVenueEditRouteImport.update({
+  id: '/venues/$venue/edit',
+  path: '/venues/$venue/edit',
+  getParentRoute: () => BandRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -242,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/$band/setlists/': typeof BandSetlistsIndexRoute
   '/$band/settings/': typeof BandSettingsIndexRoute
   '/$band/songs/': typeof BandSongsIndexRoute
+  '/$band/contacts/$contact/edit': typeof BandContactsContactEditRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
   '/$band/events/$event/print': typeof BandEventsEventPrintRoute
   '/$band/events/$event/setlist': typeof BandEventsEventSetlistRoute
@@ -249,9 +275,12 @@ export interface FileRoutesByFullPath {
   '/$band/setlists/$setlist/print': typeof BandSetlistsSetlistPrintRoute
   '/$band/setlists/$setlist/show': typeof BandSetlistsSetlistShowRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
+  '/$band/venues/$venue/edit': typeof BandVenuesVenueEditRoute
+  '/$band/contacts/$contact/': typeof BandContactsContactIndexRoute
   '/$band/events/$event/': typeof BandEventsEventIndexRoute
   '/$band/setlists/$setlist/': typeof BandSetlistsSetlistIndexRoute
   '/$band/songs/$song/': typeof BandSongsSongIndexRoute
+  '/$band/venues/$venue/': typeof BandVenuesVenueIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -277,6 +306,7 @@ export interface FileRoutesByTo {
   '/$band/setlists': typeof BandSetlistsIndexRoute
   '/$band/settings': typeof BandSettingsIndexRoute
   '/$band/songs': typeof BandSongsIndexRoute
+  '/$band/contacts/$contact/edit': typeof BandContactsContactEditRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
   '/$band/events/$event/print': typeof BandEventsEventPrintRoute
   '/$band/events/$event/setlist': typeof BandEventsEventSetlistRoute
@@ -284,9 +314,12 @@ export interface FileRoutesByTo {
   '/$band/setlists/$setlist/print': typeof BandSetlistsSetlistPrintRoute
   '/$band/setlists/$setlist/show': typeof BandSetlistsSetlistShowRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
+  '/$band/venues/$venue/edit': typeof BandVenuesVenueEditRoute
+  '/$band/contacts/$contact': typeof BandContactsContactIndexRoute
   '/$band/events/$event': typeof BandEventsEventIndexRoute
   '/$band/setlists/$setlist': typeof BandSetlistsSetlistIndexRoute
   '/$band/songs/$song': typeof BandSongsSongIndexRoute
+  '/$band/venues/$venue': typeof BandVenuesVenueIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -314,6 +347,7 @@ export interface FileRoutesById {
   '/$band/setlists/': typeof BandSetlistsIndexRoute
   '/$band/settings/': typeof BandSettingsIndexRoute
   '/$band/songs/': typeof BandSongsIndexRoute
+  '/$band/contacts/$contact/edit': typeof BandContactsContactEditRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
   '/$band/events/$event/print': typeof BandEventsEventPrintRoute
   '/$band/events/$event/setlist': typeof BandEventsEventSetlistRoute
@@ -321,9 +355,12 @@ export interface FileRoutesById {
   '/$band/setlists/$setlist/print': typeof BandSetlistsSetlistPrintRoute
   '/$band/setlists/$setlist/show': typeof BandSetlistsSetlistShowRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
+  '/$band/venues/$venue/edit': typeof BandVenuesVenueEditRoute
+  '/$band/contacts/$contact/': typeof BandContactsContactIndexRoute
   '/$band/events/$event/': typeof BandEventsEventIndexRoute
   '/$band/setlists/$setlist/': typeof BandSetlistsSetlistIndexRoute
   '/$band/songs/$song/': typeof BandSongsSongIndexRoute
+  '/$band/venues/$venue/': typeof BandVenuesVenueIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -352,6 +389,7 @@ export interface FileRouteTypes {
     | '/$band/setlists/'
     | '/$band/settings/'
     | '/$band/songs/'
+    | '/$band/contacts/$contact/edit'
     | '/$band/events/$event/edit'
     | '/$band/events/$event/print'
     | '/$band/events/$event/setlist'
@@ -359,9 +397,12 @@ export interface FileRouteTypes {
     | '/$band/setlists/$setlist/print'
     | '/$band/setlists/$setlist/show'
     | '/$band/songs/$song/edit'
+    | '/$band/venues/$venue/edit'
+    | '/$band/contacts/$contact/'
     | '/$band/events/$event/'
     | '/$band/setlists/$setlist/'
     | '/$band/songs/$song/'
+    | '/$band/venues/$venue/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -387,6 +428,7 @@ export interface FileRouteTypes {
     | '/$band/setlists'
     | '/$band/settings'
     | '/$band/songs'
+    | '/$band/contacts/$contact/edit'
     | '/$band/events/$event/edit'
     | '/$band/events/$event/print'
     | '/$band/events/$event/setlist'
@@ -394,9 +436,12 @@ export interface FileRouteTypes {
     | '/$band/setlists/$setlist/print'
     | '/$band/setlists/$setlist/show'
     | '/$band/songs/$song/edit'
+    | '/$band/venues/$venue/edit'
+    | '/$band/contacts/$contact'
     | '/$band/events/$event'
     | '/$band/setlists/$setlist'
     | '/$band/songs/$song'
+    | '/$band/venues/$venue'
   id:
     | '__root__'
     | '/'
@@ -423,6 +468,7 @@ export interface FileRouteTypes {
     | '/$band/setlists/'
     | '/$band/settings/'
     | '/$band/songs/'
+    | '/$band/contacts/$contact/edit'
     | '/$band/events/$event/edit'
     | '/$band/events/$event/print'
     | '/$band/events/$event/setlist'
@@ -430,9 +476,12 @@ export interface FileRouteTypes {
     | '/$band/setlists/$setlist/print'
     | '/$band/setlists/$setlist/show'
     | '/$band/songs/$song/edit'
+    | '/$band/venues/$venue/edit'
+    | '/$band/contacts/$contact/'
     | '/$band/events/$event/'
     | '/$band/setlists/$setlist/'
     | '/$band/songs/$song/'
+    | '/$band/venues/$venue/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -618,6 +667,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiFilesUploadRouteImport
       parentRoute: typeof ApiFilesRoute
     }
+    '/$band/contacts/$contact/': {
+      id: '/$band/contacts/$contact/'
+      path: '/contacts/$contact'
+      fullPath: '/$band/contacts/$contact/'
+      preLoaderRoute: typeof BandContactsContactIndexRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/contacts/$contact/edit': {
+      id: '/$band/contacts/$contact/edit'
+      path: '/contacts/$contact/edit'
+      fullPath: '/$band/contacts/$contact/edit'
+      preLoaderRoute: typeof BandContactsContactEditRouteImport
+      parentRoute: typeof BandRoute
+    }
     '/$band/events/$event/': {
       id: '/$band/events/$event/'
       path: '/events/$event'
@@ -688,6 +751,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BandSongsSongEditRouteImport
       parentRoute: typeof BandRoute
     }
+    '/$band/venues/$venue/': {
+      id: '/$band/venues/$venue/'
+      path: '/venues/$venue'
+      fullPath: '/$band/venues/$venue/'
+      preLoaderRoute: typeof BandVenuesVenueIndexRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/venues/$venue/edit': {
+      id: '/$band/venues/$venue/edit'
+      path: '/venues/$venue/edit'
+      fullPath: '/$band/venues/$venue/edit'
+      preLoaderRoute: typeof BandVenuesVenueEditRouteImport
+      parentRoute: typeof BandRoute
+    }
   }
 }
 
@@ -704,6 +781,7 @@ interface BandRouteChildren {
   BandSetlistsIndexRoute: typeof BandSetlistsIndexRoute
   BandSettingsIndexRoute: typeof BandSettingsIndexRoute
   BandSongsIndexRoute: typeof BandSongsIndexRoute
+  BandContactsContactEditRoute: typeof BandContactsContactEditRoute
   BandEventsEventEditRoute: typeof BandEventsEventEditRoute
   BandEventsEventPrintRoute: typeof BandEventsEventPrintRoute
   BandEventsEventSetlistRoute: typeof BandEventsEventSetlistRoute
@@ -711,9 +789,12 @@ interface BandRouteChildren {
   BandSetlistsSetlistPrintRoute: typeof BandSetlistsSetlistPrintRoute
   BandSetlistsSetlistShowRoute: typeof BandSetlistsSetlistShowRoute
   BandSongsSongEditRoute: typeof BandSongsSongEditRoute
+  BandVenuesVenueEditRoute: typeof BandVenuesVenueEditRoute
+  BandContactsContactIndexRoute: typeof BandContactsContactIndexRoute
   BandEventsEventIndexRoute: typeof BandEventsEventIndexRoute
   BandSetlistsSetlistIndexRoute: typeof BandSetlistsSetlistIndexRoute
   BandSongsSongIndexRoute: typeof BandSongsSongIndexRoute
+  BandVenuesVenueIndexRoute: typeof BandVenuesVenueIndexRoute
 }
 
 const BandRouteChildren: BandRouteChildren = {
@@ -729,6 +810,7 @@ const BandRouteChildren: BandRouteChildren = {
   BandSetlistsIndexRoute: BandSetlistsIndexRoute,
   BandSettingsIndexRoute: BandSettingsIndexRoute,
   BandSongsIndexRoute: BandSongsIndexRoute,
+  BandContactsContactEditRoute: BandContactsContactEditRoute,
   BandEventsEventEditRoute: BandEventsEventEditRoute,
   BandEventsEventPrintRoute: BandEventsEventPrintRoute,
   BandEventsEventSetlistRoute: BandEventsEventSetlistRoute,
@@ -736,9 +818,12 @@ const BandRouteChildren: BandRouteChildren = {
   BandSetlistsSetlistPrintRoute: BandSetlistsSetlistPrintRoute,
   BandSetlistsSetlistShowRoute: BandSetlistsSetlistShowRoute,
   BandSongsSongEditRoute: BandSongsSongEditRoute,
+  BandVenuesVenueEditRoute: BandVenuesVenueEditRoute,
+  BandContactsContactIndexRoute: BandContactsContactIndexRoute,
   BandEventsEventIndexRoute: BandEventsEventIndexRoute,
   BandSetlistsSetlistIndexRoute: BandSetlistsSetlistIndexRoute,
   BandSongsSongIndexRoute: BandSongsSongIndexRoute,
+  BandVenuesVenueIndexRoute: BandVenuesVenueIndexRoute,
 }
 
 const BandRouteWithChildren = BandRoute._addFileChildren(BandRouteChildren)

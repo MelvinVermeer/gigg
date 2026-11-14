@@ -27,9 +27,9 @@ function ResultLink({ band, r }: { band: string; r: SearchResult }) {
     case 'event':
       return <Link to="/$band/events/$event" params={{ band, event: r.ref }}>{r.label}</Link>
     case 'venue':
-      return <Link to="/$band/settings/venues" params={{ band }} hash={r.ref}>{r.label}</Link>
+      return <Link to="/$band/venues/$venue" params={{ band, venue: r.ref }}>{r.label}</Link>
     case 'contact':
-      return <Link to="/$band/settings/contacts" params={{ band }} hash={r.ref}>{r.label}</Link>
+      return <Link to="/$band/contacts/$contact" params={{ band, contact: r.ref }}>{r.label}</Link>
     case 'file':
       return <a href={`/api/files/${r.ref}`}>{r.label}</a>
   }

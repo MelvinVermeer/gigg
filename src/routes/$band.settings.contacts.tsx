@@ -1,14 +1,10 @@
-import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi } from '@tanstack/react-router'
 import { Button } from '#/components/ui/button'
 import { PhoneLink } from '#/components/PhoneLink'
-import { RecordList } from '#/components/RecordList'
-import type { Field } from '#/components/RecordList'
+import { RecordList } from '#/components/Records'
 import { bandOp } from '#/server/fns'
 import { archivedSearch } from '#/lib/archived'
-import type { ContactFields } from '#/server/ops'
 import { useT } from '#/lib/i18n'
-import { useCanEdit } from '#/lib/online'
-import type { Dict } from '#/lib/i18n'
 
 export const Route = createFileRoute('/$band/settings/contacts')({
   validateSearch: archivedSearch,
@@ -19,19 +15,9 @@ export const Route = createFileRoute('/$band/settings/contacts')({
 
 const bandRoute = getRouteApi('/$band')
 
-const fields = (t: Dict): Field[] => [
-  { name: 'name', label: t.common.name, required: true, max: 200 },
-  { name: 'organisation', label: t.common.organisation, max: 200 },
-  { name: 'email', label: t.common.email, type: 'email', max: 200 },
-  { name: 'phone', label: t.common.phone, type: 'tel', max: 50 },
-  { name: 'notes', label: t.common.notes, type: 'textarea', max: 10_000 },
-]
-
 function Contacts() {
   const contacts = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
-  const canEdit = useCanEdit()
-  const router = useRouter()
   const { archived } = Route.useSearch()
   const t = useT()
   return (
@@ -46,7 +32,11 @@ function Contacts() {
       )}
       <RecordList
         items={contacts}
-        fields={fields(t)}
+        name={(c) => (
+          <Link to="/$band/contacts/$contact" params={{ band: band.slug, contact: c.id }} className="hover:underline">
+            {c.name}
+          </Link>
+        )}
         detail={(c) =>
           (c.organisation || c.phone || c.email) && (
             <>
@@ -56,15 +46,6 @@ function Contacts() {
             </>
           )
         }
-        canEdit={canEdit}
-        onSave={async (id, values) => {
-          await bandOp('updateContact', band.slug, { id, fields: values as ContactFields })
-          await router.invalidate()
-        }}
-        onArchive={async (id, archived) => {
-          await bandOp(archived ? 'archiveContact' : 'restoreContact', band.slug, { id })
-          await router.invalidate()
-        }}
       />
     </>
   )

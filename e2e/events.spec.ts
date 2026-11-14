@@ -73,12 +73,32 @@ test.describe('member', () => {
 test.describe('contacts list', () => {
   test.use(asReader)
 
-  test('tapping a phone number opens call / WhatsApp, without opening the row', async ({ page }) => {
+  test('tapping a phone number opens call / WhatsApp', async ({ page }) => {
     await page.goto('/demo-band/settings/contacts')
     const row = page.locator('ul.records li', { hasText: 'Pat Promoter' })
     await row.getByRole('button', { name: '+31 6 12345678' }).click()
     await expect(page.getByRole('dialog', { name: 'Pat Promoter' }).getByRole('link', { name: 'WhatsApp' })).toHaveAttribute('href', 'https://wa.me/31612345678')
-    await expect(row.locator('details')).not.toHaveAttribute('open', '')
+  })
+})
+
+test.describe('contact page', () => {
+  test.use(asMember)
+
+  test('opens from the event, lists its events, and edits', async ({ page }) => {
+    const organisation = `Promo Co ${Date.now()}`
+    await page.goto('/demo-band/events/summer-party')
+    await page.locator('.fields').getByRole('button', { name: 'Pat Promoter' }).click()
+    await page.getByRole('dialog', { name: 'Pat Promoter' }).getByRole('link', { name: 'View contact' }).click()
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Pat Promoter')
+    await expect(page.locator('.linked-events').getByRole('link', { name: 'Summer Party' })).toBeVisible()
+
+    // Only the organisation: other tests rely on the name, phone and email.
+    await page.getByRole('link', { name: 'Edit' }).click()
+    await page.getByLabel('Organisation').fill(organisation)
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Pat Promoter')
+    await expect(page.locator('.fields')).toContainText(organisation)
   })
 })
 

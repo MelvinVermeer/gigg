@@ -2,6 +2,7 @@
 // Server functions (fns.ts) are thin wrappers around these, so everything here is testable without HTTP.
 import { createHash, randomBytes } from 'node:crypto'
 import { and, asc, desc, eq, exists, gte, inArray, isNotNull, isNull, lt, ne, notInArray, or, sql } from 'drizzle-orm'
+import type { SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { formatDuration } from '#/lib/duration'
 import { dicts, label, locales, localeOf } from '#/lib/i18n'
@@ -660,15 +661,23 @@ async function updateOwn(tx: Tx, table: typeof venues | typeof contacts, bandId:
   if (!rows.length) throw new NotFound()
 }
 
+/** This band's events matching `where`, archived too, newest first. */
+const linkedEvents = (tx: Tx, bandId: string, where: SQL) =>
+  tx
+    .select({ slug: events.slug, title: events.title, date: events.date, archivedAt: events.archivedAt })
+    .from(events)
+    .where(and(eq(events.bandId, bandId), where))
+    .orderBy(desc(events.date), asc(events.title))
+
 const venueContactOps = {
   /** All venues, active first, with how many events use each. */
   listVenues: bandOp('reader', z.object({ archived: z.boolean().default(false) }), ({ tx, bandId }, { archived }) =>
     tx
       .select({
         id: venues.id,
+        slug: venues.slug,
         name: venues.name,
         address: venues.address,
-        notes: venues.notes,
         archivedAt: venues.archivedAt,
         // Table-qualified on purpose: Drizzle renders columns unqualified inside sql``, which would
         // compare events.venue_id with events.id.
@@ -678,6 +687,16 @@ const venueContactOps = {
       .where(and(eq(venues.bandId, bandId), archived ? isNotNull(venues.archivedAt) : isNull(venues.archivedAt)))
       .orderBy(asc(venues.name)),
   ),
+
+  /** A venue (archived too) with its events, newest first. */
+  getVenue: bandOp('reader', bySlug, async ({ tx, bandId }, { slug }) => {
+    const [venue] = await tx
+      .select()
+      .from(venues)
+      .where(and(eq(venues.bandId, bandId), eq(venues.slug, slug)))
+    if (!venue) throw new NotFound()
+    return { venue, events: await linkedEvents(tx, bandId, eq(events.venueId, venue.id)) }
+  }),
 
   updateVenue: bandOp('member', byId.extend({ fields: venueFields }), ({ tx, bandId }, { id, fields }) =>
     updateOwn(tx, venues, bandId, id, fields),
@@ -698,7 +717,6 @@ const venueContactOps = {
         organisation: contacts.organisation,
         email: contacts.email,
         phone: contacts.phone,
-        notes: contacts.notes,
         archivedAt: contacts.archivedAt,
         events: sql<number>`(select count(*)::int from event_contacts where event_contacts.contact_id = contacts.id)`,
       })
@@ -706,6 +724,23 @@ const venueContactOps = {
       .where(and(eq(contacts.bandId, bandId), archived ? isNotNull(contacts.archivedAt) : isNull(contacts.archivedAt)))
       .orderBy(asc(contacts.name)),
   ),
+
+  /** A contact (archived too) with the events they're linked to, newest first. */
+  getContact: bandOp('reader', byId, async ({ tx, bandId }, { id }) => {
+    const [contact] = await tx
+      .select()
+      .from(contacts)
+      .where(and(eq(contacts.bandId, bandId), eq(contacts.id, id)))
+    if (!contact) throw new NotFound()
+    return {
+      contact,
+      events: await linkedEvents(
+        tx,
+        bandId,
+        exists(tx.select({ one: sql`1` }).from(eventContacts).where(and(eq(eventContacts.eventId, events.id), eq(eventContacts.contactId, id)))),
+      ),
+    }
+  }),
 
   updateContact: bandOp('member', byId.extend({ fields: contactFields }), ({ tx, bandId }, { id, fields }) =>
     updateOwn(tx, contacts, bandId, id, fields),
@@ -1020,7 +1055,7 @@ const setlistOps = {
 
 export type SearchResult = {
   type: 'song' | 'event' | 'venue' | 'contact' | 'file'
-  /** Slug (songs, events) or id (venues, contacts, files): what the link needs. */
+  /** Slug (songs, events, venues) or id (contacts, files): what the link needs. */
   ref: string
   label: string
   detail: string | null
@@ -1052,7 +1087,7 @@ const searchOps = {
         from events left join venues on venues.id = events.venue_id
         where events.band_id = ${bandId} and events.archived_at is null and ${matches(eventText)}
       union all
-      select 'venue', venues.id::text, venues.name, venues.address, null, ${score(venueText)}
+      select 'venue', venues.slug, venues.name, venues.address, null, ${score(venueText)}
         from venues
         where venues.band_id = ${bandId} and venues.archived_at is null and ${matches(venueText)}
       union all

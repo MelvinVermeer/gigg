@@ -24,7 +24,6 @@ Backlog only. What's built is described in [docs/](docs/).
 - Privacy: anonymise a user record when someone leaves
 - Styled invite emails: HTML with branding instead of plain text
 - Tests: accessibility check per page (`@axe-core/playwright`), public file link works then is revoked, smoke test against the Vercel preview deploy
-- Contact search: results show which events/venues the contact is linked to
 - Setlist edit: drag and drop in blocks doesn't work yet, and the edit view doesn't feel right
 
 ## From feedback (2026-11-12)

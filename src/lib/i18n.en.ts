@@ -323,6 +323,11 @@ export const en = {
     backToContacts: 'Back to contacts',
     archivedVenues: 'Archived venues',
     backToVenues: 'Back to venues',
+    editTitle: (name: string) => `Edit ${name}`,
+    venueArchived: 'This venue is archived.',
+    contactArchived: 'This contact is archived.',
+    noEvents: 'Not linked to any event yet.',
+    viewContact: 'View contact',
   },
 
   settings: {

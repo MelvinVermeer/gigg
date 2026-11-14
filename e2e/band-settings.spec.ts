@@ -14,10 +14,12 @@ test.describe('member', () => {
     // Only the address: other tests rely on the venue's name.
     const row = page.locator('ul.records li', { hasText: 'The Local Hall' })
     await expect(row).toContainText(/used in \d+ events/)
-    await row.locator('summary').click()
-    await row.getByLabel('Address').fill(address)
-    await row.getByRole('button', { name: 'Save' }).click()
-    await expect(row.locator('summary')).toContainText(address)
+    await row.getByRole('link', { name: 'The Local Hall' }).click()
+    await page.getByRole('link', { name: 'Edit' }).click()
+    await page.getByLabel('Address').fill(address)
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('The Local Hall')
+    await expect(page.locator('.fields').getByRole('link', { name: address })).toHaveAttribute('href', /google\.com\/maps/)
 
     await page.goto('/demo-band/events/summer-party')
     await expect(page.locator('.fields')).toContainText(address)
@@ -87,8 +89,9 @@ test.describe('reader', () => {
     await expect(page.getByRole('link', { name: 'Venues' })).toHaveCount(0)
 
     await page.goto('/demo-band/settings/venues')
-    await page.locator('ul.records summary').first().click()
-    await expect(page.getByRole('button', { name: 'Save' })).toHaveCount(0)
+    await page.locator('ul.records').getByRole('link').first().click()
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Edit' })).toHaveCount(0)
   })
 
   test('subscribes to the band calendar: the feed has timed gigs, options marked', async ({ page, request }) => {

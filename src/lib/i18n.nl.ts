@@ -321,6 +321,11 @@ export const nl: Dict = {
     backToContacts: 'Terug naar contacten',
     archivedVenues: 'Gearchiveerde locaties',
     backToVenues: 'Terug naar locaties',
+    editTitle: (name) => `${name} bewerken`,
+    venueArchived: 'Deze locatie is gearchiveerd.',
+    contactArchived: 'Dit contact is gearchiveerd.',
+    noEvents: 'Nog niet gekoppeld aan een optreden.',
+    viewContact: 'Bekijk contact',
   },
 
   settings: {
