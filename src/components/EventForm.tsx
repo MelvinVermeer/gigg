@@ -196,20 +196,20 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
                   </Button>
                 </span>
                 {!c.id && (
-                  <span className="grid grid-cols-2 gap-2">
-                    <Input
-                      aria-label={t.eventForm.emailFor(c.name)}
-                      placeholder={t.eventForm.emailOptional}
-                      type="email"
-                      value={c.email ?? ''}
-                      onChange={(e) => update(c.key, { email: e.target.value })}
-                    />
+                  <span className="grid gap-2 sm:grid-cols-2">
                     <Input
                       aria-label={t.eventForm.phoneFor(c.name)}
                       placeholder={t.eventForm.phoneOptional}
                       type="tel"
                       value={c.phone ?? ''}
                       onChange={(e) => update(c.key, { phone: e.target.value })}
+                    />
+                    <Input
+                      aria-label={t.eventForm.emailFor(c.name)}
+                      placeholder={t.eventForm.emailOptional}
+                      type="email"
+                      value={c.email ?? ''}
+                      onChange={(e) => update(c.key, { email: e.target.value })}
                     />
                   </span>
                 )}
