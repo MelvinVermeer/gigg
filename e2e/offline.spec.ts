@@ -50,6 +50,19 @@ test('opening a band preloads setlists, songs and every song for offline', async
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
 })
 
+test('opening a band preloads the setlists and songs pages for a full load offline', async ({ page, context }) => {
+  await page.goto('/demo-band/events')
+  await page.evaluate(() => navigator.serviceWorker.ready)
+  await page.reload()
+  await page.waitForLoadState('networkidle')
+
+  await context.setOffline(true)
+  await page.goto('/demo-band/setlists')
+  await expect(page.getByRole('heading', { name: 'Setlists', level: 1 })).toBeVisible()
+  await page.goto('/demo-band/songs')
+  await expect(page.getByRole('heading', { name: 'Songs', level: 1 })).toBeVisible()
+})
+
 test('a songs list opened online reloads offline', async ({ page, context }) => {
   await page.goto('/demo-band/songs')
   await page.evaluate(() => navigator.serviceWorker.ready)

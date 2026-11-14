@@ -35,6 +35,12 @@ function BandLayout() {
           if (stop) return
           await bandOp('getSong', band.slug, { slug: s.slug }).catch(() => {})
         }
+        // Page HTML too, so a full load of these two works offline. Same URL = same cache key
+        // as a real navigation (sw.js matches by URL only).
+        for (const p of ['setlists', 'songs']) {
+          if (stop) return
+          await fetch(`/${band.slug}/${p}`).catch(() => {})
+        }
       })
       .catch(() => {})
     return () => {
