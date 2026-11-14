@@ -40,6 +40,15 @@ test('a member invites someone, who signs in and sees the band, then is removed'
   await guest.goto('/demo-band/settings')
   await expect(guest.getByLabel('Invite by email')).toHaveCount(0)
 
+  // The display name saves on Enter (no Save button); the card keeps showing the email.
+  const name = guest.getByLabel('Display name')
+  await name.fill('New Reader')
+  await name.press('Enter')
+  await expect(guest.getByText('Saved')).toBeVisible()
+  await guest.reload()
+  await expect(name).toHaveValue('New Reader')
+  await expect(guest.getByText(`Signed in as ${email}`)).toBeVisible()
+
   await row.getByRole('button', { name: `Remove ${email}` }).click()
   await member.getByRole('dialog').getByRole('button', { name: 'Remove' }).click()
   await expect(row).toHaveCount(0)

@@ -1,5 +1,5 @@
 import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 import { deviceName } from '#/lib/device-name'
 import { Check, KeyRound, Monitor, Moon, Plus, Sun, Trash2 } from 'lucide-react'
@@ -87,10 +87,16 @@ function Settings() {
   // '' | 'saved' | an error message
   const [nameStatus, setNameStatus] = useState('')
 
-  async function saveName(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const res = await authClient.updateUser({ name: String(new FormData(e.currentTarget).get('name')).trim() })
-    setNameStatus(res.error ? (res.error.message ?? t.settings.couldNotSave) : 'saved')
+  // Auto-saves on blur and Enter, only when the value changed. Empty clears the name.
+  const savedName = useRef(me?.name ?? '')
+  async function saveName(value: string) {
+    const name = value.trim()
+    if (name === savedName.current) return
+    const res = await authClient.updateUser({ name })
+    if (res.error) return setNameStatus(res.error.message ?? t.settings.couldNotSave)
+    savedName.current = name
+    setNameStatus('saved')
+    setTimeout(() => setNameStatus((s) => (s === 'saved' ? '' : s)), 2000)
     await router.invalidate()
   }
 
@@ -132,25 +138,36 @@ function Settings() {
               {t.settings.you}
             </CardTitle>
             <CardDescription>
-              {t.settings.signedInAs} <strong className="text-foreground">{me?.name || me?.email}</strong>
+              {t.settings.signedInAs} <strong className="text-foreground">{me?.email}</strong>
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
             {online && (
-            <form onSubmit={saveName} className="flex flex-wrap items-end gap-2">
-              <Field label={t.settings.displayName} className="min-w-48 flex-1">
-                <Input name="name" defaultValue={me?.name} maxLength={100} placeholder={me?.email} onChange={() => setNameStatus('')} />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                saveName(String(new FormData(e.currentTarget).get('name')))
+              }}
+            >
+              <Field label={t.settings.displayName}>
+                <Input
+                  name="name"
+                  defaultValue={me?.name}
+                  maxLength={100}
+                  placeholder={me?.email}
+                  onChange={() => setNameStatus('')}
+                  onBlur={(e) => saveName(e.currentTarget.value)}
+                />
               </Field>
-              <Button type="submit" aria-live="polite">
+              <p aria-live="polite" className={`mt-1 min-h-5 text-sm ${nameStatus === 'saved' ? 'text-muted-foreground' : 'text-destructive'}`}>
                 {nameStatus === 'saved' ? (
                   <>
-                    <Check aria-hidden /> {t.common.saved}
+                    <Check aria-hidden className="inline size-4" /> {t.common.saved}
                   </>
                 ) : (
-                  t.common.save
+                  nameStatus
                 )}
-              </Button>
-              {nameStatus !== 'saved' && <span className="self-center text-sm text-destructive">{nameStatus}</span>}
+              </p>
             </form>
             )}
             {online && <Separator />}
