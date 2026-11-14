@@ -30,6 +30,7 @@ export const nl: Dict = {
     phone: 'Telefoon',
     call: 'Bellen',
     whatsapp: 'WhatsApp',
+    mail: 'Mailen',
     notes: 'Notities',
     tags: 'Tags',
     title: 'Titel',

@@ -515,7 +515,7 @@ const eventOps = {
       throw new NotFound()
     }
     const eventContactRows = await tx
-      .select({ id: contacts.id, name: contacts.name, email: contacts.email, phone: contacts.phone })
+      .select({ id: contacts.id, name: contacts.name, email: contacts.email, phone: contacts.phone, organisation: contacts.organisation })
       .from(eventContacts)
       .innerJoin(contacts, eq(contacts.id, eventContacts.contactId))
       .where(eq(eventContacts.eventId, row.event.id))

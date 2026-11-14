@@ -4,7 +4,7 @@ import { formatDuration } from '#/lib/duration'
 import { Availability, AvailabilitySummary } from '#/components/Availability'
 import { Files } from '#/components/Files'
 import { Markdown } from '#/components/Markdown'
-import { PhoneLink } from '#/components/PhoneLink'
+import { ContactLink } from '#/components/PhoneLink'
 import { ChevronDown, Pencil } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -86,26 +86,8 @@ function Event() {
               <Badge variant="secondary">{t.payment[event.paymentStatus]}</Badge>
             </dd>
             <dt className="text-muted-foreground">{t.common.contacts}</dt>
-            <dd>
-              {contacts.length
-                ? contacts.map((c) => (
-                    <div key={c.id}>
-                      {c.name}
-                      {c.phone && (
-                        <>
-                          {' · '}
-                          <PhoneLink name={c.name} phone={c.phone} />
-                        </>
-                      )}
-                      {c.email && (
-                        <>
-                          {' · '}
-                          <a href={`mailto:${c.email}`}>{c.email}</a>
-                        </>
-                      )}
-                    </div>
-                  ))
-                : '–'}
+            <dd className={contacts.length ? "-my-3" : undefined}>
+              {contacts.length ? contacts.map((c) => <ContactLink key={c.id} contact={c} />) : '–'}
             </dd>
             <dt className="text-muted-foreground">{t.common.tags}</dt>
             <dd>{event.tags.length ? event.tags.join(', ') : '–'}</dd>

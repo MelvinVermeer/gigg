@@ -1,4 +1,4 @@
-import { MessageCircle, Phone } from 'lucide-react'
+import { Mail, MessageCircle, Phone } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '#/components/ui/dialog'
@@ -38,6 +38,57 @@ export function PhoneLink({ name, phone }: { name: string; phone: string }) {
                 <MessageCircle aria-hidden /> {t.common.whatsapp}
               </a>
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+type Contact = { name: string; phone: string | null; email: string | null; organisation?: string | null }
+
+/** A contact's name; tapping it opens their details with Call / WhatsApp / Mail. Plain text without phone or email. */
+export function ContactLink({ contact: c }: { contact: Contact }) {
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  if (!c.phone && !c.email) return <span className="flex min-h-11 items-center">{c.name}</span>
+  return (
+    <>
+      <button type="button" className="flex min-h-11 items-center text-left font-medium underline-offset-4 hover:underline" onClick={() => setOpen(true)}>
+        {c.name}
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{c.name}</DialogTitle>
+            {c.organisation && <DialogDescription>{c.organisation}</DialogDescription>}
+          </DialogHeader>
+          <div className="space-y-1 text-sm break-all">
+            {c.phone && <p>{c.phone}</p>}
+            {c.email && <p>{c.email}</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {c.phone && (
+              <>
+                <Button asChild size="lg">
+                  <a href={`tel:${telNumber(c.phone)}`}>
+                    <Phone aria-hidden /> {t.common.call}
+                  </a>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <a href={`https://wa.me/${whatsappNumber(c.phone)}`} target="_blank" rel="noreferrer">
+                    <MessageCircle aria-hidden /> {t.common.whatsapp}
+                  </a>
+                </Button>
+              </>
+            )}
+            {c.email && (
+              <Button asChild size="lg" variant="outline" className={c.phone ? 'col-span-2' : undefined}>
+                <a href={`mailto:${c.email}`}>
+                  <Mail aria-hidden /> {t.common.mail}
+                </a>
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

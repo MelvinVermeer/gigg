@@ -28,6 +28,7 @@ export const en = {
     phone: 'Phone',
     call: 'Call',
     whatsapp: 'WhatsApp',
+    mail: 'Mail',
     notes: 'Notes',
     tags: 'Tags',
     title: 'Title',

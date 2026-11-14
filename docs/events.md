@@ -20,7 +20,8 @@ The term is **events** (URL `/<band>/events/<slug>`).
   Paid upfront = `confirmed` + `paid`. Paid afterwards = past `confirmed` + `invoiced`. Played is implicit: a confirmed event in the past.
 - Free tags for anything else.
 - Song and event notes render as markdown (GFM, no raw HTML).
-- Tapping a phone number (event page, contacts list) asks: call or WhatsApp.
+- Event page: each contact shows just the name; tapping it opens a pop-up with phone, email and organisation, plus Call · WhatsApp · Mail (only for the filled fields). A contact with neither phone nor email is plain text.
+- Contacts list (settings): tapping a phone number asks: call or WhatsApp.
 - An event has one setlist (see [setlists.md](setlists.md)), chosen or copied in the event form.
 - Availability: see [availability.md](availability.md).
 
