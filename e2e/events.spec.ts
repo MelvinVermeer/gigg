@@ -35,11 +35,21 @@ test.describe('member', () => {
     await expect(fields).toContainText('Side Street 2')
     await expect(fields).toContainText('Confirmed')
     await expect(fields).toContainText('Pat Promoter')
-    // Tapping the number asks: call or WhatsApp.
-    await page.getByRole('button', { name: '+31 6 1111 2222' }).click()
+    // Tapping a contact's name opens their details: call, WhatsApp, mail.
+    await fields.getByRole('button', { name: 'Sam Sound' }).click()
     const dialog = page.getByRole('dialog', { name: 'Sam Sound' })
+    await expect(dialog).toContainText('+31 6 1111 2222')
     await expect(dialog.getByRole('link', { name: 'Call' })).toHaveAttribute('href', 'tel:+31611112222')
     await expect(dialog.getByRole('link', { name: 'WhatsApp' })).toHaveAttribute('href', 'https://wa.me/31611112222')
+    await expect(dialog.getByRole('link', { name: 'Mail' })).toHaveCount(0)
+    await page.keyboard.press('Escape')
+
+    await fields.getByRole('button', { name: 'Pat Promoter' }).click()
+    const pat = page.getByRole('dialog', { name: 'Pat Promoter' })
+    await expect(pat).toContainText('+31 6 12345678')
+    await expect(pat).toContainText('pat@example.com')
+    await expect(pat.getByRole('link', { name: 'Call' })).toHaveAttribute('href', 'tel:+31612345678')
+    await expect(pat.getByRole('link', { name: 'Mail' })).toHaveAttribute('href', 'mailto:pat@example.com')
   })
 
   test('picking a known venue suggests the contacts from last time', async ({ page }) => {
