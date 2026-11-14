@@ -38,16 +38,20 @@ export function SetlistBuilder({ band, target, data, editable, actions }: Props)
   const [sets, setSets] = useState<Set[]>(data.sets)
   const [status, setStatus] = useState<'saved' | 'saving' | 'error' | ''>('')
   const queue = useRef(Promise.resolve())
+  const latest = useRef(0)
 
-  /** Saves run one after another, in order. */
+  /** Saves run one after another, in order; "Saved" only once the last one is done. */
   function persist(next: Set[]) {
     setSets(next)
     setStatus('saving')
+    const n = ++latest.current
     const body = next.map((s) => ({ name: s.name.trim() || t.setlist.set, songIds: s.songs.map((song) => song.id) }))
     queue.current = queue.current
       .then(() => bandOp('saveSetlist', band, { ...target, sets: body }))
       .then(
-        () => setStatus('saved'),
+        () => {
+          if (n === latest.current) setStatus('saved')
+        },
         () => setStatus('error'),
       )
   }

@@ -32,6 +32,35 @@ test('visited pages, show mode and preloaded gigs work offline', async ({ page, 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Setlist')
 })
 
+test('opening a band preloads the songs and every song for offline', async ({ page, context }) => {
+  await page.goto('/demo-band/setlists')
+  await page.evaluate(() => navigator.serviceWorker.ready)
+  // Now controlled by the service worker: the band preloads its songs list and every song.
+  await page.reload()
+  await page.waitForLoadState('networkidle')
+
+  await context.setOffline(true)
+  await page.getByRole('link', { name: 'All songs' }).click()
+  await expect(page.getByRole('heading', { name: 'Songs', level: 1 })).toBeVisible()
+  const song = page.locator('table.songs tbody a').last()
+  const title = (await song.textContent())!
+  await song.click()
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
+})
+
+test('a songs list opened online reloads offline', async ({ page, context }) => {
+  await page.goto('/demo-band/songs')
+  await page.evaluate(() => navigator.serviceWorker.ready)
+  await page.reload()
+  await page.waitForLoadState('networkidle')
+  await expect(page.locator('table.songs tbody tr').first()).toBeVisible()
+
+  await context.setOffline(true)
+  await page.reload()
+  await expect(page.getByRole('status')).toContainText('Offline')
+  await expect(page.locator('table.songs tbody tr').first()).toBeVisible()
+})
+
 test.describe('as a member', () => {
   test.use(asMember)
 

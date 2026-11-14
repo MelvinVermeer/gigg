@@ -16,6 +16,28 @@ function BandLayout() {
   const band = Route.useLoaderData()
   const t = useT()
   useEffect(() => rememberBand(band.slug), [band.slug])
+
+  // Once per band opened online: fetch the songs list and every song (text only, no files), so the
+  // service worker has them offline. The same requests the route loaders make (same cache keys),
+  // called directly so the router's own state is left alone.
+  // One song at a time, after the page rendered.
+  // ponytail: refetches every song on each band open; send a version/etag if bands get huge.
+  useEffect(() => {
+    if (!navigator.onLine) return
+    let stop = false
+    bandOp('getBand', band.slug, {}).catch(() => {})
+    bandOp('listSongs', band.slug, { archived: false })
+      .then(async (songs) => {
+        for (const s of songs) {
+          if (stop) return
+          await bandOp('getSong', band.slug, { slug: s.slug }).catch(() => {})
+        }
+      })
+      .catch(() => {})
+    return () => {
+      stop = true
+    }
+  }, [band.slug])
   return (
     <main className="mx-auto w-full max-w-3xl px-4 pt-4 pb-16">
       <nav className="band-nav mb-6 flex items-center gap-1" aria-label={band.name}>
