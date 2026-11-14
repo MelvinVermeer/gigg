@@ -14,13 +14,13 @@ export const Route = createFileRoute('/$band/events/$event/edit')({
     ])
     if (res.moved) throw redirect({ to: '/$band/events/$event/edit', params: { ...params, event: res.slug } })
     const people = await bandOp('getAvailability', params.band, { event: res.event.slug })
-    return { ...res, data, people: people.map((p) => p.userId) }
+    return { ...res, data, people: people.map((p) => p.userId), askedAny: people.some((p) => p.asked) }
   },
   component: EditEvent,
 })
 
 function EditEvent() {
-  const { event, contacts, data, people } = Route.useLoaderData()
+  const { event, contacts, data, people, askedAny } = Route.useLoaderData()
   const { band } = Route.useParams()
   const navigate = useNavigate()
   const t = useT()
@@ -48,12 +48,10 @@ function EditEvent() {
       <EventForm
         id="event-form"
         data={data}
-        initial={{ ...event, contacts, people }}
+        initial={{ ...event, contacts, people, askedAny }}
         submitLabel={t.common.save}
-        onSubmit={async (fields) => {
-          const saved = await bandOp('updateEvent', band, { slug: event.slug, fields })
-          await navigate({ to: '/$band/events/$event', params: { band, event: saved.slug } })
-        }}
+        onSubmit={async (fields) => (await bandOp('updateEvent', band, { slug: event.slug, fields })).slug}
+        onSaved={(slug) => navigate({ to: '/$band/events/$event', params: { band, event: slug } })}
       />
       <Separator className="my-8" />
       <div className="flex flex-wrap items-center justify-between gap-3">

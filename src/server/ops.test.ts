@@ -133,17 +133,19 @@ describe('events', () => {
     ])
   })
 
-  it("marks mine: I'm on the event's list and didn't answer no", async () => {
+  it("marks mine: I'm a participant (whatever I answered) or I created it", async () => {
     const t = await testDb()
     await bandOps.createEvent(t.db, t.member, t.band, { title: 'Lead Gig', date: day(3), people: [t.reader] })
     const mine = async (user: string) => (await bandOps.listEvents(t.db, user, t.band, {})).map((e) => [e.title, e.bookingStatus, e.mine])
-    // Every status, everyone's; creating an event doesn't make it yours (the seed puts the member on Summer Party).
-    expect(await mine(t.member)).toEqual([['Lead Gig', 'lead', false], ['Summer Party', 'confirmed', true]])
+    // Every status, everyone's. The member created Lead Gig, so sees it without being on it (the seed puts the member on Summer Party).
+    expect(await mine(t.member)).toEqual([['Lead Gig', 'lead', true], ['Summer Party', 'confirmed', true]])
     expect(await mine(t.reader)).toEqual([['Lead Gig', 'lead', true], ['Summer Party', 'confirmed', false]])
-    await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'lead-gig', answer: 'maybe' })
-    expect((await mine(t.reader))[0]).toEqual(['Lead Gig', 'lead', true])
     await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'lead-gig', answer: 'no' })
+    expect((await mine(t.reader))[0]).toEqual(['Lead Gig', 'lead', true])
+    // Without participants the event is only the creator's.
+    await bandOps.updateEvent(t.db, t.member, t.band, { slug: 'lead-gig', fields: { title: 'Lead Gig', date: day(3), people: [] } })
     expect((await mine(t.reader))[0]).toEqual(['Lead Gig', 'lead', false])
+    expect((await mine(t.member))[0]).toEqual(['Lead Gig', 'lead', true])
   })
 
   it('creates a new venue and contacts inline and links them', async () => {
