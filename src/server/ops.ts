@@ -479,7 +479,7 @@ async function setEventContacts(tx: Tx, bandId: string, eventId: string, contact
 const eventOps = {
   /**
    * Upcoming (today and later, soonest first), past (latest first) or archived: every status and everyone's,
-   * each marked `mine` (I'm on its list and didn't answer no). The list filters in the browser, so one
+   * each marked `mine` (I'm one of its participants, or I created it). The list filters in the browser, so one
    * cached response per `when` serves every filter offline.
    */
   listEvents: bandOp(
@@ -496,17 +496,14 @@ const eventOps = {
           endTime: events.endTime,
           venue: venues.name,
           bookingStatus: events.bookingStatus,
-          mine: sql<boolean>`${exists(
-            tx
-              .select({ one: sql`1` })
-              .from(eventPeople)
-              .where(
-                and(
-                  eq(eventPeople.eventId, events.id),
-                  eq(eventPeople.userId, userId),
-                  or(isNull(eventPeople.answer), ne(eventPeople.answer, 'no')),
-                ),
-              ),
+          mine: sql<boolean>`${or(
+            eq(events.createdBy, userId),
+            exists(
+              tx
+                .select({ one: sql`1` })
+                .from(eventPeople)
+                .where(and(eq(eventPeople.eventId, events.id), eq(eventPeople.userId, userId))),
+            ),
           )}`,
         })
         .from(events)

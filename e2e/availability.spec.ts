@@ -11,6 +11,10 @@ test('people are added in the form, asked one by one or all at once, and answer 
   await page.goto('/demo-band/events/new')
   await page.getByLabel('Title').fill(title)
   await page.getByLabel('Date').fill(inDays(40))
+  // The participants field starts closed and empty.
+  const participants = page.getByRole('button', { name: /Participants/ })
+  await expect(participants).toHaveAccessibleName(/Nobody selected/)
+  await participants.click()
   await page.getByRole('checkbox', { name: /Dev Member/ }).check()
   await page.getByRole('checkbox', { name: /Dev Reader/ }).check()
   await page.getByRole('button', { name: 'Add event' }).click()
@@ -53,4 +57,31 @@ test('people are added in the form, asked one by one or all at once, and answer 
   await expect(region.getByText('not asked', { exact: true })).toHaveCount(0)
   await expect(region.getByRole('button', { name: 'Check availability' })).toHaveCount(0)
   expect(await mails()).toHaveLength(1)
+})
+
+test('participants: select all, ask from the form, and offer to ask someone added later', async ({ page }) => {
+  const title = `Participants ${Date.now()}`
+  await page.goto('/demo-band/events/new')
+  await page.getByLabel('Title').fill(title)
+  await page.getByLabel('Date').fill(inDays(41))
+  await page.getByRole('button', { name: /Participants/ }).click()
+  await page.getByRole('checkbox', { name: 'Select all' }).check()
+  await expect(page.getByRole('checkbox', { name: /Dev Reader/ })).toBeChecked()
+  await page.getByRole('checkbox', { name: /Dev Reader/ }).uncheck()
+  // Saves the event and asks the selected participants.
+  await page.getByRole('button', { name: 'Ask availability' }).click()
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
+  const region = page.getByRole('region', { name: 'Availability' })
+  await expect(region.getByText('waiting', { exact: true })).toBeVisible()
+  await expect(region.getByText('Dev Reader')).toHaveCount(0)
+
+  // Adding someone after asking started offers to ask them too.
+  await page.getByRole('link', { name: 'Edit' }).click()
+  await page.getByRole('button', { name: /Participants/ }).click()
+  await page.getByRole('checkbox', { name: /Dev Reader/ }).check()
+  await expect(page.getByRole('dialog')).toContainText('Do you also want to check availability with this person?')
+  await page.getByRole('button', { name: 'Yes' }).click()
+  await page.getByRole('button', { name: 'Save' }).first().click()
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
+  await expect(region.getByText('waiting', { exact: true })).toHaveCount(2)
 })

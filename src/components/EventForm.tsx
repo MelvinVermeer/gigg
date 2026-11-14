@@ -1,7 +1,8 @@
-import { Plus, X } from 'lucide-react'
+import { ChevronDown, Plus, X } from 'lucide-react'
 import { Link, useParams } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Combobox } from '#/components/Combobox'
+import { confirmDialog } from '#/components/ConfirmDialog'
 import { Field, FormError } from '#/components/Field'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -12,6 +13,7 @@ import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { Textarea } from '#/components/ui/textarea'
 import { withLabels } from '#/lib/labels'
 import type { EventFields } from '#/server/ops'
+import { askAvailability } from '#/server/fns'
 import { errorText, label, useT } from '#/lib/i18n'
 
 type Venue = { id: string; name: string; address: string | null }
@@ -28,8 +30,10 @@ export type EventFormData = {
 }
 
 type Initial = Partial<Omit<EventFields, 'venue' | 'contacts' | 'people'>> & {
-  /** User ids on the event */
+  /** User ids on the event (its participants) */
   people?: string[]
+  /** Someone on the event was already asked for their availability */
+  askedAny?: boolean
   /** In edit: the event itself, left out of the same-date warning */
   slug?: string
   venueId?: string | null
@@ -42,8 +46,14 @@ type Props = {
   submitLabel: string
   /** Lets a submit button outside the form (form={id}) save it too */
   id?: string
-  onSubmit: (fields: EventFields) => Promise<void>
+  /** Save the event; returns its slug. */
+  onSubmit: (fields: EventFields) => Promise<string>
+  /** After saving (and asking availability, if wanted). */
+  onSaved: (slug: string) => Promise<unknown>
 }
+
+/** Who to ask for their availability once saved: everyone not asked yet, and/or these people. */
+type AskAfterSave = { all: boolean; users: string[] }
 
 /** A picked contact: existing (id) or new (typed name plus optional details). */
 type Picked = { key: string; id?: string; name: string; email?: string; phone?: string }
@@ -55,7 +65,7 @@ let nextKey = 0
 
 const matches = (label: string, text: string) => label.toLowerCase().includes(text.trim().toLowerCase())
 
-export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Props) {
+export function EventForm({ data, initial = {}, submitLabel, id, onSubmit, onSaved }: Props) {
   const t = useT()
   const { band } = useParams({ strict: false }) as { band: string }
   const venues = useMemo(() => withLabels(data.venues, (v) => v.name, (v) => v.address), [data.venues])
@@ -73,6 +83,8 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
   const [startTime, setStartTime] = useState(initial.startTime?.slice(0, 5) ?? '')
   const [endTime, setEndTime] = useState(initial.endTime?.slice(0, 5) ?? '')
   const [people, setPeople] = useState(() => new Set(initial.people ?? []))
+  /** People added here whom the user also wants asked (a check was already running). */
+  const [askAdded, setAskAdded] = useState(() => new Set<string>())
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -95,13 +107,34 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
   const update = (key: string, patch: Partial<Picked>) =>
     setPicked((p) => p.map((c) => (c.key === key ? { ...c, ...patch } : c)))
 
+  /** Tick or untick participants. Adding someone after availability was asked offers to ask them too. */
+  async function choose(ids: string[], on: boolean) {
+    setPeople((s) => {
+      const next = new Set(s)
+      for (const id of ids) on ? next.add(id) : next.delete(id)
+      return next
+    })
+    if (!on) {
+      setAskAdded((s) => new Set([...s].filter((id) => !ids.includes(id))))
+      return
+    }
+    // Only people new to the saved event: someone unticked and ticked again before saving keeps their state.
+    const added = ids.filter((id) => !people.has(id) && !initial.people?.includes(id))
+    if (!initial.askedAny || !added.length) return
+    if (await confirmDialog(t.eventForm.askAddedToo(added.length), t.eventForm.yes, { cancel: t.eventForm.no, destructive: false }))
+      setAskAdded((s) => new Set([...s, ...added]))
+  }
+
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
+    // "Ask availability" saves the form too, then asks everyone on it who wasn't asked yet.
+    const askAll = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('name') === 'ask'
     setBusy(true)
     setError('')
+    let slug: string
     try {
-      await onSubmit({
+      slug = await onSubmit({
         title: String(f.get('title')),
         date: String(f.get('date')),
         startTime,
@@ -120,7 +153,16 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
     } catch (err) {
       setError(errorText(t, err, t.common.savingFailed))
       setBusy(false)
+      return
     }
+    const ask: AskAfterSave = { all: askAll, users: [...askAdded].filter((id) => people.has(id)) }
+    try {
+      if (ask.all) await askAvailability({ data: { band, event: slug } })
+      else for (const user of ask.users) await askAvailability({ data: { band, event: slug, user } })
+    } catch {
+      // The event is saved; whoever wasn't reached shows as "not asked" on the event page, with Ask next to them.
+    }
+    await onSaved(slug)
   }
 
   return (
@@ -240,26 +282,7 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
         />
       </fieldset>
 
-      <fieldset className="grid gap-3 rounded-lg border p-4">
-        <legend className="px-1 text-sm font-medium">{t.eventForm.people}</legend>
-        <p className="-mt-1 text-sm text-muted-foreground">{t.eventForm.peopleHint}</p>
-        {data.people.map((p) => (
-          <Label key={p.id} className="font-normal">
-            <Checkbox
-              checked={people.has(p.id)}
-              onCheckedChange={(c) =>
-                setPeople((s) => {
-                  const next = new Set(s)
-                  if (c === true) next.add(p.id)
-                  else next.delete(p.id)
-                  return next
-                })
-              }
-            />
-            {p.name || p.email} <span className="text-muted-foreground">({label(t.role, p.role)})</span>
-          </Label>
-        ))}
-      </fieldset>
+      <Participants all={data.people} chosen={people} onChoose={choose} busy={busy} />
 
       <div className="grid grid-cols-2 gap-4">
         <Field label={t.events.booking}>
@@ -294,5 +317,69 @@ export function EventForm({ data, initial = {}, submitLabel, id, onSubmit }: Pro
         </Button>
       </div>
     </form>
+  )
+}
+
+/**
+ * The participants field: closed it sums up who's on the event; opened it's a checklist of the band with
+ * "Select all" and "Ask availability" (saves the form, then asks).
+ */
+function Participants({
+  all,
+  chosen,
+  onChoose,
+  busy,
+}: {
+  all: EventFormData['people']
+  chosen: Set<string>
+  onChoose: (ids: string[], on: boolean) => void
+  busy: boolean
+}) {
+  const t = useT()
+  const listId = useId()
+  const [open, setOpen] = useState(false)
+  const names = all.filter((p) => chosen.has(p.id)).map((p) => p.name || p.email)
+  const allChosen = all.length > 0 && all.every((p) => chosen.has(p.id))
+  return (
+    <div className="grid gap-2">
+      <Label id={`${listId}-label`}>{t.eventForm.people}</Label>
+      <Button
+        type="button"
+        variant="outline"
+        className="h-auto min-h-9 justify-between py-2 text-left font-normal whitespace-normal"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-labelledby={`${listId}-label ${listId}-summary`}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span id={`${listId}-summary`} className={names.length ? undefined : 'text-muted-foreground'}>
+          {names.length ? `${t.eventForm.selected(names.length)}: ${names.join(', ')}` : t.eventForm.nobody}
+        </span>
+        <ChevronDown aria-hidden className={open ? 'rotate-180 transition-transform' : 'transition-transform'} />
+      </Button>
+      {open && (
+        <div id={listId} role="group" aria-labelledby={`${listId}-label`} className="grid gap-3 rounded-lg border p-4">
+          <p className="-mt-1 text-sm text-muted-foreground">{t.eventForm.peopleHint}</p>
+          <Label className="font-medium">
+            <Checkbox
+              checked={allChosen}
+              onCheckedChange={() => onChoose(all.map((p) => p.id), !allChosen)}
+            />
+            {t.eventForm.selectAll}
+          </Label>
+          {all.map((p) => (
+            <Label key={p.id} className="font-normal">
+              <Checkbox checked={chosen.has(p.id)} onCheckedChange={(c) => onChoose([p.id], c === true)} />
+              {p.name || p.email} <span className="text-muted-foreground">({label(t.role, p.role)})</span>
+            </Label>
+          ))}
+          <div>
+            <Button type="submit" name="ask" variant="secondary" size="sm" disabled={busy || !chosen.size}>
+              {t.eventForm.askAvailability}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
