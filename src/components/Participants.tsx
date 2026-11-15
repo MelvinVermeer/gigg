@@ -8,7 +8,7 @@ import { Checkbox } from '#/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '#/components/ui/dialog'
 import { Label } from '#/components/ui/label'
 import { cn } from '#/lib/utils'
-import { errorText, label, useT } from '#/lib/i18n'
+import { errorText, useT } from '#/lib/i18n'
 
 type Answer = 'yes' | 'maybe' | 'no'
 export type BandPerson = { id: string; name: string; email: string; role: string }
@@ -81,7 +81,13 @@ export function Participants({ people, chosen, states = {}, closed = false, canE
     waiting: on.filter((p) => state(p.id).asked && !state(p.id).answer).length,
   } as Record<Count, number>
   const allChosen = people.length > 0 && people.every((p) => chosen.has(p.id))
-  const listed = canEdit ? people : on
+  // yes > maybe > no > waiting > not asked (people not on the event sit with them, so ticking doesn't move a row).
+  // The sort is stable: names stay alphabetical within each group.
+  const rank = (id: string) => {
+    const s = state(id)
+    return chosen.has(id) && s.answer ? answers.indexOf(s.answer) : chosen.has(id) && s.asked ? 3 : 4
+  }
+  const listed = [...(canEdit ? people : on)].sort((a, b) => rank(a.id) - rank(b.id))
 
   const run = async (go: () => Promise<unknown>) => {
     setBusy(true)
@@ -118,7 +124,6 @@ export function Participants({ people, chosen, states = {}, closed = false, canE
         >
           <span>{empty ? t.participants.select : t.participants.count(on.length)}</span>
           {started && <AvailabilityPill counts={counts} />}
-          {started && closed && <span className="text-xs font-normal text-muted-foreground">({t.participants.closed})</span>}
           <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
         </button>
       )}
@@ -146,11 +151,7 @@ export function Participants({ people, chosen, states = {}, closed = false, canE
             {listed.map((p) => {
               const s = state(p.id)
               const who = p.name || p.email
-              const name = (
-                <>
-                  {who} <span className="text-muted-foreground">({label(t.role, p.role)})</span>
-                </>
-              )
+              const name = who
               return (
                 <div key={p.id} className="flex flex-wrap items-center gap-2 text-sm">
                   {canEdit ? (

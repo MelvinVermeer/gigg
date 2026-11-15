@@ -299,7 +299,6 @@ export const en = {
     askAddedToo: (n: number): string => (n === 1 ? 'Do you also want to check availability with this person?' : 'Do you also want to check availability with these people?'),
     yes: 'Yes',
     no: 'No',
-    closed: 'closed',
     checkOpen: 'Availability check open: participants can answer.',
     checkClosed: 'Availability check closed: nobody can answer until it’s reopened.',
     close: 'Close availability check',

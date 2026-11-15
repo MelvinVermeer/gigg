@@ -298,7 +298,6 @@ export const nl: Dict = {
     askAddedToo: (n) => (n === 1 ? 'Wil je ook een beschikbaarheidscheck doen bij deze persoon?' : 'Wil je ook een beschikbaarheidscheck doen bij deze personen?'),
     yes: 'Ja',
     no: 'Nee',
-    closed: 'gesloten',
     checkOpen: 'Beschikbaarheidscheck open: deelnemers kunnen antwoorden.',
     checkClosed: 'Beschikbaarheidscheck gesloten: niemand kan antwoorden tot hij heropend wordt.',
     close: 'Beschikbaarheidscheck sluiten',
