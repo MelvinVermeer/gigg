@@ -118,7 +118,7 @@ function Event() {
           {event.notes && <Markdown className="notes mt-4 border-t pt-4 text-sm">{event.notes}</Markdown>}
         </CardContent>
       </Card>
-      <Availability band={band.slug} event={event.slug} people={availability} canAsk={canEdit && !event.archivedAt} />
+      <Availability band={band.slug} event={event.slug} me={availability.people.find((p) => p.mine)} open={availability.open} />
       <Files band={band.slug} owner={{ event: event.slug }} files={files} canEdit={canEdit && !event.archivedAt} />
     </>
   )
@@ -135,15 +135,16 @@ function EventParticipants({
   band: string
   event: string
   people: { id: string; name: string; email: string; role: string }[]
-  availability: { userId: string; asked: boolean; answer: 'yes' | 'maybe' | 'no' | null }[]
+  availability: { closed: boolean; people: { userId: string; asked: boolean; stale: boolean; answer: 'yes' | 'maybe' | 'no' | null }[] }
   canEdit: boolean
 }) {
   const router = useRouter()
-  const saved = availability.map((p) => p.userId).join()
+  const saved = availability.people.map((p) => p.userId).join()
   // Ticks show at once; the saved list replaces them when the page data reloads (or the save fails).
-  const [chosen, setChosen] = useState(() => new Set(availability.map((p) => p.userId)))
+  const [chosen, setChosen] = useState(() => new Set(availability.people.map((p) => p.userId)))
   useEffect(() => setChosen(new Set(saved ? saved.split(',') : [])), [saved])
-  const states = Object.fromEntries(availability.map((p) => [p.userId, { asked: p.asked, answer: p.answer }]))
+  const states = Object.fromEntries(availability.people.map((p) => [p.userId, { asked: p.asked, answer: p.answer, stale: p.stale }]))
+  const reload = () => router.invalidate()
   const ask = async (user?: string) => {
     await askAvailability({ data: { band, event, user } })
   }
@@ -152,6 +153,7 @@ function EventParticipants({
       people={people}
       chosen={chosen}
       states={states}
+      closed={availability.closed}
       canEdit={canEdit}
       onChange={async (ids, on) => {
         const next = on ? [...new Set([...chosen, ...ids])] : [...chosen].filter((id) => !ids.includes(id))
@@ -168,7 +170,15 @@ function EventParticipants({
       }}
       onAsk={async (ids) => {
         for (const id of ids) await ask(id)
-        await router.invalidate()
+        await reload()
+      }}
+      onClose={async () => {
+        await bandOp('closeAvailability', band, { event })
+        await reload()
+      }}
+      onReopen={async () => {
+        await bandOp('reopenAvailability', band, { event })
+        await reload()
       }}
     />
   )

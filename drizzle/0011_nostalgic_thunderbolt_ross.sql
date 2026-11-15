@@ -1,0 +1,1 @@
+ALTER TABLE "events" ADD COLUMN "availability_closed_at" timestamp with time zone;

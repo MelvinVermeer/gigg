@@ -7,12 +7,13 @@ import { Button } from '#/components/ui/button'
 import { Checkbox } from '#/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '#/components/ui/dialog'
 import { Label } from '#/components/ui/label'
+import { cn } from '#/lib/utils'
 import { errorText, label, useT } from '#/lib/i18n'
 
 type Answer = 'yes' | 'maybe' | 'no'
 export type BandPerson = { id: string; name: string; email: string; role: string }
-/** A participant's availability: not asked, waiting (asked, no answer) or their answer. */
-export type ParticipantState = { asked: boolean; answer: Answer | null }
+/** A participant's availability: not asked, waiting (asked, no answer) or their answer; stale = asked before the event moved. */
+export type ParticipantState = { asked: boolean; answer: Answer | null; stale?: boolean }
 
 type Props = {
   /** Everyone in the band (who can be picked) */
@@ -20,37 +21,65 @@ type Props = {
   chosen: Set<string>
   /** Availability per participant (user id); absent = not asked */
   states?: Record<string, ParticipantState>
+  /** The check was closed: nobody can answer until it's reopened. */
+  closed?: boolean
   canEdit: boolean
   /** Tick or untick people. */
   onChange: (ids: string[], on: boolean) => Promise<void>
-  /** Ask every participant not asked yet. */
+  /** Ask every participant not asked yet (starts or reopens the check). */
   onAskAll: () => Promise<void>
-  /** Ask just these people (offered when adding someone after asking started). */
+  /** Ask just these people: someone added while the check is open, or asked before the event moved. */
   onAsk?: (ids: string[]) => Promise<void>
+  onClose?: () => Promise<void>
+  onReopen?: () => Promise<void>
 }
 
 const answers: Answer[] = ['yes', 'maybe', 'no']
+type Count = Answer | 'waiting'
+const pillColor: Record<Count, string> = { ...answerColor, waiting: 'bg-muted text-muted-foreground' }
+
+/** One rounded bar with a number per status (yes / maybe / no / waiting), only the nonzero ones. */
+export function AvailabilityPill({ counts }: { counts: Record<Count, number> }) {
+  const t = useT()
+  const shown = ([...answers, 'waiting'] as Count[]).filter((k) => counts[k] > 0)
+  if (!shown.length) return null
+  return (
+    <span
+      role="img"
+      aria-label={shown.map((k) => `${counts[k]} ${k === 'waiting' ? t.availability.waiting : t.answer[k].toLowerCase()}`).join(', ')}
+      className="inline-flex overflow-hidden rounded-full text-xs font-medium tabular-nums"
+    >
+      {shown.map((k) => (
+        <span key={k} className={cn('px-2 py-0.5', pillColor[k])}>
+          {counts[k]}
+        </span>
+      ))}
+    </span>
+  )
+}
 
 /**
- * The Participants field: "3 participants" (with answer counts once asking started) or "Select".
- * Clicking opens a dialog to add and remove people and ask their availability. Readers see it read-only.
+ * The Participants field: "3 participants" (with the availability pill once asking started) or "Select".
+ * Clicking opens a dialog to add and remove people, ask their availability and close or reopen the check.
+ * Readers see it read-only.
  */
-export function Participants({ people, chosen, states = {}, canEdit, onChange, onAskAll, onAsk }: Props) {
+export function Participants({ people, chosen, states = {}, closed = false, canEdit, onChange, onAskAll, onAsk, onClose, onReopen }: Props) {
   const t = useT()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  /** People just added after asking started: offer to ask them too. */
+  /** People just added while the check is open: offer to ask them too. */
   const [offer, setOffer] = useState<string[]>([])
 
   const on = people.filter((p) => chosen.has(p.id))
   const state = (id: string): ParticipantState => states[id] ?? { asked: false, answer: null }
-  const askedAny = on.some((p) => state(p.id).asked)
+  const started = on.some((p) => state(p.id).asked)
+  const checkOpen = started && !closed
   const notAsked = on.filter((p) => !state(p.id).asked)
   const counts = {
     ...Object.fromEntries(answers.map((a) => [a, on.filter((p) => state(p.id).answer === a).length])),
     waiting: on.filter((p) => state(p.id).asked && !state(p.id).answer).length,
-  } as Record<Answer | 'waiting', number>
+  } as Record<Count, number>
   const allChosen = people.length > 0 && people.every((p) => chosen.has(p.id))
   const listed = canEdit ? people : on
 
@@ -72,7 +101,7 @@ export function Participants({ people, chosen, states = {}, canEdit, onChange, o
     const added = ids.filter((id) => !chosen.has(id))
     if (!(await run(() => onChange(ids, add)))) return
     if (!add) setOffer((o) => o.filter((id) => !ids.includes(id)))
-    else if (askedAny && onAsk && added.length) setOffer((o) => [...new Set([...o, ...added])])
+    else if (checkOpen && onAsk && added.length) setOffer((o) => [...new Set([...o, ...added])])
   }
 
   const empty = !on.length
@@ -88,23 +117,8 @@ export function Participants({ people, chosen, states = {}, canEdit, onChange, o
           onClick={() => setOpen(true)}
         >
           <span>{empty ? t.participants.select : t.participants.count(on.length)}</span>
-          {askedAny && (
-            <span className="inline-flex flex-wrap gap-1">
-              {answers.map(
-                (a) =>
-                  counts[a] > 0 && (
-                    <Badge key={a} className={answerColor[a]}>
-                      {counts[a]} {t.answer[a].toLowerCase()}
-                    </Badge>
-                  ),
-              )}
-              {counts.waiting > 0 && (
-                <Badge variant="outline">
-                  {counts.waiting} {t.availability.waiting}
-                </Badge>
-              )}
-            </span>
-          )}
+          {started && <AvailabilityPill counts={counts} />}
+          {started && closed && <span className="text-xs font-normal text-muted-foreground">({t.participants.closed})</span>}
           <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
         </button>
       )}
@@ -118,7 +132,9 @@ export function Participants({ people, chosen, states = {}, canEdit, onChange, o
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t.participants.title}</DialogTitle>
-            {canEdit && <DialogDescription>{t.participants.hint}</DialogDescription>}
+            <DialogDescription>
+              {started ? (closed ? t.participants.checkClosed : t.participants.checkOpen) : canEdit ? t.participants.hint : null}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid max-h-[50vh] gap-3 overflow-y-auto py-1">
             {canEdit && (
@@ -129,9 +145,10 @@ export function Participants({ people, chosen, states = {}, canEdit, onChange, o
             )}
             {listed.map((p) => {
               const s = state(p.id)
+              const who = p.name || p.email
               const name = (
                 <>
-                  {p.name || p.email} <span className="text-muted-foreground">({label(t.role, p.role)})</span>
+                  {who} <span className="text-muted-foreground">({label(t.role, p.role)})</span>
                 </>
               )
               return (
@@ -148,6 +165,12 @@ export function Participants({ people, chosen, states = {}, canEdit, onChange, o
                     <Badge className={s.answer ? answerColor[s.answer] : undefined} variant={s.answer ? undefined : 'outline'}>
                       {s.answer ? t.answer[s.answer] : t.availability.waiting}
                     </Badge>
+                  )}
+                  {chosen.has(p.id) && s.stale && <span className="text-muted-foreground">({t.availability.movedShort})</span>}
+                  {canEdit && checkOpen && onAsk && chosen.has(p.id) && (!s.asked || s.stale) && (
+                    <Button variant="ghost" size="xs" className="ml-auto" disabled={busy} aria-label={t.availability.askPerson(who)} onClick={() => run(() => onAsk([p.id]))}>
+                      {t.availability.ask}
+                    </Button>
                   )}
                 </div>
               )
@@ -167,11 +190,21 @@ export function Participants({ people, chosen, states = {}, canEdit, onChange, o
             </div>
           )}
           <FormError>{error}</FormError>
-          <DialogFooter>
+          <DialogFooter className="flex-wrap">
             <Button variant="outline" onClick={() => setOpen(false)}>
               {t.common.done}
             </Button>
-            {canEdit && notAsked.length > 0 && (
+            {canEdit && checkOpen && onClose && (
+              <Button variant="outline" disabled={busy} onClick={() => run(onClose)}>
+                {t.participants.close}
+              </Button>
+            )}
+            {canEdit && started && closed && onReopen && (
+              <Button disabled={busy} onClick={() => run(onReopen)}>
+                {t.participants.reopen}
+              </Button>
+            )}
+            {canEdit && !(started && closed) && notAsked.length > 0 && (
               <Button disabled={busy} onClick={async () => (await run(onAskAll)) && setOpen(false)}>
                 {t.participants.askAvailability}
               </Button>

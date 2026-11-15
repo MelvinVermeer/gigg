@@ -57,11 +57,17 @@ function Answer() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
-            {r.stale && (
+            {r.closed && (
+              <p role="status" className="rounded-md bg-muted px-3 py-2 text-sm">
+                {t.availability.closedLink}
+              </p>
+            )}
+            {!r.closed && r.stale && (
               <p role="status" className="rounded-md bg-muted px-3 py-2 text-sm">
                 {t.availability.staleLink}
               </p>
             )}
+            {!r.closed && (
             <form onSubmit={submit} className="grid gap-5">
                 <fieldset>
                   <legend className="mb-3 text-sm font-medium">{t.availability.yourAnswer}</legend>
@@ -82,6 +88,7 @@ function Answer() {
                 )}
                 <FormError>{error}</FormError>
               </form>
+            )}
           </CardContent>
         </Card>
       </main>

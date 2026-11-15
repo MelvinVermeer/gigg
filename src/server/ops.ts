@@ -1210,6 +1210,8 @@ async function describe(tx: Tx, t: Dict, rows: Change[]) {
       else {
         const changed = Object.keys(after!).filter((k) => JSON.stringify(after![k]) !== JSON.stringify(before![k]))
         if (changed.length === 1 && changed[0] === 'archived_at') lines.push(after!.archived_at ? h.archived(name) : h.restored(name))
+        else if (changed.length === 1 && changed[0] === 'availability_closed_at')
+          lines.push((after!.availability_closed_at ? h.closedAvailability : h.reopenedAvailability)(String(r.title)))
         else if (changed.length) lines.push(h.changed(name, changed.filter((k) => k !== 'slug').map((k) => human(t, k)).join(', ')))
       }
     } else if (c.tableName === 'sets') setlistIds.add(r.setlist_id as string)
@@ -1246,7 +1248,7 @@ async function describe(tx: Tx, t: Dict, rows: Change[]) {
 export type Diff = { what: string; field: string; from: string; to: string }
 
 /** Columns that are bookkeeping, not something a person changed. */
-const hidden = new Set(['id', 'band_id', 'slug', 'created_at', 'created_by', 'position'])
+const hidden = new Set(['id', 'band_id', 'slug', 'created_at', 'created_by', 'position', 'availability_closed_at'])
 const refs = ['song_id', 'venue_id', 'contact_id', 'event_id', 'setlist_id', 'block_id', 'user_id']
 
 /**
@@ -1424,12 +1426,17 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
 
 async function availabilityEvent(tx: Tx, bandId: string, slug: string) {
   const [event] = await tx
-    .select({ id: events.id, title: events.title, slug: events.slug, date: events.date, venue: venues.name })
+    .select({ id: events.id, title: events.title, slug: events.slug, date: events.date, venue: venues.name, closedAt: events.availabilityClosedAt })
     .from(events)
     .leftJoin(venues, eq(venues.id, events.venueId))
     .where(and(eq(events.bandId, bandId), eq(events.slug, slug)))
   if (!event) throw new NotFound()
   return event
+}
+
+/** Answering is only possible while the check isn't closed. */
+const assertOpen = (closedAt: Date | null) => {
+  if (closedAt) throw new Error('availabilityClosed')
 }
 
 // Notes only explain a maybe.
@@ -1457,16 +1464,31 @@ const onEvent = (tx: Tx, eventId: string, where?: SQL) =>
 const availabilityOps = {
   /**
    * The event's people, each with their state: not asked (`asked` false), waiting (no answer) or their answer.
-   * `stale`: asked for a date the event has since moved from.
+   * `stale`: asked for a date the event has since moved from. The check is `open` once someone was asked,
+   * until a member closes it (`closed`).
    */
   getAvailability: bandOp('reader', z.object({ event: z.string() }), async ({ tx, bandId, userId }, { event: slug }) => {
     const event = await availabilityEvent(tx, bandId, slug)
-    return (await onEvent(tx, event.id)).map(({ id: _, locale: _l, askedFor, ...p }) => ({
+    const people = (await onEvent(tx, event.id)).map(({ id: _, locale: _l, askedFor, ...p }) => ({
       ...p,
       asked: !!askedFor,
       stale: !!askedFor && askedFor !== event.date,
       mine: p.userId === userId,
     }))
+    const closed = !!event.closedAt
+    return { open: !closed && people.some((p) => p.asked), closed, people }
+  }),
+
+  /** Close the check: nobody can answer (in the app or by link) until it's reopened or someone is asked. */
+  closeAvailability: bandOp('member', z.object({ event: z.string() }), async ({ tx, bandId }, { event: slug }) => {
+    const event = await availabilityEvent(tx, bandId, slug)
+    if (!event.closedAt) await tx.update(events).set({ availabilityClosedAt: new Date() }).where(eq(events.id, event.id))
+  }),
+
+  /** Reopen a closed check: answers kept, links work again. Nobody is mailed. */
+  reopenAvailability: bandOp('member', z.object({ event: z.string() }), async ({ tx, bandId }, { event: slug }) => {
+    const event = await availabilityEvent(tx, bandId, slug)
+    if (event.closedAt) await tx.update(events).set({ availabilityClosedAt: null }).where(eq(events.id, event.id))
   }),
 
   /** Who can be on an event: everyone in the band (for the participants dialog). */
@@ -1497,6 +1519,7 @@ const availabilityOps = {
         .update(eventPeople)
         .set({ tokenHash: sha256(r.token), askedFor: event.date, answer: null, note: null, answeredAt: null })
         .where(eq(eventPeople.id, r.id))
+    if (event.closedAt) await tx.update(events).set({ availabilityClosedAt: null }).where(eq(events.id, event.id)) // asking (re)opens
     const [band] = await tx.select({ name: bands.name, slug: bands.slug }).from(bands).where(eq(bands.id, bandId))
     return { band, event, recipients }
   }),
@@ -1504,6 +1527,7 @@ const availabilityOps = {
   /** Answer (or change your answer) from inside the app: any time you're on the event, asked or not. */
   answerAvailability: bandOp('reader', answerInput.extend({ event: z.string() }), async ({ tx, bandId, userId }, { event: slug, answer, note }) => {
     const event = await availabilityEvent(tx, bandId, slug)
+    assertOpen(event.closedAt)
     const rows = await tx
       .update(eventPeople)
       .set({ ...answered(answer, note), askedFor: event.date }) // answered for the date shown now
@@ -1526,6 +1550,7 @@ async function personByToken(tx: Tx, token: string) {
       date: eventPeople.askedFor,
       eventDate: events.date,
       eventTitle: events.title,
+      closedAt: events.availabilityClosedAt,
       venue: venues.name,
       bandName: bands.name,
     })
@@ -1556,6 +1581,7 @@ export function availabilityByToken(db: Db, token: string) {
       venue: r.venue,
       date: r.date ?? r.eventDate,
       stale: r.date !== r.eventDate,
+      closed: !!r.closedAt,
       answer: r.answer,
       note: r.note,
     }
@@ -1566,6 +1592,7 @@ export async function answerByToken(db: Db, token: string, rawInput: unknown) {
   const input = answerInput.parse(rawInput)
   return db.transaction(async (tx) => {
     const r = await personByToken(tx, token)
+    assertOpen(r.closedAt)
     await tx.execute(sql`select set_config('app.user_id', ${r.userId}, true)`) // the audit trail shows who answered
     await tx.update(eventPeople).set(answered(input.answer, input.note)).where(eq(eventPeople.id, r.id))
   })

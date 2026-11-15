@@ -145,6 +145,8 @@ export const events = pgTable(
     setlistId: uuid('setlist_id').references((): AnyPgColumn => setlists.id),
     // Null for events created before this column existed and not traceable in `changes`.
     createdBy: uuid('created_by').references(() => users.id),
+    // Set while the availability check is closed: nobody can answer. Asking or reopening clears it.
+    availabilityClosedAt: timestamp('availability_closed_at', { withTimezone: true }),
     createdAt: createdAt(),
     archivedAt: archivedAt(),
   },

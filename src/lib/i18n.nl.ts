@@ -55,6 +55,7 @@ export const nl: Dict = {
   },
 
   errors: {
+    availabilityClosed: 'De beschikbaarheidscheck is gesloten',
     cannotRemoveYourself: 'Je kunt jezelf niet verwijderen',
     startTimeNeeded: 'Vul ook een begintijd in',
   },
@@ -297,6 +298,11 @@ export const nl: Dict = {
     askAddedToo: (n) => (n === 1 ? 'Wil je ook een beschikbaarheidscheck doen bij deze persoon?' : 'Wil je ook een beschikbaarheidscheck doen bij deze personen?'),
     yes: 'Ja',
     no: 'Nee',
+    closed: 'gesloten',
+    checkOpen: 'Beschikbaarheidscheck open: deelnemers kunnen antwoorden.',
+    checkClosed: 'Beschikbaarheidscheck gesloten: niemand kan antwoorden tot hij heropend wordt.',
+    close: 'Beschikbaarheidscheck sluiten',
+    reopen: 'Beschikbaarheidscheck heropenen',
   },
 
   availability: {
@@ -306,12 +312,13 @@ export const nl: Dict = {
     notAsked: 'niet gevraagd',
     ask: 'Vragen',
     askPerson: (name) => `${name} vragen`,
-    moved: 'Het optreden is verplaatst sinds sommigen het gevraagd werden.',
+    movedYou: 'Het optreden is verplaatst sinds je het gevraagd werd: kijk je antwoord na.',
     movedShort: 'sindsdien verplaatst',
     note: 'Toelichting',
     whyMaybe: 'Waarom misschien?',
     canYouMakeIt: 'Kun je erbij zijn?',
     at: (venue) => ` in ${venue}`,
+    closedLink: 'Deze beschikbaarheidscheck is gesloten. Vraag de band als er iets veranderd is.',
     staleLink: 'Dit optreden is verplaatst sinds je het gevraagd werd. Overleg met de band voor je antwoordt.',
     whyMaybeOptional: 'Waarom misschien? (optioneel)',
     change: 'Antwoord wijzigen',

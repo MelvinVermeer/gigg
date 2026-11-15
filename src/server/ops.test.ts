@@ -709,7 +709,7 @@ describe('availability', () => {
   const gig = (t: T) => bandOps.createEvent(t.db, t.member, t.band, { title: 'Gig', date: day(20), people: [t.member, t.reader] })
   const ask = (t: T, user?: string) => bandOps.askAvailability(t.db, t.member, t.band, { event: 'gig', user })
   const people = async (t: T) =>
-    (await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'gig' })).map((p) => [p.email, p.asked, p.answer, p.mine])
+    (await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'gig' })).people.map((p) => [p.email, p.asked, p.answer, p.mine])
   const lines = async (t: T) => (await bandOps.listChanges(t.db, t.reader, t.band, {})).flatMap((s) => s.lines)
 
   it('adds people from the event form without asking them; removing shows in the history', async () => {
@@ -743,6 +743,33 @@ describe('availability', () => {
     expect(await people(t)).toContainEqual(['reader@example.com', false, null, true])
     await expect(bandOps.setParticipants(t.db, t.reader, t.band, { event: 'gig', people: [] })).rejects.toBeInstanceOf(Forbidden)
     await expect(bandOps.setParticipants(t.db, t.member, t.band, { event: 'gig', people: [t.outsider] })).rejects.toBeInstanceOf(NotFound)
+  })
+
+  it('a check opens when someone is asked; closed, nobody can answer until it reopens', async () => {
+    const t = await testDb()
+    await gig(t)
+    const state = async () => {
+      const a = await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'gig' })
+      return [a.open, a.closed]
+    }
+    expect(await state()).toEqual([false, false])
+    const token = (await ask(t, t.reader)).recipients[0].token
+    expect(await state()).toEqual([true, false])
+    await expect(bandOps.closeAvailability(t.db, t.reader, t.band, { event: 'gig' })).rejects.toBeInstanceOf(Forbidden)
+    await bandOps.closeAvailability(t.db, t.member, t.band, { event: 'gig' })
+    expect(await state()).toEqual([false, true])
+    await expect(bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'gig', answer: 'yes' })).rejects.toThrow('availabilityClosed')
+    await expect(answerByToken(t.db, token, { answer: 'yes' })).rejects.toThrow('availabilityClosed')
+    expect(await availabilityByToken(t.db, token)).toMatchObject({ closed: true })
+    expect(await lines(t)).toContainEqual('Closed the availability request for event “Gig”')
+    await bandOps.reopenAvailability(t.db, t.member, t.band, { event: 'gig' })
+    expect(await state()).toEqual([true, false])
+    await answerByToken(t.db, token, { answer: 'yes' }) // the same link works again
+    expect(await lines(t)).toContainEqual('Reopened the availability request for event “Gig”')
+    // Asking reopens a closed check too.
+    await bandOps.closeAvailability(t.db, t.member, t.band, { event: 'gig' })
+    await ask(t)
+    expect(await state()).toEqual([true, false])
   })
 
   it('checking availability asks only people not asked yet', async () => {
@@ -790,9 +817,9 @@ describe('availability', () => {
     await ask(t, t.reader)
     await bandOps.answerAvailability(t.db, t.reader, t.band, { event: 'gig', answer: 'no' })
     await t.db.update(events).set({ date: '2031-01-01' }).where(eq(events.slug, 'gig'))
-    expect((await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'gig' })).find((p) => p.mine)).toMatchObject({ stale: true, answer: 'no' })
+    expect((await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'gig' })).people.find((p) => p.mine)).toMatchObject({ stale: true, answer: 'no' })
     await ask(t, t.reader)
-    expect((await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'gig' })).find((p) => p.mine)).toMatchObject({ stale: false, answer: null, asked: true })
+    expect((await bandOps.getAvailability(t.db, t.reader, t.band, { event: 'gig' })).people.find((p) => p.mine)).toMatchObject({ stale: false, answer: null, asked: true })
   })
 
   it('readers answer only for themselves and cannot ask', async () => {

@@ -27,15 +27,21 @@ test('participants are picked in a dialog, asked from it, and answer from the em
   await page.getByRole('button', { name: 'Add event' }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
 
-  // Adding sends nothing; no availability card until someone is asked.
+  // Adding sends nothing; no availability card until the check starts.
   const region = page.getByRole('region', { name: 'Availability' })
   await expect(page.getByRole('button', { name: /^2 participants/ })).toBeVisible()
   await expect(region).toHaveCount(0)
   await page.getByRole('button', { name: /^2 participants/ }).click()
   await dialog.getByRole('button', { name: 'Ask availability' }).click()
   await expect(dialog).toBeHidden()
-  await expect(region.getByText('waiting', { exact: true })).toHaveCount(2)
   await expect(page.getByRole('button', { name: /2 participants.*2 waiting/ })).toBeVisible()
+
+  // The card is only for my own answer.
+  await region.getByRole('radio', { name: 'Yes' }).click()
+  await region.getByRole('button', { name: 'Save' }).click()
+  await expect(region.getByText('Yes', { exact: true })).toBeVisible()
+  await expect(region.getByText('Dev Reader')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /2 participants.*1 yes, 1 waiting/ })).toBeVisible()
 
   const maybeLink = (await mails('reader@example.com', title)).at(-1)!.text.match(/Maybe: (\S+)/)![1]
   // A logged-out visitor: opening the link records nothing until they confirm.
@@ -51,9 +57,24 @@ test('participants are picked in a dialog, asked from it, and answer from the em
   await expect(guest.getByRole('status')).toContainText('Recorded: Maybe')
 
   await page.reload()
-  await expect(region.getByText('“after 9pm”')).toBeVisible()
-  await expect(page.getByRole('button', { name: /2 participants.*1 maybe.*1 waiting/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /2 participants.*1 yes, 1 maybe/ })).toBeVisible()
   expect(await mails('reader@example.com', title)).toHaveLength(1)
+
+  // Closing the check hides the card and stops the link; reopening brings both back.
+  await page.getByRole('button', { name: /^2 participants/ }).click()
+  await dialog.getByRole('button', { name: 'Close availability check' }).click()
+  await expect(dialog).toContainText('Availability check closed')
+  await dialog.getByRole('button', { name: 'Done' }).click()
+  await expect(region).toHaveCount(0)
+  await guest.reload()
+  await expect(guest.getByRole('status')).toContainText('This availability check is closed')
+  await expect(guest.getByRole('button', { name: 'Change my answer' })).toHaveCount(0)
+  await page.getByRole('button', { name: /^2 participants/ }).click()
+  await dialog.getByRole('button', { name: 'Reopen availability check' }).click()
+  await dialog.getByRole('button', { name: 'Done' }).click()
+  await expect(region).toBeVisible()
+  await guest.reload()
+  await expect(guest.getByRole('button', { name: 'Change my answer' })).toBeVisible()
 })
 
 test('ask from the new-event form; someone added later is offered a check, someone removed loses their answer', async ({ page }) => {
@@ -69,8 +90,7 @@ test('ask from the new-event form; someone added later is offered a check, someo
   // Saves the event, then asks.
   await dialog.getByRole('button', { name: 'Ask availability' }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
-  const region = page.getByRole('region', { name: 'Availability' })
-  await expect(region.getByText('waiting', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: /^1 participant.*1 waiting/ })).toBeVisible()
 
   await page.getByRole('button', { name: /^1 participant/ }).click()
   await dialog.getByRole('checkbox', { name: /Dev Reader/ }).check()
@@ -79,12 +99,11 @@ test('ask from the new-event form; someone added later is offered a check, someo
   await expect(dialog.getByRole('alert')).toBeHidden()
   await expect(dialog.getByText('waiting', { exact: true })).toHaveCount(2)
   await dialog.getByRole('button', { name: 'Done' }).click()
-  await expect(region.getByText('waiting', { exact: true })).toHaveCount(2)
+  await expect(page.getByRole('button', { name: /^2 participants.*2 waiting/ })).toBeVisible()
   expect(await mails('reader@example.com', title)).toHaveLength(1)
 
   await page.getByRole('button', { name: /^2 participants/ }).click()
   await dialog.getByRole('checkbox', { name: /Dev Reader/ }).uncheck()
   await dialog.getByRole('button', { name: 'Done' }).click()
-  await expect(page.getByRole('button', { name: /^1 participant/ })).toBeVisible()
-  await expect(region.getByText('Dev Reader')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^1 participant.*1 waiting/ })).toBeVisible()
 })

@@ -54,6 +54,7 @@ export const en = {
 
   /** Messages for errors the server throws by key. */
   errors: {
+    availabilityClosed: 'The availability check is closed',
     cannotRemoveYourself: 'You cannot remove yourself',
     startTimeNeeded: 'Add a start time too',
   },
@@ -298,6 +299,11 @@ export const en = {
     askAddedToo: (n: number): string => (n === 1 ? 'Do you also want to check availability with this person?' : 'Do you also want to check availability with these people?'),
     yes: 'Yes',
     no: 'No',
+    closed: 'closed',
+    checkOpen: 'Availability check open: participants can answer.',
+    checkClosed: 'Availability check closed: nobody can answer until it’s reopened.',
+    close: 'Close availability check',
+    reopen: 'Reopen availability check',
   },
 
   availability: {
@@ -307,13 +313,14 @@ export const en = {
     notAsked: 'not asked',
     ask: 'Ask',
     askPerson: (name: string) => `Ask ${name}`,
-    moved: 'The event has moved since some people were asked.',
+    movedYou: 'The event has moved since you were asked: check your answer.',
     movedShort: 'moved since',
     note: 'Note',
     whyMaybe: 'Why maybe?',
     // The page behind the emailed links
     canYouMakeIt: 'Can you make it?',
     at: (venue: string) => ` at ${venue}`,
+    closedLink: 'This availability check is closed. Ask the band if something changed.',
     staleLink: 'This event has moved since you were asked. Ask the band before answering.',
     whyMaybeOptional: 'Why maybe? (optional)',
     change: 'Change my answer',

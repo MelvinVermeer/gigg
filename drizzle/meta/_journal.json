@@ -78,6 +78,13 @@
       "when": 1794668834006,
       "tag": "0010_first_black_tom",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794722805438,
+      "tag": "0011_nostalgic_thunderbolt_ross",
+      "breakpoints": true
     }
   ]
 }
