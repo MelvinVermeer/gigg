@@ -60,7 +60,7 @@ export const en = {
   },
 
   booking: { lead: 'Lead', option: 'Option', confirmed: 'Confirmed', cancelled: 'Cancelled' },
-  payment: { open: 'Open', invoiced: 'Invoiced', paid: 'Paid' },
+  payment: { open: 'Open', invoiced: 'Invoiced', paid: 'Paid', free: 'Free' },
   role: { member: 'member', reader: 'reader' },
   answer: { yes: 'Yes', maybe: 'Maybe', no: 'No' },
 
@@ -148,7 +148,7 @@ export const en = {
     field: {
       title: 'title', name: 'name', duration: 'duration', key: 'key', bpm: 'bpm', tuning: 'tuning', notes: 'notes', tags: 'tags',
       date: 'date', start_time: 'start time', end_time: 'end time', venue: 'venue', booking_status: 'booking status',
-      payment_status: 'payment status', address: 'address', organisation: 'organisation', email: 'email', phone: 'phone',
+      fee: 'fee', payment_status: 'payment status', address: 'address', organisation: 'organisation', email: 'email', phone: 'phone',
       archived_at: 'archived', role: 'role', answer: 'answer', note: 'note', contact: 'contact', songs: 'songs', sets: 'sets',
       setlist: 'setlist', event: 'event', song: 'song', block: 'block', closed_at: 'closed', standard: 'standard setlist',
     },
@@ -179,6 +179,7 @@ export const en = {
     isArchived: 'This event is archived.',
     booking: 'Booking',
     payment: 'Payment',
+    fee: 'Fee',
     chooseSetlist: 'Choose setlist',
     newSetlist: 'New',
     noSetlist: 'No setlist yet',
@@ -203,6 +204,7 @@ export const en = {
     contactPlaceholder: 'Search or type a new contact',
     sameDate: 'Heads up: there is already an event on this date:',
     notesHint: '(load-in, soundcheck, parking, …)',
+    feePlaceholder: 'e.g. €450 + drinks',
   },
 
   setlist: {

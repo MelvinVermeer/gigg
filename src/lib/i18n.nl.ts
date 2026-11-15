@@ -61,7 +61,7 @@ export const nl: Dict = {
   },
 
   booking: { lead: 'Lead', option: 'Optie', confirmed: 'Bevestigd', cancelled: 'Geannuleerd' },
-  payment: { open: 'Open', invoiced: 'Gefactureerd', paid: 'Betaald' },
+  payment: { open: 'Open', invoiced: 'Gefactureerd', paid: 'Betaald', free: 'Gratis' },
   role: { member: 'lid', reader: 'lezer' },
   answer: { yes: 'Ja', maybe: 'Misschien', no: 'Nee' },
 
@@ -147,7 +147,7 @@ export const nl: Dict = {
     field: {
       title: 'titel', name: 'naam', duration: 'duur', key: 'toonsoort', bpm: 'bpm', tuning: 'stemming', notes: 'notities', tags: 'tags',
       date: 'datum', start_time: 'begintijd', end_time: 'eindtijd', venue: 'locatie', booking_status: 'boekingsstatus',
-      payment_status: 'betaalstatus', address: 'adres', organisation: 'organisatie', email: 'e-mail', phone: 'telefoon',
+      fee: 'gage', payment_status: 'betaalstatus', address: 'adres', organisation: 'organisatie', email: 'e-mail', phone: 'telefoon',
       archived_at: 'gearchiveerd', role: 'rol', answer: 'antwoord', note: 'toelichting', contact: 'contact', songs: 'nummers', sets: 'sets',
       setlist: 'setlist', event: 'optreden', song: 'nummer', block: 'blok', closed_at: 'gesloten', standard: 'standaardsetlist',
     },
@@ -178,6 +178,7 @@ export const nl: Dict = {
     isArchived: 'Dit optreden is gearchiveerd.',
     booking: 'Boeking',
     payment: 'Betaling',
+    fee: 'Gage',
     chooseSetlist: 'Setlist kiezen',
     newSetlist: 'Nieuw',
     noSetlist: 'Nog geen setlist',
@@ -202,6 +203,7 @@ export const nl: Dict = {
     contactPlaceholder: 'Zoek of typ een nieuw contact',
     sameDate: 'Let op: er is al een event op deze datum:',
     notesHint: '(opbouw, soundcheck, parkeren, …)',
+    feePlaceholder: 'bijv. €450 + drankjes',
   },
 
   setlist: {

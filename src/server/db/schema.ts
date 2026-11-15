@@ -123,7 +123,7 @@ export const contacts = pgTable(
 // Events ------------------------------------------------------------------
 
 export const bookingStatus = pgEnum('booking_status', ['lead', 'option', 'confirmed', 'cancelled'])
-export const paymentStatus = pgEnum('payment_status', ['open', 'invoiced', 'paid'])
+export const paymentStatus = pgEnum('payment_status', ['open', 'invoiced', 'paid', 'free'])
 
 export const events = pgTable(
   'events',
@@ -139,6 +139,7 @@ export const events = pgTable(
     venueId: uuid('venue_id').references(() => venues.id),
     bookingStatus: bookingStatus('booking_status').notNull().default('lead'),
     paymentStatus: paymentStatus('payment_status').notNull().default('open'),
+    fee: text('fee'), // free text: "€450 + drinks"
     tags: text('tags').array().notNull().default(sql`'{}'`),
     notes: text('notes'),
     // A standard (standalone) setlist used as is. Null: the event has its own (custom) setlist.

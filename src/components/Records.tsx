@@ -95,7 +95,7 @@ export function RecordForm({
   }
 
   return (
-    <form className="grid gap-4" onSubmit={save}>
+    <form id="record-form" className="grid gap-4" onSubmit={save}>
       {fields.map((f) => {
         const value = String(initial[f.name] ?? '')
         return (

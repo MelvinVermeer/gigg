@@ -85,6 +85,13 @@
       "when": 1794722805438,
       "tag": "0011_nostalgic_thunderbolt_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794755353773,
+      "tag": "0012_kind_nekra",
+      "breakpoints": true
     }
   ]
 }

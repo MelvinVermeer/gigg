@@ -27,7 +27,7 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
         <H>Events</H>
         <P>
           A gig with a date, a venue and contacts. Type a new venue or contact in the form to create it on the spot. Booking (lead → option → confirmed, or
-          cancelled) and payment (open → invoiced → paid) are separate; a confirmed event in the past was played. The filter on the events page
+          cancelled) and payment (open → invoiced → paid, or free) are separate, with the fee as free text; a confirmed event in the past was played. The filter on the events page
           switches between upcoming and past, picks statuses, and shows your own events (you're on the event's people and didn't answer no) or everyone's. Start and end times are optional; an end
           before the start means after midnight. Files such as contracts or riders go on the event page. To get the gigs in your own Google or Apple
           calendar, use Settings → Calendar.

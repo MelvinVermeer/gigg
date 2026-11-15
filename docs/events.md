@@ -15,9 +15,11 @@ The term is **events** (URL `/<band>/events/<slug>`).
 | Field   | Values                                                 |
 |---------|--------------------------------------------------------|
 | Booking | `lead → option → confirmed` (+ `cancelled`)            |
-| Payment | `open → invoiced → paid`                               |
+| Payment | `open → invoiced → paid` (+ `free`)                    |
 
   Paid upfront = `confirmed` + `paid`. Paid afterwards = past `confirmed` + `invoiced`. Played is implicit: a confirmed event in the past.
+- **Fee**: free text under Payment (“€450 + drinks”), also with `free`.
+- Event page: venue, contacts, fee and tags are left out when empty.
 - Free tags for anything else.
 - Song and event notes render as markdown (GFM, no raw HTML).
 - Event page: the venue name links to the venue's page. Each contact shows just the name; tapping it opens a pop-up with phone, email and organisation, plus Call · WhatsApp · Mail (only for the filled fields) and a "View contact" link to the contact's page. A contact with neither phone nor email links straight to that page.

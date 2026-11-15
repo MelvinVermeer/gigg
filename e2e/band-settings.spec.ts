@@ -17,7 +17,7 @@ test.describe('member', () => {
     await row.getByRole('link', { name: 'The Local Hall' }).click()
     await page.getByRole('link', { name: 'Edit' }).click()
     await page.getByLabel('Address').fill(address)
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save' }).first().click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('The Local Hall')
     await expect(page.locator('.fields').getByRole('link', { name: address })).toHaveAttribute('href', /google\.com\/maps/)
 

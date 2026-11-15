@@ -27,6 +27,8 @@ test.describe('member', () => {
     await page.getByLabel('Add contact').fill('pat')
     await page.getByRole('option', { name: 'Pat Promoter' }).click()
     await page.getByLabel('Booking').selectOption('confirmed')
+    await page.getByLabel('Payment').selectOption('free')
+    await page.getByLabel('Fee').fill('dinner + drinks')
     await page.getByRole('button', { name: 'Add event' }).click()
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
@@ -35,6 +37,10 @@ test.describe('member', () => {
     await expect(fields).toContainText('Side Street 2')
     await expect(fields).toContainText('Confirmed')
     await expect(fields).toContainText('Pat Promoter')
+    await expect(fields).toContainText('Free')
+    await expect(fields).toContainText('dinner + drinks')
+    // Empty fields are left out.
+    await expect(fields.getByText('Tags', { exact: true })).toHaveCount(0)
     // Tapping a contact's name opens their details: call, WhatsApp, mail.
     await fields.getByRole('button', { name: 'Sam Sound' }).click()
     const dialog = page.getByRole('dialog', { name: 'Sam Sound' })
@@ -96,7 +102,8 @@ test.describe('contact page', () => {
     // Only the organisation: other tests rely on the name, phone and email.
     await page.getByRole('link', { name: 'Edit' }).click()
     await page.getByLabel('Organisation').fill(organisation)
-    await page.getByRole('button', { name: 'Save' }).click()
+    // Save sits in the header (and below the form); history below the rule.
+    await page.getByRole('button', { name: 'Save' }).first().click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Pat Promoter')
     await expect(page.locator('.fields')).toContainText(organisation)
   })

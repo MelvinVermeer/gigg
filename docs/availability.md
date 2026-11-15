@@ -9,7 +9,7 @@ An event has one list of people: its **participants**. Each has a state: **not a
 - Adding someone while the check is open asks in the dialog: “Do you also want to check availability with this person?” Yes asks them.
 - The **Availability** card on the event is only for your own answer: shown while the check is open and you're a participant.
 - The email has a link to a page (`/availability/<token>`, in the recipient's language) where they answer without logging in. One token per person per ask; only its hash is stored. Everyone answers only for themselves.
-- Answers: yes / maybe / no (coloured). A note can be added on *maybe* only. An answer can be changed (Edit in the card, or the same link) while the check is open.
+- Answers: yes / maybe / no (coloured). A note can be added on *maybe* only; it shows in the Participants dialog. An answer can be changed (Edit in the card, or the same link) while the check is open.
 - If the event moves after someone was asked, their answer shows as *moved since* and **Ask** appears next to them again (asking again clears their answer).
 - Removing someone (participants dialog) removes their answer and their link stops working; added again, they start over at *not asked*.
 - Adding, removing, asking, answering, closing and reopening show up in [history](history.md).

@@ -54,7 +54,7 @@ type Props = {
 type Picked = { key: string; id?: string; name: string; email?: string; phone?: string }
 
 const bookingStatuses = ['lead', 'option', 'confirmed', 'cancelled'] as const
-const paymentStatuses = ['open', 'invoiced', 'paid'] as const
+const paymentStatuses = ['open', 'invoiced', 'paid', 'free'] as const
 
 let nextKey = 0
 
@@ -121,6 +121,7 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
         people: withParticipants ? [...people] : undefined,
         bookingStatus: f.get('bookingStatus') as EventFields['bookingStatus'],
         paymentStatus: f.get('paymentStatus') as EventFields['paymentStatus'],
+        fee: String(f.get('fee')),
         notes: String(f.get('notes')),
         tags: String(f.get('tags'))
           .split(',')
@@ -297,6 +298,9 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
           </NativeSelect>
         </Field>
       </div>
+      <Field label={t.events.fee} hint={t.common.optional}>
+        <Input name="fee" maxLength={200} placeholder={t.eventForm.feePlaceholder} defaultValue={initial.fee ?? ''} />
+      </Field>
       <Field label={t.common.notes} hint={t.eventForm.notesHint}>
         <Textarea name="notes" rows={6} maxLength={10_000} defaultValue={initial.notes ?? ''} />
       </Field>

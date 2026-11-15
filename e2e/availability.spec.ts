@@ -59,6 +59,10 @@ test('participants are picked in a dialog, asked from it, and answer from the em
   await page.reload()
   await expect(page.getByRole('button', { name: /2 participants.*1 yes, 1 maybe/ })).toBeVisible()
   expect(await mails('reader@example.com', title)).toHaveLength(1)
+  // The dialog shows the maybe's reason.
+  await page.getByRole('button', { name: /^2 participants/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Participants' }).getByText('“after 9pm”')).toBeVisible()
+  await page.keyboard.press('Escape')
 
   // Closing the check hides the card and stops the link; reopening brings both back.
   await page.getByRole('button', { name: /^2 participants/ }).click()

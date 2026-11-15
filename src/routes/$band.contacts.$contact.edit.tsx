@@ -30,7 +30,9 @@ function EditContact() {
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="mb-0">{t.records.editTitle(contact.name)}</h1>
-        <HistoryLink item={contact.id} />
+        <Button type="submit" form="record-form">
+          {t.common.save}
+        </Button>
       </div>
       {contact.archivedAt && (
         <p role="status" className="mb-4 rounded-md bg-muted px-3 py-2 text-sm">
@@ -52,9 +54,12 @@ function EditContact() {
         }}
       />
       <Separator className="my-8" />
-      <Button variant="outline" onClick={() => setArchived(!contact.archivedAt)}>
-        {contact.archivedAt ? t.common.restore : t.common.archive}
-      </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button variant="outline" onClick={() => setArchived(!contact.archivedAt)}>
+          {contact.archivedAt ? t.common.restore : t.common.archive}
+        </Button>
+        <HistoryLink item={contact.id} />
+      </div>
     </>
   )
 }

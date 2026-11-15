@@ -64,10 +64,10 @@ function Event() {
               <span className="whitespace-nowrap">{formatDate(event.date, t.intl)}</span>
               {event.startTime && <> <span className="whitespace-nowrap">· {formatTimes(event.startTime, event.endTime)}</span></>}
             </dd>
-            <dt className="text-muted-foreground">{t.common.venue}</dt>
-            <dd>
-              {venue ? (
-                <>
+            {venue && (
+              <>
+                <dt className="text-muted-foreground">{t.common.venue}</dt>
+                <dd>
                   <Link to="/$band/venues/$venue" params={{ band: band.slug, venue: venue.slug }} className="font-medium">
                     {venue.name}
                   </Link>
@@ -79,11 +79,9 @@ function Event() {
                       </a>
                     </>
                   )}
-                </>
-              ) : (
-                '–'
-              )}
-            </dd>
+                </dd>
+              </>
+            )}
             <dt className="text-muted-foreground">{t.participants.title}</dt>
             <dd>
               <EventParticipants band={band.slug} event={event.slug} people={bandPeople} availability={availability} canEdit={canEdit && !event.archivedAt} />
@@ -96,12 +94,26 @@ function Event() {
             <dd>
               <Badge variant="secondary">{t.payment[event.paymentStatus]}</Badge>
             </dd>
-            <dt className="text-muted-foreground">{t.common.contacts}</dt>
-            <dd className={contacts.length ? "-my-3" : undefined}>
-              {contacts.length ? contacts.map((c) => <ContactLink key={c.id} band={band.slug} contact={c} />) : '–'}
-            </dd>
-            <dt className="text-muted-foreground">{t.common.tags}</dt>
-            <dd>{event.tags.length ? event.tags.join(', ') : '–'}</dd>
+            {event.fee && (
+              <>
+                <dt className="text-muted-foreground">{t.events.fee}</dt>
+                <dd>{event.fee}</dd>
+              </>
+            )}
+            {contacts.length > 0 && (
+              <>
+                <dt className="text-muted-foreground">{t.common.contacts}</dt>
+                <dd className="-my-3">
+                  {contacts.map((c) => <ContactLink key={c.id} band={band.slug} contact={c} />)}
+                </dd>
+              </>
+            )}
+            {event.tags.length > 0 && (
+              <>
+                <dt className="text-muted-foreground">{t.common.tags}</dt>
+                <dd>{event.tags.join(', ')}</dd>
+              </>
+            )}
             <dt className="text-muted-foreground">{t.common.setlist}</dt>
             <dd>
               {setlist.songs || standardName || !canEdit ? (
@@ -135,7 +147,7 @@ function EventParticipants({
   band: string
   event: string
   people: { id: string; name: string; email: string; role: string }[]
-  availability: { closed: boolean; people: { userId: string; asked: boolean; stale: boolean; answer: 'yes' | 'maybe' | 'no' | null }[] }
+  availability: { closed: boolean; people: { userId: string; asked: boolean; stale: boolean; answer: 'yes' | 'maybe' | 'no' | null; note: string | null }[] }
   canEdit: boolean
 }) {
   const router = useRouter()
@@ -143,7 +155,7 @@ function EventParticipants({
   // Ticks show at once; the saved list replaces them when the page data reloads (or the save fails).
   const [chosen, setChosen] = useState(() => new Set(availability.people.map((p) => p.userId)))
   useEffect(() => setChosen(new Set(saved ? saved.split(',') : [])), [saved])
-  const states = Object.fromEntries(availability.people.map((p) => [p.userId, { asked: p.asked, answer: p.answer, stale: p.stale }]))
+  const states = Object.fromEntries(availability.people.map((p) => [p.userId, { asked: p.asked, answer: p.answer, stale: p.stale, note: p.note }]))
   const reload = () => router.invalidate()
   const ask = async (user?: string) => {
     await askAvailability({ data: { band, event, user } })

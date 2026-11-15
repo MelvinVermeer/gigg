@@ -13,7 +13,7 @@ import { errorText, useT } from '#/lib/i18n'
 type Answer = 'yes' | 'maybe' | 'no'
 export type BandPerson = { id: string; name: string; email: string; role: string }
 /** A participant's availability: not asked, waiting (asked, no answer) or their answer; stale = asked before the event moved. */
-export type ParticipantState = { asked: boolean; answer: Answer | null; stale?: boolean }
+export type ParticipantState = { asked: boolean; answer: Answer | null; stale?: boolean; /** Why maybe */ note?: string | null }
 
 type Props = {
   /** Everyone in the band (who can be picked) */
@@ -168,6 +168,7 @@ export function Participants({ people, chosen, states = {}, closed = false, canE
                     </Badge>
                   )}
                   {chosen.has(p.id) && s.stale && <span className="text-muted-foreground">({t.availability.movedShort})</span>}
+                  {chosen.has(p.id) && s.note && <span className="text-muted-foreground">“{s.note}”</span>}
                   {canEdit && checkOpen && onAsk && chosen.has(p.id) && (!s.asked || s.stale) && (
                     <Button variant="ghost" size="xs" className="ml-auto" disabled={busy} aria-label={t.availability.askPerson(who)} onClick={() => run(() => onAsk([p.id]))}>
                       {t.availability.ask}

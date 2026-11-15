@@ -402,6 +402,7 @@ const eventFields = z.object({
   people: z.array(z.uuid()).max(100).optional(),
   bookingStatus: z.enum(bookingStatus.enumValues).default('lead'),
   paymentStatus: z.enum(paymentStatus.enumValues).default('open'),
+  fee: optText(200),
   tags,
   notes: optText(10_000),
 })

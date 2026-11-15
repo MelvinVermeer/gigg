@@ -30,7 +30,9 @@ function EditVenue() {
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="mb-0">{t.records.editTitle(venue.name)}</h1>
-        <HistoryLink item={venue.id} />
+        <Button type="submit" form="record-form">
+          {t.common.save}
+        </Button>
       </div>
       {venue.archivedAt && (
         <p role="status" className="mb-4 rounded-md bg-muted px-3 py-2 text-sm">
@@ -50,9 +52,12 @@ function EditVenue() {
         }}
       />
       <Separator className="my-8" />
-      <Button variant="outline" onClick={() => setArchived(!venue.archivedAt)}>
-        {venue.archivedAt ? t.common.restore : t.common.archive}
-      </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button variant="outline" onClick={() => setArchived(!venue.archivedAt)}>
+          {venue.archivedAt ? t.common.restore : t.common.archive}
+        </Button>
+        <HistoryLink item={venue.id} />
+      </div>
     </>
   )
 }
