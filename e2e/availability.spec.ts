@@ -81,6 +81,27 @@ test('participants are picked in a dialog, asked from it, and answer from the em
   await expect(guest.getByRole('button', { name: 'Change my answer' })).toBeVisible()
 })
 
+test('the dialog lists participants first, in the order taken when it opened', async ({ page }) => {
+  await page.goto('/demo-band/events/new')
+  await page.getByRole('button', { name: 'Select' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Participants' })
+  const rows = dialog.locator('label')
+  await expect(rows).toHaveText(['Select all', 'Dev Member', 'Dev Reader'])
+  await dialog.getByRole('checkbox', { name: /Dev Reader/ }).check()
+  await dialog.getByRole('button', { name: 'Done' }).click()
+
+  await page.getByRole('button', { name: /^1 participant/ }).click()
+  await expect(rows).toHaveText(['Select all', 'Dev Reader', 'Dev Member'])
+  // Ticking doesn't move anyone while it's open.
+  await dialog.getByRole('checkbox', { name: /Dev Member/ }).check()
+  await dialog.getByRole('checkbox', { name: /Dev Reader/ }).uncheck()
+  await expect(rows).toHaveText(['Select all', 'Dev Reader', 'Dev Member'])
+  await dialog.getByRole('button', { name: 'Done' }).click()
+
+  await page.getByRole('button', { name: /^1 participant/ }).click()
+  await expect(rows).toHaveText(['Select all', 'Dev Member', 'Dev Reader'])
+})
+
 test('ask from the new-event form; someone added later is offered a check, someone removed loses their answer', async ({ page }) => {
   const title = `Participants ${Date.now()}`
   await page.goto('/demo-band/events/new')

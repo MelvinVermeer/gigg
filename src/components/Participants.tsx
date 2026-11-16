@@ -81,13 +81,16 @@ export function Participants({ people, chosen, states = {}, closed = false, canE
     waiting: on.filter((p) => state(p.id).asked && !state(p.id).answer).length,
   } as Record<Count, number>
   const allChosen = people.length > 0 && people.every((p) => chosen.has(p.id))
-  // yes > maybe > no > waiting > not asked (people not on the event sit with them, so ticking doesn't move a row).
-  // The sort is stable: names stay alphabetical within each group.
+  // yes > maybe > no > waiting > not asked > not on the event. The sort is stable: names stay alphabetical within each group.
   const rank = (id: string) => {
     const s = state(id)
-    return chosen.has(id) && s.answer ? answers.indexOf(s.answer) : chosen.has(id) && s.asked ? 3 : 4
+    return !chosen.has(id) ? 5 : s.answer ? answers.indexOf(s.answer) : s.asked ? 3 : 4
   }
-  const listed = [...(canEdit ? people : on)].sort((a, b) => rank(a.id) - rank(b.id))
+  const shown = canEdit ? people : on
+  // The order is taken when the dialog opens, so ticking doesn't move a row; anyone not in it yet goes last.
+  const [order, setOrder] = useState<string[]>([])
+  const pos = (id: string) => (order.includes(id) ? order.indexOf(id) : order.length)
+  const listed = [...shown].sort((a, b) => pos(a.id) - pos(b.id))
 
   const run = async (go: () => Promise<unknown>) => {
     setBusy(true)
@@ -120,7 +123,10 @@ export function Participants({ people, chosen, states = {}, closed = false, canE
           type="button"
           className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-left font-medium"
           aria-haspopup="dialog"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setOrder([...shown].sort((a, b) => rank(a.id) - rank(b.id)).map((p) => p.id))
+            setOpen(true)
+          }}
         >
           <span>{empty ? t.participants.select : t.participants.count(on.length)}</span>
           {started && <AvailabilityPill counts={counts} />}
