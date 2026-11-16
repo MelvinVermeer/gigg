@@ -147,7 +147,7 @@ export function Participants({ people, chosen, states = {}, closed = false, canE
               {started ? (closed ? t.participants.checkClosed : t.participants.checkOpen) : canEdit ? t.participants.hint : null}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid max-h-[50vh] gap-3 overflow-y-auto py-1">
+          <div className="grid max-h-[50dvh] gap-3 overflow-y-auto py-1">
             {canEdit && (
               <Label className="font-medium">
                 <Checkbox checked={allChosen} disabled={busy} onCheckedChange={() => change(people.map((p) => p.id), !allChosen)} />

@@ -1,4 +1,4 @@
-import { cloneElement, useId } from 'react'
+import { cloneElement, useEffect, useId, useRef } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 import { Label } from '#/components/ui/label'
 import { cn } from '#/lib/utils'
@@ -16,8 +16,23 @@ export function Field({
   children: ReactElement<{ id?: string }>
 }) {
   const id = useId()
+  const ref = useRef<HTMLDivElement>(null)
+  // aria-invalid mirrors :user-invalid (only after interaction or a failed submit); "false" until then.
+  useEffect(() => {
+    const el = ref.current?.querySelector<HTMLElement>('input, select, textarea')
+    if (!el) return
+    const sync = () => {
+      try {
+        el.setAttribute('aria-invalid', String(el.matches(':user-invalid')))
+      } catch {} // ponytail: selector unsupported (old browsers/jsdom), leave unset
+    }
+    const events = ['blur', 'input', 'change', 'invalid']
+    sync()
+    events.forEach((e) => el.addEventListener(e, sync))
+    return () => events.forEach((e) => el.removeEventListener(e, sync))
+  }, [])
   return (
-    <div className={cn('grid gap-2', className)}>
+    <div ref={ref} className={cn('grid gap-2', className)}>
       <Label htmlFor={id}>
         {label}
         {hint && <span className="font-normal text-muted-foreground">{hint}</span>}
