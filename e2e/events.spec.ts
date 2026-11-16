@@ -58,6 +58,33 @@ test.describe('member', () => {
     await expect(pat.getByRole('link', { name: 'Mail' })).toHaveAttribute('href', 'mailto:pat@example.com')
   })
 
+  test('adds tags from suggestions and filters the list by them', async ({ page }) => {
+    const title = `Tagged ${Date.now()}`
+    await page.goto('/demo-band')
+    await startEvent(page, title)
+    await page.getByLabel('Add tag').fill('fest')
+    await page.getByRole('option', { name: 'festival', exact: true }).click()
+    await page.getByLabel('Add tag').fill('Abroad,')
+    await expect(page.locator('.tags')).toHaveText(/festival.*abroad/)
+    await page.getByLabel('Booking').selectOption('confirmed')
+    await page.getByRole('button', { name: 'Add event' }).click()
+    await expect(page.locator('.fields')).toContainText('festival, abroad')
+
+    await page.goto('/demo-band/events')
+    await page.getByRole('button', { name: 'Filter' }).click()
+    await page.getByRole('menuitem', { name: 'Tags' }).click()
+    await page.getByRole('menuitemcheckbox', { name: 'wedding' }).click()
+    await expect(page).toHaveURL(/tags=wedding/)
+    await expect(page.getByRole('link', { name: 'Wedding at Hotel Meridian' })).toBeVisible()
+    await expect(page.getByRole('link', { name: title })).toHaveCount(0)
+
+    // Any of the chosen tags.
+    await page.getByRole('menuitemcheckbox', { name: 'abroad' }).click()
+    await expect(page.getByRole('link', { name: title })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Wedding at Hotel Meridian' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Park Festival' })).toHaveCount(0)
+  })
+
   test('picking a known venue suggests the contacts from last time', async ({ page }) => {
     const title = `Return Show ${Date.now()}`
     await page.goto('/demo-band/events')

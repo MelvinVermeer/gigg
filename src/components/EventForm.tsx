@@ -26,6 +26,8 @@ export type EventFormData = {
   events: { slug: string; title: string; date: string; bookingStatus: NonNullable<EventFields['bookingStatus']> }[]
   /** Band members and readers, to put on the event */
   people: { id: string; name: string; email: string; role: string }[]
+  /** Every tag on the band's events, for suggestions */
+  tags: string[]
 }
 
 type Initial = Partial<Omit<EventFields, 'venue' | 'contacts' | 'people'>> & {
@@ -78,6 +80,8 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
   const [startTime, setStartTime] = useState(initial.startTime?.slice(0, 5) ?? '')
   const [endTime, setEndTime] = useState(initial.endTime?.slice(0, 5) ?? '')
   const [people, setPeople] = useState(() => new Set<string>())
+  const [tags, setTags] = useState(initial.tags ?? [])
+  const [tagText, setTagText] = useState('')
   const form = useRef<HTMLFormElement>(null)
   const askButton = useRef<HTMLButtonElement>(null)
   const [error, setError] = useState('')
@@ -98,6 +102,21 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
     setPicked((p) => [...p, { key: `new${nextKey++}`, name: text.trim() }])
     setContactText('')
   }
+
+  // Lowercase, like the server stores them.
+  const addTags = (...texts: string[]) => {
+    const next = texts.map((x) => x.trim().toLowerCase()).filter(Boolean)
+    setTags((ts) => [...new Set([...ts, ...next])])
+    setTagText('')
+  }
+  /** Typing a comma adds what came before it. */
+  const typeTag = (v: string) => {
+    if (!v.includes(',')) return setTagText(v)
+    const parts = v.split(',')
+    addTags(...parts.slice(0, -1))
+    setTagText(parts.at(-1)!)
+  }
+  const tagQuery = tagText.trim().toLowerCase()
 
   const update = (key: string, patch: Partial<Picked>) =>
     setPicked((p) => p.map((c) => (c.key === key ? { ...c, ...patch } : c)))
@@ -123,10 +142,8 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
         paymentStatus: f.get('paymentStatus') as EventFields['paymentStatus'],
         fee: String(f.get('fee')),
         notes: String(f.get('notes')),
-        tags: String(f.get('tags'))
-          .split(',')
-          .map((t) => t.trim())
-          .filter(Boolean),
+        // A tag typed but not added yet still counts.
+        tags: [...new Set([...tags, tagQuery].filter(Boolean))],
       })
     } catch (err) {
       setError(errorText(t, err, t.common.savingFailed))
@@ -304,9 +321,44 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
       <Field label={t.common.notes} hint={t.eventForm.notesHint}>
         <Textarea name="notes" rows={6} maxLength={10_000} defaultValue={initial.notes ?? ''} />
       </Field>
-      <Field label={t.common.tags} hint={t.common.commaSeparated}>
-        <Input name="tags" defaultValue={(initial.tags ?? []).join(', ')} />
-      </Field>
+      <div className="grid gap-2">
+        <Label>{t.common.tags}</Label>
+        {tags.length > 0 && (
+          <ul className="tags flex flex-wrap gap-1.5">
+            {tags.map((tag) => (
+              <li key={tag}>
+                <Badge variant="secondary" className="gap-0.5 pr-0.5">
+                  {tag}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="size-4"
+                    aria-label={t.eventForm.removeTag(tag)}
+                    onClick={() => setTags((ts) => ts.filter((x) => x !== tag))}
+                  >
+                    <X />
+                  </Button>
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Combobox
+          label={t.eventForm.addTag}
+          value={tagText}
+          onValueChange={typeTag}
+          placeholder={t.eventForm.tagPlaceholder}
+          options={[
+            ...data.tags
+              .filter((x) => !tags.includes(x) && x.includes(tagQuery))
+              .map((x) => ({ value: x, label: x, onSelect: () => addTags(x) })),
+            ...(data.tags.includes(tagQuery) || tags.includes(tagQuery)
+              ? []
+              : [{ value: '+', label: <><Plus aria-hidden /> {t.eventForm.newTag(tagQuery)}</>, onSelect: () => addTags(tagQuery) }]),
+          ]}
+        />
+      </div>
       <FormError>{error}</FormError>
       <div>
         <Button type="submit" disabled={busy}>

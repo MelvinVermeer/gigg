@@ -252,6 +252,17 @@ describe('events', () => {
     expect(sam.venueId).toBe(hall.id)
   })
 
+  it('lowercases and deduplicates tags, and suggests every tag the band used', async () => {
+    const t = await testDb()
+    const e = await bandOps.createEvent(t.db, t.member, t.band, { title: 'Fest', date: day(5), tags: ['Festival', 'festival ', 'Abroad'] })
+    expect(e.tags).toEqual(['festival', 'abroad'])
+    await bandOps.createEvent(t.db, t.member, t.band, { title: 'Wed', date: day(6), tags: ['wedding', 'abroad'] })
+    const data = await bandOps.eventFormData(t.db, t.member, t.band, {})
+    expect(data.tags).toEqual(['abroad', 'festival', 'wedding'])
+    const list = await bandOps.listEvents(t.db, t.member, t.band, {})
+    expect(list.find((x) => x.slug === e.slug)?.tags).toEqual(['festival', 'abroad'])
+  })
+
   it('lists the events per date for the same-date warning, without cancelled or archived ones', async () => {
     const t = await testDb()
     await bandOps.createEvent(t.db, t.member, t.band, { title: 'Off', date: day(5), bookingStatus: 'cancelled' })

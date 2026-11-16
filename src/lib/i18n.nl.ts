@@ -207,6 +207,10 @@ export const nl: Dict = {
     sameDate: 'Let op: er is al een event op deze datum:',
     notesHint: '(opbouw, soundcheck, parkeren, …)',
     feePlaceholder: 'bijv. €450 + drankjes',
+    addTag: 'Tag toevoegen',
+    tagPlaceholder: 'Zoek of typ een nieuwe tag',
+    newTag: (tag) => `Nieuwe tag “${tag}”`,
+    removeTag: (tag) => `${tag} verwijderen`,
   },
 
   setlist: {

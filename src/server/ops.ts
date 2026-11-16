@@ -160,8 +160,9 @@ const optText = (max: number) =>
     .nullish()
     .transform((v) => v || null)
 
+// Lowercase, so "Festival" and "festival" are one tag (suggestions and the filter compare exactly).
 const tags = z
-  .array(z.string().trim().min(1).max(40))
+  .array(z.string().trim().toLowerCase().min(1).max(40))
   .max(30)
   .default([])
   .transform((t) => [...new Set(t)])
@@ -619,6 +620,7 @@ const eventOps = {
           endTime: events.endTime,
           venue: venues.name,
           bookingStatus: events.bookingStatus,
+          tags: events.tags,
           mine: sql<boolean>`${or(
             eq(events.createdBy, userId),
             exists(
@@ -730,7 +732,21 @@ const eventOps = {
       .from(events)
       .where(and(eq(events.bandId, bandId), isNull(events.archivedAt), ne(events.bookingStatus, 'cancelled')))
 
-    return { venues: venueRows, contacts: contactRows, lastContactsByVenue, events: dated, people: await bandPeople(tx, bandId) }
+    // Every tag used on the band's events (archived ones too), for the tag suggestions.
+    const tagRows = await tx
+      .selectDistinct({ tag: sql<string>`unnest(${events.tags})` })
+      .from(events)
+      .where(eq(events.bandId, bandId))
+      .orderBy(sql`1`)
+
+    return {
+      venues: venueRows,
+      contacts: contactRows,
+      lastContactsByVenue,
+      events: dated,
+      people: await bandPeople(tx, bandId),
+      tags: tagRows.map((r) => r.tag),
+    }
   }),
 
   /** Create an event. Its setlist is chosen afterwards, on the event page. */

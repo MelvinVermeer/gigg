@@ -208,6 +208,10 @@ export const en = {
     sameDate: 'Heads up: there is already an event on this date:',
     notesHint: '(load-in, soundcheck, parking, …)',
     feePlaceholder: 'e.g. €450 + drinks',
+    addTag: 'Add tag',
+    tagPlaceholder: 'Search or type a new tag',
+    newTag: (tag: string) => `New tag “${tag}”`,
+    removeTag: (tag: string) => `Remove ${tag}`,
   },
 
   setlist: {

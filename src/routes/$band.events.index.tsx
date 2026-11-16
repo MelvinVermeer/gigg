@@ -1,7 +1,7 @@
 import { Link, createFileRoute, getRouteApi, useNavigate, useRouter } from '@tanstack/react-router'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { formatDate, formatTimes } from '#/lib/date'
-import { ListFilter, Plus } from 'lucide-react'
+import { ChevronDown, ListFilter, Plus } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import {
@@ -23,18 +23,21 @@ type Status = (typeof statuses)[number]
 const defaultStatuses: Status[] = ['option', 'confirmed']
 
 /** The URL carries only what differs from the default view: upcoming, option + confirmed, mine. */
-type Search = { when?: 'past' | 'archived'; status?: string; who?: 'all' }
+type Search = { when?: 'past' | 'archived'; status?: string; who?: 'all'; tags?: string }
 
 const parseStatuses = (s: string | undefined): Status[] =>
   s === undefined ? defaultStatuses : statuses.filter((x) => s.split(',').includes(x))
+
+const parseTags = (s: string | undefined) => (s ? s.split(',') : [])
 
 export const Route = createFileRoute('/$band/events/')({
   validateSearch: (search: Record<string, unknown>): Search => ({
     ...(search.when === 'past' || search.when === 'archived' ? { when: search.when } : {}),
     ...(typeof search.status === 'string' ? { status: search.status } : {}),
     ...(search.who === 'all' ? { who: 'all' as const } : {}),
+    ...(typeof search.tags === 'string' && search.tags ? { tags: search.tags } : {}),
   }),
-  // Only `when` reaches the server; status and who filter in the browser, so they work offline too.
+  // Only `when` reaches the server; status, who and tags filter in the browser, so they work offline too.
   loaderDeps: ({ search }) => ({ when: search.when }),
   loader: ({ params, deps }) => bandOp('listEvents', params.band, { when: deps.when ?? 'upcoming' }),
   component: Events,
@@ -49,9 +52,23 @@ function Events() {
   // Archived ignores the filter.
   const events = useMemo(() => {
     const chosen = parseStatuses(search.status)
-    return when === 'archived' ? all : all.filter((e) => chosen.includes(e.bookingStatus) && (search.who === 'all' || e.mine))
-  }, [all, when, search.status, search.who])
-  const filtered = search.when === 'past' || search.status !== undefined || search.who === 'all'
+    // Any of the chosen tags.
+    const tags = parseTags(search.tags)
+    return when === 'archived'
+      ? all
+      : all.filter(
+          (e) =>
+            chosen.includes(e.bookingStatus) &&
+            (search.who === 'all' || e.mine) &&
+            (!tags.length || e.tags.some((x) => tags.includes(x))),
+        )
+  }, [all, when, search.status, search.who, search.tags])
+  const filtered = search.when === 'past' || search.status !== undefined || search.who === 'all' || search.tags !== undefined
+  // The loaded list's tags, plus chosen ones it lacks (say after switching to past), so they can be unticked.
+  const tags = useMemo(
+    () => [...new Set([...all.flatMap((e) => e.tags), ...parseTags(search.tags)])].sort(),
+    [all, search.tags],
+  )
   const band = bandRoute.useLoaderData()
   const canEdit = useCanEdit()
   const params = { band: band.slug }
@@ -83,7 +100,7 @@ function Events() {
               </Link>
             </Button>
           ) : (
-            <Filter search={search} />
+            <Filter search={search} tags={tags} />
           )}
           {canEdit && when !== 'archived' && (
             <Button asChild size="sm">
@@ -140,8 +157,8 @@ function Events() {
   )
 }
 
-/** One menu for time, statuses and whose events; every change goes straight into the URL. */
-function Filter({ search }: { search: Search }) {
+/** One menu for time, statuses, whose events and tags; every change goes straight into the URL. */
+function Filter({ search, tags }: { search: Search; tags: string[] }) {
   const t = useT()
   const navigate = useNavigate({ from: Route.fullPath })
   const set = (patch: Partial<Search>) => navigate({ search: (s) => ({ ...s, ...patch }), replace: true })
@@ -151,8 +168,15 @@ function Filter({ search }: { search: Search }) {
     const isDefault = next.join() === defaultStatuses.join()
     set({ status: isDefault ? undefined : next.join(',') })
   }
-  const changed = [search.when === 'past', search.status !== undefined, search.who === 'all'].filter(Boolean).length
+  const chosenTags = parseTags(search.tags)
+  const toggleTag = (tag: string, on: boolean) => {
+    const next = tags.filter((x) => (x === tag ? on : chosenTags.includes(x)))
+    set({ tags: next.length ? next.join(',') : undefined })
+  }
+  const changed = [search.when === 'past', search.status !== undefined, search.who === 'all', search.tags !== undefined].filter(Boolean).length
   const keepOpen = (e: Event) => e.preventDefault()
+  // Tags fold out inside the menu (no submenu: those are fiddly on phones). Open when some are chosen.
+  const [tagsOpen, setTagsOpen] = useState(chosenTags.length > 0)
 
   return (
     <DropdownMenu modal={false}>
@@ -162,7 +186,8 @@ function Filter({ search }: { search: Search }) {
           {changed > 0 && <Badge className="h-5 min-w-5 px-1 tabular-nums">{changed}</Badge>}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      {/* Below the sticky site header (z-10), so scrolling slides the open menu under it. */}
+      <DropdownMenuContent align="end" className="z-[5] w-48">
         <DropdownMenuRadioGroup value={search.when ?? 'upcoming'} onValueChange={(v) => set({ when: v === 'past' ? 'past' : undefined })}>
           <DropdownMenuRadioItem value="upcoming" onSelect={keepOpen}>{t.events.upcoming}</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="past" onSelect={keepOpen}>{t.events.past}</DropdownMenuRadioItem>
@@ -178,10 +203,32 @@ function Filter({ search }: { search: Search }) {
           <DropdownMenuRadioItem value="mine" onSelect={keepOpen}>{t.events.mine}</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="all" onSelect={keepOpen}>{t.events.everyone}</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
+        {tags.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              aria-expanded={tagsOpen}
+              onSelect={(e) => {
+                keepOpen(e)
+                setTagsOpen((o) => !o)
+              }}
+            >
+              {t.common.tags}
+              {chosenTags.length > 0 && ` (${chosenTags.length})`}
+              <ChevronDown aria-hidden className={`ml-auto transition-transform ${tagsOpen ? 'rotate-180' : ''}`} />
+            </DropdownMenuItem>
+            {tagsOpen &&
+              tags.map((tag) => (
+                <DropdownMenuCheckboxItem key={tag} checked={chosenTags.includes(tag)} onCheckedChange={(on) => toggleTag(tag, on)} onSelect={keepOpen}>
+                  {tag}
+                </DropdownMenuCheckboxItem>
+              ))}
+          </>
+        )}
         {changed > 0 && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => set({ when: undefined, status: undefined, who: undefined })}>{t.events.resetFilter}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => set({ when: undefined, status: undefined, who: undefined, tags: undefined })}>{t.events.resetFilter}</DropdownMenuItem>
           </>
         )}
       </DropdownMenuContent>
