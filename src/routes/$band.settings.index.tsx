@@ -153,7 +153,20 @@ function Settings() {
                 saveName(String(new FormData(e.currentTarget).get('name')))
               }}
             >
-              <Field label={t.settings.displayName}>
+              <Field
+                label={t.settings.displayName}
+                hint={
+                  <span aria-live="polite" className={nameStatus === 'saved' ? '' : 'text-destructive'}>
+                    {nameStatus === 'saved' ? (
+                      <>
+                        <Check aria-hidden className="inline size-4" /> {t.common.saved}
+                      </>
+                    ) : (
+                      nameStatus
+                    )}
+                  </span>
+                }
+              >
                 <Input
                   name="name"
                   defaultValue={me?.name}
@@ -163,18 +176,8 @@ function Settings() {
                   onBlur={(e) => saveName(e.currentTarget.value)}
                 />
               </Field>
-              <p aria-live="polite" className={`mt-1 min-h-5 text-sm ${nameStatus === 'saved' ? 'text-muted-foreground' : 'text-destructive'}`}>
-                {nameStatus === 'saved' ? (
-                  <>
-                    <Check aria-hidden className="inline size-4" /> {t.common.saved}
-                  </>
-                ) : (
-                  nameStatus
-                )}
-              </p>
             </form>
             )}
-            {online && <Separator />}
             <div className="grid gap-3">
               <h3 className="mb-0 text-sm font-medium">{t.settings.passkeys}</h3>
               {/* Nothing while loading, so people with a passkey don't see the explanation flash by. */}
