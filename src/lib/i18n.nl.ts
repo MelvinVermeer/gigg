@@ -354,6 +354,10 @@ export const nl: Dict = {
     displayName: 'Weergavenaam',
     couldNotSave: 'Opslaan lukte niet',
     passkeys: 'Passkeys',
+    passkeyIntro:
+      'Log in met je gezicht, vingerafdruk of de pincode van je telefoon, in plaats van te wachten op een e-mail. Niets om te onthouden, en veiliger dan een wachtwoord. Je kunt je passkeys hier altijd bekijken en verwijderen.',
+    passkeySetUp: 'Passkey ingesteld',
+    managePasskeys: 'Beheren',
     yourPasskeys: 'Je passkeys',
     synced: 'Gesynchroniseerde passkey',
     device: 'Passkey op apparaat',

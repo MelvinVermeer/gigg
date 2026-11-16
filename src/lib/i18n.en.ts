@@ -356,6 +356,10 @@ export const en = {
     displayName: 'Display name',
     couldNotSave: 'Could not save',
     passkeys: 'Passkeys',
+    passkeyIntro:
+      'Sign in with your face, fingerprint or phone PIN instead of waiting for an email. Nothing to remember, and safer than a password. You can see and remove your passkeys here any time.',
+    passkeySetUp: 'Passkey set up',
+    managePasskeys: 'Manage',
     yourPasskeys: 'Your passkeys',
     synced: 'Synced passkey',
     device: 'Device passkey',

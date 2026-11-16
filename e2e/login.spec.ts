@@ -42,6 +42,7 @@ test('sign in with an email link, add a passkey, sign back in with it', async ({
   // The passkey is listed in settings and can be deleted.
   await page.getByRole('button', { name: /Account menu/ }).click()
   await page.getByRole('menuitem', { name: 'Settings' }).click()
+  await page.getByText('Manage').click()
   const list = page.getByRole('list', { name: 'Your passkeys' })
   await expect(list.getByRole('listitem')).toHaveCount(1)
   await expect(list.getByRole('listitem')).toContainText(/Chrome on \w+, added/)
@@ -49,4 +50,5 @@ test('sign in with an email link, add a passkey, sign back in with it', async ({
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
   await expect(page.getByRole('status')).toHaveText('Passkey deleted')
   await expect(list).toHaveCount(0)
+  await expect(page.getByText(/You can see and remove your passkeys/)).toBeVisible()
 })

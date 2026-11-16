@@ -2,7 +2,7 @@ import { Link, createFileRoute, getRouteApi, useRouter } from '@tanstack/react-r
 import { useEffect, useRef, useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 import { deviceName } from '#/lib/device-name'
-import { Check, KeyRound, Monitor, Moon, Plus, Sun, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, KeyRound, Monitor, Moon, Plus, Sun, Trash2 } from 'lucide-react'
 import { RadioGroup } from 'radix-ui'
 import { Field } from '#/components/Field'
 import { Badge } from '#/components/ui/badge'
@@ -177,29 +177,48 @@ function Settings() {
             {online && <Separator />}
             <div className="grid gap-3">
               <h3 className="mb-0 text-sm font-medium">{t.settings.passkeys}</h3>
-              {passkeys.data && passkeys.data.length > 0 && (
-                <ul aria-label={t.settings.yourPasskeys} className="divide-y rounded-lg border">
-                  {passkeys.data.map((p) => (
-                    <li key={p.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                      <KeyRound aria-hidden className="size-4 text-muted-foreground" />
-                      <span className="flex-1">
-                        {p.name || (p.deviceType === 'multiDevice' ? t.settings.synced : t.settings.device)}
-                        {p.createdAt && <span className="text-muted-foreground">{t.settings.added(new Date(p.createdAt).toLocaleDateString(t.intl))}</span>}
-                      </span>
-                      {online && (
-                        <Button variant="ghost" size="icon-sm" aria-label={t.settings.deletePasskey} onClick={() => deletePasskey(p.id)}>
-                          <Trash2 aria-hidden />
-                        </Button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+              {/* Nothing while loading, so people with a passkey don't see the explanation flash by. */}
+              {passkeys.data?.length === 0 && online && (
+                <>
+                  <p className="text-sm text-muted-foreground">{t.settings.passkeyIntro}</p>
+                  <div>
+                    <Button variant="outline" onClick={addPasskey}>
+                      <Plus aria-hidden /> {t.settings.addPasskey}
+                    </Button>
+                  </div>
+                </>
               )}
-              <div hidden={!online}>
-                <Button variant="outline" onClick={addPasskey}>
-                  <Plus aria-hidden /> {t.settings.addPasskey}
-                </Button>
-              </div>
+              {!!passkeys.data?.length && (
+                <details className="group rounded-lg border">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm [&::-webkit-details-marker]:hidden">
+                    <Check aria-hidden className="size-4 text-muted-foreground" />
+                    <span className="flex-1">{t.settings.passkeySetUp}</span>
+                    <span className="text-muted-foreground">{t.settings.managePasskeys}</span>
+                    <ChevronDown aria-hidden className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
+                  </summary>
+                  <ul aria-label={t.settings.yourPasskeys} className="divide-y border-t">
+                    {passkeys.data.map((p) => (
+                      <li key={p.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                        <KeyRound aria-hidden className="size-4 text-muted-foreground" />
+                        <span className="flex-1">
+                          {p.name || (p.deviceType === 'multiDevice' ? t.settings.synced : t.settings.device)}
+                          {p.createdAt && <span className="text-muted-foreground">{t.settings.added(new Date(p.createdAt).toLocaleDateString(t.intl))}</span>}
+                        </span>
+                        {online && (
+                          <Button variant="ghost" size="icon-sm" aria-label={t.settings.deletePasskey} onClick={() => deletePasskey(p.id)}>
+                            <Trash2 aria-hidden />
+                          </Button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  <div hidden={!online} className="border-t px-3 py-2">
+                    <Button variant="outline" onClick={addPasskey}>
+                      <Plus aria-hidden /> {t.settings.addPasskey}
+                    </Button>
+                  </div>
+                </details>
+              )}
               {status && (
                 <p role="status" className="text-sm text-muted-foreground">
                   {status}
