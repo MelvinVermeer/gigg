@@ -31,6 +31,13 @@ Backlog only. What's built is described in [docs/](docs/).
 Each of these needs a **grill-me session** before building: the open questions get settled first.
 
 - **C. Non-availability ahead of time.** Log holidays and blocked dates up front, maybe pre-filling answers when you're put on an event. (Done: an event has one list of people with an availability state each, see docs/availability.md.)
-- **A. Event filtering and default view.** By default show only confirmed gigs you're part of; remember the chosen view per user or device. The same filter for the iCal feed ("only my events/gigs"). ("Part of" = on the event's people, not answered no.) (A filter menu exists; the default and the remembering don't.)
-- **B. Event types and money.** Event types such as *repetitie* (rehearsal) besides gigs. A fee field (*vergoeding*) per event, with free events as an empty or zero fee; later, totals per year. Open: which fields (booking/payment status, fee) apply to which type.
+
 - **D. Setlists and songs.** Personal notes per song, visible only to you (different from per-song notes in a setlist). A setting for which song fields a setlist shows (key, BPM, duration…), tied in with the other PDFs.
+
+- Editing contacts and venues: the edit button should switch to the save button when in edit mode (similar to how it is done on editing events). the history button should move below the rule (same as editing events).
+
+- Payment: add option 'free', And add a 'fee' field, this can be free teskt. Below the payment field.
+
+- If fields Venue / Contacts / Fee / Tags are empty, hide them in the display mode.
+
+- Avalability, if someone answered maybe with a reason. This reason should be shown in the availability dialog.
