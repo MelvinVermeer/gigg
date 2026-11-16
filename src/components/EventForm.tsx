@@ -318,9 +318,6 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
       <Field label={t.events.fee} hint={t.common.optional}>
         <Input name="fee" maxLength={200} placeholder={t.eventForm.feePlaceholder} defaultValue={initial.fee ?? ''} />
       </Field>
-      <Field label={t.common.notes} hint={t.eventForm.notesHint}>
-        <Textarea name="notes" rows={6} maxLength={10_000} defaultValue={initial.notes ?? ''} />
-      </Field>
       <div className="grid gap-2">
         <Label>{t.common.tags}</Label>
         {tags.length > 0 && (
@@ -359,6 +356,9 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
           ]}
         />
       </div>
+      <Field label={t.common.notes} hint={t.eventForm.notesHint}>
+        <Textarea name="notes" rows={6} maxLength={10_000} defaultValue={initial.notes ?? ''} />
+      </Field>
       <FormError>{error}</FormError>
       <div>
         <Button type="submit" disabled={busy}>

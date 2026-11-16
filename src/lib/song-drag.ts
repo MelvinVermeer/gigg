@@ -67,7 +67,9 @@ export function onHandlePointerDown(e: ReactPointerEvent<HTMLElement>, onDrop: O
 const rowsOf = (zone: Element) => [...zone.querySelectorAll<HTMLElement>('[data-drag-row]')]
 
 function begin(row: HTMLElement, x0: number, y0: number, pointerId: number, onDrop: OnDrop) {
-  const zones = [...row.closest('[data-drag-scope]')!.querySelectorAll<HTMLElement>('[data-drop-zone]')]
+  const scope = row.closest<HTMLElement>('[data-drag-scope]')!
+  // A single list is its own scope and zone; querySelectorAll skips the element itself.
+  const zones = scope.matches('[data-drop-zone]') ? [scope] : [...scope.querySelectorAll<HTMLElement>('[data-drop-zone]')]
   const fromZone = row.closest('[data-drop-zone]')!
   const from = { list: zones.indexOf(fromZone as HTMLElement), index: rowsOf(fromZone).indexOf(row) }
   dragging = true

@@ -134,7 +134,6 @@ function Events() {
                 <Link to="/$band/events/$event" params={{ ...params, event: e.slug }} className="truncate font-medium after:absolute after:inset-0">
                   {e.title}
                 </Link>
-                {e.venue && <span className="venue truncate text-sm text-muted-foreground">{e.venue}</span>}
               </span>
               </span>
               <span className="status flex shrink-0 gap-1">

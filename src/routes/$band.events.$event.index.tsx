@@ -82,6 +82,14 @@ function Event() {
                 </dd>
               </>
             )}
+            {contacts.length > 0 && (
+              <>
+                <dt className="text-muted-foreground">{t.common.contacts}</dt>
+                <dd className="-my-3">
+                  {contacts.map((c) => <ContactLink key={c.id} band={band.slug} contact={c} />)}
+                </dd>
+              </>
+            )}
             <dt className="text-muted-foreground">{t.participants.title}</dt>
             <dd>
               <EventParticipants band={band.slug} event={event.slug} people={bandPeople} availability={availability} canEdit={canEdit && !event.archivedAt} />
@@ -98,14 +106,6 @@ function Event() {
               <>
                 <dt className="text-muted-foreground">{t.events.fee}</dt>
                 <dd>{event.fee}</dd>
-              </>
-            )}
-            {contacts.length > 0 && (
-              <>
-                <dt className="text-muted-foreground">{t.common.contacts}</dt>
-                <dd className="-my-3">
-                  {contacts.map((c) => <ContactLink key={c.id} band={band.slug} contact={c} />)}
-                </dd>
               </>
             )}
             {event.tags.length > 0 && (

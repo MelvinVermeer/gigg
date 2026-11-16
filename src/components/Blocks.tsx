@@ -11,6 +11,7 @@ import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
 import { useT } from '#/lib/i18n'
 import { useCanEdit } from '#/lib/online'
+import { useShownFields } from '#/lib/song-fields'
 
 const bandRoute = getRouteApi('/$band')
 
@@ -63,6 +64,7 @@ function BlockRow({ block, repertoire, editable, isNew }: { block: Block; repert
   const [songs, setSongs] = useState(block.songs)
   const [saved, setSaved] = useState(false)
   const t = useT()
+  const { cols } = useShownFields('page')
   const details = useRef<HTMLDetailsElement>(null)
   const nameInput = useRef<HTMLInputElement>(null)
 
@@ -117,6 +119,7 @@ function BlockRow({ block, repertoire, editable, isNew }: { block: Block; repert
             songs={songs}
             repertoire={repertoire}
             editable={editable && !block.archivedAt}
+            fields={cols}
             onChange={(next) => {
               setSongs(next)
               setSaved(false)
