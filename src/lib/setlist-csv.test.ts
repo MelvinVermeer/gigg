@@ -3,7 +3,7 @@ import { setlistCsv } from './setlist-csv'
 
 it('setlistCsv: blank row between sets, numbering per set, quoting', () => {
   const song = (title: string, durationSec: number | null = null) => ({ title, key: 'Am', bpm: 120, tuning: null, durationSec })
-  const csv = setlistCsv([{ songs: [song('Intro; "live"', 225), song('Two')] }, { songs: [song('Encore')] }], ['#', 'Title', 'Key', 'BPM', 'Tuning', 'Duration'])
+  const csv = setlistCsv([{ songs: [song('Intro; "live"', 225), song('Two')] }, { songs: [song('Encore')] }], ['number', 'key', 'bpm', 'tuning', 'durationSec'], ['#', 'Title', 'Key', 'BPM', 'Tuning', 'Duration'])
   expect(csv).toBe(
     '﻿#;Title;Key;BPM;Tuning;Duration\r\n' +
       '1;"Intro; ""live""";Am;120;;3:45\r\n' +
@@ -11,4 +11,9 @@ it('setlistCsv: blank row between sets, numbering per set, quoting', () => {
       '\r\n' +
       '1;Encore;Am;120;;\r\n',
   )
+})
+
+it('setlistCsv: only the chosen fields, custom ones by id, notes quoted across lines', () => {
+  const song = { title: 'One', key: 'C', bpm: 90, tuning: null, durationSec: null, notes: 'capo 2\nslow', custom: { f1: 'Anna' } }
+  expect(setlistCsv([{ songs: [song] }], ['f1', 'notes'], ['Title', 'Lead', 'Notes'])).toBe('﻿Title;Lead;Notes\r\nOne;Anna;"capo 2\nslow"\r\n')
 })

@@ -1,4 +1,5 @@
 import { Link, createFileRoute, getRouteApi, redirect } from '@tanstack/react-router'
+import { Fragment } from 'react'
 import { formatDuration } from '#/lib/duration'
 import { Pencil } from 'lucide-react'
 import { Button } from '#/components/ui/button'
@@ -60,6 +61,12 @@ function Song() {
             <dd>{song.bpm ?? '–'}</dd>
             <dt className="text-muted-foreground">{t.common.tuning}</dt>
             <dd>{song.tuning || '–'}</dd>
+            {band.songFields.map((f) => (
+              <Fragment key={f.id}>
+                <dt className="text-muted-foreground [overflow-wrap:anywhere]">{f.name}</dt>
+                <dd className="[overflow-wrap:anywhere]">{song.custom[f.id] || '–'}</dd>
+              </Fragment>
+            ))}
             <dt className="text-muted-foreground">{t.common.tags}</dt>
             <dd>{song.tags.length ? song.tags.join(', ') : '–'}</dd>
           </dl>

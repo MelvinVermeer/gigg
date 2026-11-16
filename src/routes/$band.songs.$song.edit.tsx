@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, useNavigate, useRouter } from '@tanstack/react-router'
+import { createFileRoute, getRouteApi, redirect, useNavigate, useRouter } from '@tanstack/react-router'
 import { SongForm } from '#/components/SongForm'
 import { bandOp } from '#/server/fns'
 import { HistoryLink } from '#/components/HistoryLink'
@@ -15,8 +15,11 @@ export const Route = createFileRoute('/$band/songs/$song/edit')({
   component: EditSong,
 })
 
+const bandRoute = getRouteApi('/$band')
+
 function EditSong() {
   const song = Route.useLoaderData()
+  const { songFields } = bandRoute.useLoaderData()
   const { band } = Route.useParams()
   const navigate = useNavigate()
   const t = useT()
@@ -41,6 +44,7 @@ function EditSong() {
       )}
       <SongForm
         initial={song}
+        customFields={songFields}
         submitLabel={t.common.save}
         onSubmit={async (fields) => {
           const saved = await bandOp('updateSong', band, { slug: song.slug, fields })

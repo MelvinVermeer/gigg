@@ -28,7 +28,7 @@ async function chooseNew(page: Page) {
   await expect(heading).toBeVisible()
 }
 
-const songsIn = (page: Page, nth: number) => page.locator('section.set').nth(nth).locator('ol.song-list .title')
+const songsIn = (page: Page, nth: number) => page.locator('section.set').nth(nth).locator('ol.song-list .title a')
 
 test.describe('member', () => {
   test.use(asMember)

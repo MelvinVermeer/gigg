@@ -108,6 +108,63 @@ describe('songs', () => {
 
 const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10)
 
+describe('song fields', () => {
+  it('adds, renames and archives; names are unique ignoring case and not a fixed field', async () => {
+    const t = await testDb()
+    const lead = await bandOps.addSongField(t.db, t.member, t.band, { name: ' Lead vocal ' })
+    expect(lead.name).toBe('Lead vocal')
+    await expect(bandOps.addSongField(t.db, t.member, t.band, { name: 'lead VOCAL' })).rejects.toThrow('songFieldExists')
+    await expect(bandOps.addSongField(t.db, t.member, t.band, { name: 'BPM' })).rejects.toThrow('songFieldReserved')
+    await expect(bandOps.addSongField(t.db, t.member, t.band, { name: 'Toonsoort' })).rejects.toThrow('songFieldReserved')
+    const capo = await bandOps.addSongField(t.db, t.member, t.band, { name: 'Capo' })
+    await expect(bandOps.renameSongField(t.db, t.member, t.band, { id: capo.id, name: 'Lead Vocal' })).rejects.toThrow('songFieldExists')
+    await bandOps.renameSongField(t.db, t.member, t.band, { id: capo.id, name: 'capo' }) // its own name in another case is fine
+    await bandOps.archiveSongField(t.db, t.member, t.band, { id: lead.id })
+    expect((await bandOps.getBand(t.db, t.reader, t.band, {})).songFields).toEqual([{ id: capo.id, name: 'capo' }])
+    expect(await bandOps.listSongFields(t.db, t.reader, t.band, {})).toMatchObject([{ name: 'Lead vocal', archivedAt: expect.any(Date) }, { name: 'capo', archivedAt: null }])
+  })
+
+  it('stores single-line values per song; archiving a field keeps its values', async () => {
+    const t = await testDb()
+    const lead = await bandOps.addSongField(t.db, t.member, t.band, { name: 'Lead vocal' })
+    const capo = await bandOps.addSongField(t.db, t.member, t.band, { name: 'Capo' })
+    await expect(bandOps.createSong(t.db, t.member, t.band, { title: 'X', custom: { [lead.id]: 'two\nlines' } })).rejects.toThrow()
+    const song = await bandOps.createSong(t.db, t.member, t.band, { title: 'Duet', custom: { [lead.id]: ' Anna ', [capo.id]: '' } })
+    expect(song.custom).toEqual({ [lead.id]: 'Anna' })
+    await bandOps.archiveSongField(t.db, t.member, t.band, { id: lead.id })
+    // The form only sends active fields; the archived one's value stays.
+    const updated = await bandOps.updateSong(t.db, t.member, t.band, { slug: 'duet', fields: { title: 'Duet', custom: { [capo.id]: '2' } } })
+    expect(updated.custom).toEqual({ [lead.id]: 'Anna', [capo.id]: '2' })
+  })
+
+  it("ignores other bands' or unknown field ids", async () => {
+    const t = await testDb()
+    const song = await bandOps.createSong(t.db, t.member, t.band, { title: 'Y', custom: { [crypto.randomUUID()]: 'x' } })
+    expect(song.custom).toEqual({})
+  })
+
+  it('shown fields: defaults until you pick, per person', async () => {
+    const t = await testDb()
+    const before = (await bandOps.getBand(t.db, t.reader, t.band, {})).shown
+    expect(before).toEqual({ page: ['number', 'key', 'durationSec'], show: ['number', 'key', 'notes'], print: ['number', 'key'], excel: ['number', 'key', 'bpm', 'tuning', 'durationSec'] })
+    const mine = { page: ['bpm'], show: [], print: ['key', 'notes'], excel: ['key'] }
+    await bandOps.setShownFields(t.db, t.reader, t.band, mine)
+    await bandOps.setShownFields(t.db, t.reader, t.band, { ...mine, show: ['tuning'] })
+    expect((await bandOps.getBand(t.db, t.reader, t.band, {})).shown).toEqual({ ...mine, show: ['tuning'] })
+    expect((await bandOps.getBand(t.db, t.member, t.band, {})).shown).toEqual(before)
+  })
+
+  it('setlists carry every field a view can show', async () => {
+    const t = await testDb()
+    const lead = await bandOps.addSongField(t.db, t.member, t.band, { name: 'Lead vocal' })
+    await bandOps.updateSong(t.db, t.member, t.band, { slug: 'closer', fields: { title: 'Closer', bpm: 128, notes: 'loud', custom: { [lead.id]: 'Anna' } } })
+    const [closer] = (await bandOps.listSongs(t.db, t.member, t.band, {})).filter((s) => s.slug === 'closer')
+    await bandOps.saveSetlist(t.db, t.member, t.band, { event: 'summer-party', sets: [{ name: 'Set 1', songIds: [closer.id] }] })
+    const { sets } = await bandOps.getSetlist(t.db, t.reader, t.band, { event: 'summer-party' })
+    expect(sets[0].songs[0]).toMatchObject({ bpm: 128, notes: 'loud', custom: { [lead.id]: 'Anna' } })
+  })
+})
+
 describe('events', () => {
   it('slugs: title, then date-title, then date-title-2', async () => {
     const t = await testDb()
@@ -503,7 +560,7 @@ describe('audit trail', () => {
 
   it('is attached to every table except auth internals', async () => {
     const t = await testDb()
-    const notAudited = ['changes', 'sessions', 'accounts', 'verifications', 'passkeys', 'calendar_feeds'] // feeds: history would show the secret token
+    const notAudited = ['changes', 'sessions', 'accounts', 'verifications', 'passkeys', 'calendar_feeds', 'shown_fields'] // feeds: history would show the secret token; shown fields: a personal view setting
     const { rows } = (await t.db.execute(sql`
       select table_name from information_schema.tables
       where table_schema = 'public' and table_type = 'BASE TABLE'
@@ -549,6 +606,16 @@ describe('history', () => {
       fields: { title: 'Gig', date: '2026-12-01', notes: 'Bring cables', contacts: res.contacts.map((c) => ({ id: c.id })) },
     })
     expect((await latest(t)).lines).toEqual(['Changed event “Gig”: notes'])
+  })
+
+  it('shows custom song field changes by field name', async () => {
+    const t = await testDb()
+    const lead = await bandOps.addSongField(t.db, t.member, t.band, { name: 'Lead vocal' })
+    expect((await latest(t)).lines).toEqual(['Added song field “Lead vocal”'])
+    await bandOps.updateSong(t.db, t.member, t.band, { slug: 'closer', fields: { title: 'Closer', custom: { [lead.id]: 'Anna' } } })
+    const save = await latest(t)
+    expect(save.lines).toEqual([expect.stringContaining('custom fields')])
+    expect(save.diffs).toContainEqual({ what: 'Song “Closer”', field: 'Lead vocal', from: '–', to: 'Anna' })
   })
 
   it('shows each change as before → after, with names instead of ids', async () => {

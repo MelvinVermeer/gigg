@@ -12,6 +12,7 @@ import { bandOp } from '#/server/fns'
 import { useT } from '#/lib/i18n'
 import { applyDrop } from '#/lib/drop'
 import type { OnDrop } from '#/lib/song-drag'
+import { useShownFields } from '#/lib/song-fields'
 
 type Set = { name: string; songs: SongRef[] }
 
@@ -35,6 +36,7 @@ type Props = {
  */
 export function SetlistBuilder({ band, target, data, editable, actions }: Props) {
   const t = useT()
+  const { cols } = useShownFields('page')
   const [sets, setSets] = useState<Set[]>(data.sets)
   const [status, setStatus] = useState<'saved' | 'saving' | 'error' | ''>('')
   const queue = useRef(Promise.resolve())
@@ -108,6 +110,7 @@ export function SetlistBuilder({ band, target, data, editable, actions }: Props)
             repertoire={data.songs}
             blocks={data.blocks}
             editable={editable}
+            fields={cols}
             // Removing the last song removes the set.
             onDrop={drop}
             onChange={(songs) => persist(songs.length || !set.songs.length ? updateSet(i, { songs }) : shown.filter((_, j) => j !== i))}

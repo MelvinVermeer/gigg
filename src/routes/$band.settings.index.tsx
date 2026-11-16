@@ -17,12 +17,14 @@ import type { Theme } from '#/lib/theme'
 import { dicts, errorText, locales, useT } from '#/lib/i18n'
 import { useOnline } from '#/lib/online'
 import { confirmDialog } from '#/components/ConfirmDialog'
+import { ShownFieldsCard, SongFieldsCard } from '#/components/SongSettings'
 
 export const Route = createFileRoute('/$band/settings/')({
   // Readers can't list members.
   loader: async ({ params }) => ({
     members: (await bandOp('getBand', params.band, {})).role === 'member' ? await bandOp('listMembers', params.band, {}) : [],
     feed: await bandOp('calendarFeed', params.band, {}),
+    songFields: await bandOp('listSongFields', params.band, {}),
   }),
   component: Settings,
 })
@@ -36,7 +38,7 @@ const themes = [
 ] as const
 
 function Settings() {
-  const { members, feed } = Route.useLoaderData()
+  const { members, feed, songFields } = Route.useLoaderData()
   const router = useRouter()
   const { user: me, locale } = rootRoute.useLoaderData()
   const t = useT()
@@ -280,6 +282,10 @@ function Settings() {
             )}
           </CardContent>
         </Card>
+
+        <SongFieldsCard band={band} fields={songFields} canEdit={band.role === 'member' && online} />
+        {/* Remount when the band's fields change, so a new or renamed one shows up. */}
+        <ShownFieldsCard key={band.songFields.map((f) => f.id).join()} band={band} custom={band.songFields} shown={band.shown} online={online} />
 
         {band.role === 'member' && (
           <Card>

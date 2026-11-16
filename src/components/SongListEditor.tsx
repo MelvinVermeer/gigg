@@ -11,8 +11,19 @@ import { applyDrop } from '#/lib/drop'
 import { onHandlePointerDown, onRowPointerDown, preventScrollWhileDragging } from '#/lib/song-drag'
 import type { OnDrop } from '#/lib/song-drag'
 import { cn } from '#/lib/utils'
+import { defaultShown, inlineText } from '#/lib/song-fields'
 
-export type SongRef = { id: string; slug: string; title: string; key: string | null; durationSec: number | null }
+export type SongRef = {
+  id: string
+  slug: string
+  title: string
+  key: string | null
+  durationSec: number | null
+  bpm?: number | null
+  tuning?: string | null
+  notes?: string | null
+  custom?: Record<string, string>
+}
 
 type Props = {
   band: string
@@ -24,6 +35,8 @@ type Props = {
   blocks?: { id: string; name: string; songs: SongRef[] }[]
   editable: boolean
   onChange: (songs: SongRef[]) => void
+  /** Song fields to show (lib/song-fields.ts); duration stays in its own column. */
+  fields?: string[]
   /** Drops handled by a parent with several lists (a setlist's sets). Without it this list is its own drag scope. */
   onDrop?: OnDrop
 }
@@ -34,10 +47,11 @@ export const totalDuration = (songs: SongRef[]) => songs.reduce((sum, s) => sum 
  * An ordered list of songs: drag to reorder or out to remove (long-press on touch, grip handle with a mouse), remove, add from the repertoire.
  * Up/down buttons stay for the keyboard, visible on focus. Used for sets and blocks.
  */
-export function SongListEditor({ band, label, songs, repertoire, blocks = [], editable, onChange, onDrop }: Props) {
+export function SongListEditor({ band, label, songs, repertoire, blocks = [], editable, onChange, onDrop, fields = defaultShown.page }: Props) {
   const router = useRouter()
   const t = useT()
   const [text, setText] = useState('')
+  const numbered = fields.includes('number')
   const options = useMemo(() => withLabels(repertoire, (s) => s.title, (s) => s.key), [repertoire])
 
   const blockLabel = (b: { name: string; songs: SongRef[] }) => t.songList.block(b.name, b.songs.length)
@@ -81,8 +95,9 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
             <li
               key={`${s.id}-${i}`}
               className={cn(
-                'grid grid-cols-[1.75rem_1fr_2.5rem_3.25rem_auto] items-center gap-1 py-1.5 text-sm',
-                editable && 'pointer-fine:grid-cols-[1.25rem_1.75rem_1fr_2.5rem_3.25rem_auto]',
+                'grid items-center gap-1 py-1.5 text-sm',
+                numbered ? 'grid-cols-[1.75rem_1fr_3.25rem_auto]' : 'grid-cols-[1fr_3.25rem_auto]',
+                editable && (numbered ? 'pointer-fine:grid-cols-[1.25rem_1.75rem_1fr_3.25rem_auto]' : 'pointer-fine:grid-cols-[1.25rem_1fr_3.25rem_auto]'),
               )}
               {...(editable && { 'data-drag-row': '', onPointerDown: (e) => onRowPointerDown(e, drop) })}
             >
@@ -95,14 +110,15 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
                   <GripVertical className="size-4" />
                 </span>
               )}
-              <span className="text-muted-foreground tabular-nums">{i + 1}.</span>
+              {numbered && <span className="text-muted-foreground tabular-nums">{i + 1}.</span>}
               <span className="title font-medium [overflow-wrap:anywhere]">
                 <Link to="/$band/songs/$song" params={{ band, song: s.slug }} className="underline-offset-4 hover:underline">
                   {s.title}
                 </Link>
+                {inlineText(s, fields, ['durationSec']) && <span className="text-xs font-normal text-muted-foreground"> {inlineText(s, fields, ['durationSec'])}</span>}
+                {fields.includes('notes') && s.notes && <span className="block text-xs font-normal whitespace-pre-wrap text-muted-foreground">{s.notes}</span>}
               </span>
-              <span className="text-muted-foreground">{s.key}</span>
-              <span className="text-muted-foreground tabular-nums">{formatDuration(s.durationSec)}</span>
+              <span className="text-muted-foreground tabular-nums">{fields.includes('durationSec') && formatDuration(s.durationSec)}</span>
               {editable ? (
                 <span className="flex gap-0.5">
                   <Button

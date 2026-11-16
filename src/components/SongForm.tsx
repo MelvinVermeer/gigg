@@ -6,16 +6,19 @@ import { Textarea } from '#/components/ui/textarea'
 import { formatDuration, parseDuration } from '#/lib/duration'
 import type { SongFields } from '#/server/ops'
 import { errorText, useT } from '#/lib/i18n'
+import type { CustomField } from '#/lib/song-fields'
 
 type Props = {
   initial?: Partial<SongFields>
+  /** The band's active custom fields, one single-line input each. */
+  customFields: CustomField[]
   submitLabel: string
   onSubmit: (fields: SongFields) => Promise<void>
 }
 
 const num = (v: FormDataEntryValue | null) => (String(v ?? '').trim() ? Number(v) : null)
 
-export function SongForm({ initial = {}, submitLabel, onSubmit }: Props) {
+export function SongForm({ initial = {}, customFields, submitLabel, onSubmit }: Props) {
   const t = useT()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -39,6 +42,7 @@ export function SongForm({ initial = {}, submitLabel, onSubmit }: Props) {
           .split(',')
           .map((t) => t.trim())
           .filter(Boolean),
+        custom: Object.fromEntries(customFields.map((cf) => [cf.id, String(f.get(`custom-${cf.id}`))])),
       })
     } catch (err) {
       setError(errorText(t, err, t.common.savingFailed))
@@ -65,6 +69,11 @@ export function SongForm({ initial = {}, submitLabel, onSubmit }: Props) {
       <Field label={t.songs.tuningLong}>
         <Input name="tuning" maxLength={200} defaultValue={initial.tuning ?? ''} />
       </Field>
+      {customFields.map((cf) => (
+        <Field key={cf.id} label={cf.name}>
+          <Input name={`custom-${cf.id}`} maxLength={100} defaultValue={initial.custom?.[cf.id] ?? ''} />
+        </Field>
+      ))}
       <Field label={t.common.notes}>
         <Textarea name="notes" rows={5} maxLength={10_000} defaultValue={initial.notes ?? ''} />
       </Field>

@@ -5,6 +5,7 @@ import { Button } from '#/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '#/components/ui/dropdown-menu'
 import { useT } from '#/lib/i18n'
 import { setlistCsv } from '#/lib/setlist-csv'
+import { fieldName, useShownFields } from '#/lib/song-fields'
 
 type Props = {
   /** File name without extension, already slugified. */
@@ -18,10 +19,13 @@ type Props = {
 /** Excel (CSV, built here so it works offline), print and show mode in one menu. */
 export function SetlistDownload({ file, sets, show, print }: Props) {
   const t = useT()
+  const { cols, custom } = useShownFields('excel')
 
   function excel() {
-    const c = t.common
-    const csv = setlistCsv(sets, ['#', c.title, c.key, c.bpm, c.tuning, c.duration])
+    // '#' (number) is always first, then the title, then the rest.
+    const names = cols.map((f) => fieldName(t, f, custom))
+    const header = cols[0] === 'number' ? [names[0], t.common.title, ...names.slice(1)] : [t.common.title, ...names]
+    const csv = setlistCsv(sets, cols, header)
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     a.download = `${file}.csv`

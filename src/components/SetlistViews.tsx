@@ -2,10 +2,12 @@ import { useEffect, useRef } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 import { ChevronLeft, ChevronRight, Printer, X } from 'lucide-react'
 import { Button } from '#/components/ui/button'
-import { stageFontMm } from '#/lib/stage'
+import { small, stageFontMm } from '#/lib/stage'
 import { useT } from '#/lib/i18n'
+import { inlineText, useShownFields } from '#/lib/song-fields'
+import type { SongValues } from '#/lib/song-fields'
 
-type Set = { name: string; songs: { title: string; key: string | null; notes?: string | null }[] }
+type Set = { name: string; songs: SongValues[] }
 
 /** The link back to the setlist, styled by the view; the route supplies where it goes. */
 type Back = (props: { className?: string; 'aria-label'?: string; children: ReactNode }) => ReactElement
@@ -36,6 +38,8 @@ const keys: Record<string, number> = { ArrowRight: 1, PageDown: 1, ' ': 1, Arrow
 export function ShowMode({ title, sets, back }: { title: string; sets: Set[]; back: Back }) {
   const track = useRef<HTMLDivElement>(null)
   const t = useT()
+  const { cols } = useShownFields('show')
+  const notes = cols.includes('notes')
   useWakeLock()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -86,12 +90,12 @@ export function ShowMode({ title, sets, back }: { title: string; sets: Set[]; ba
                   {i + 1}/{sets.length}
                 </small>
               </h2>
-              <ol className="m-0 list-decimal pl-[1.4em] leading-[1.15] font-bold marker:text-muted-foreground">
+              <ol className={`m-0 leading-[1.15] font-bold marker:text-muted-foreground ${cols.includes('number') ? 'list-decimal pl-[1.4em]' : 'list-none pl-0'}`}>
                 {set.songs.map((song, j) => (
                   <li key={j}>
                     {song.title}
-                    {song.key && <small className="text-[0.5em] font-normal text-muted-foreground"> {song.key}</small>}
-                    {song.notes && <span className="block text-[max(0.4em,0.9rem)] font-normal whitespace-pre-wrap text-muted-foreground">{song.notes}</span>}
+                    {inlineText(song, cols) && <small className="text-[0.5em] font-normal text-muted-foreground"> {inlineText(song, cols)}</small>}
+                    {notes && song.notes && <span className="block text-[max(0.4em,0.9rem)] font-normal whitespace-pre-wrap text-muted-foreground">{song.notes}</span>}
                   </li>
                 ))}
               </ol>
@@ -107,6 +111,8 @@ export function ShowMode({ title, sets, back }: { title: string; sets: Set[]; ba
 /** Stage-floor setlist: one page per set, big titles only. Print it or save it as PDF. */
 export function StagePrint({ title, sets, back }: { title: string; sets: Set[]; back: Back }) {
   const t = useT()
+  const { cols } = useShownFields('print')
+  const notes = cols.includes('notes')
   return (
     <>
       <div className="no-print mb-4 flex items-center justify-between gap-3">
@@ -120,11 +126,24 @@ export function StagePrint({ title, sets, back }: { title: string; sets: Set[]; 
           <header className="text-[4mm] text-muted-foreground">
             <strong className="text-foreground">{set.name}</strong> · {title}
           </header>
-          <ol className="mt-[4mm] list-decimal pl-[1.6em] leading-[1.15] font-bold whitespace-nowrap" style={{ fontSize: `${stageFontMm(set.songs.map((s) => s.title))}mm` }}>
+          <ol
+            className={`mt-[4mm] leading-[1.15] font-bold whitespace-nowrap ${cols.includes('number') ? 'list-decimal pl-[1.6em]' : 'list-none pl-0'}`}
+            style={{ fontSize: `${stageFontMm(set.songs.map((s) => ({ title: s.title, extra: inlineText(s, cols), notes: notes ? (s.notes ?? '') : '' })))}mm` }}
+          >
             {set.songs.map((song, j) => (
               <li key={j}>
                 {song.title}
-                {song.key && <small className="text-[0.45em] font-normal text-muted-foreground"> {song.key}</small>}
+                {inlineText(song, cols) && (
+                  <small className="font-normal text-muted-foreground" style={{ fontSize: `${small}em` }}>
+                    {' '}
+                    {inlineText(song, cols)}
+                  </small>
+                )}
+                {notes && song.notes && (
+                  <span className="block font-normal whitespace-pre-wrap text-muted-foreground" style={{ fontSize: `${small}em` }}>
+                    {song.notes}
+                  </span>
+                )}
               </li>
             ))}
           </ol>

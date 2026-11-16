@@ -8,6 +8,8 @@ import { formatDuration } from '#/lib/duration'
 import { dicts, label, locales, localeOf } from '#/lib/i18n'
 import type { Dict } from '#/lib/i18n'
 import { slugify } from '#/lib/slug'
+import { defaultShown, outputs } from '#/lib/song-fields'
+import type { Shown } from '#/lib/song-fields'
 import type { Db } from './db'
 import {
   availabilityAnswer,
@@ -31,7 +33,9 @@ import {
   setItems,
   setlists,
   sets,
+  shownFields,
   slugRedirects,
+  songFields as songFieldsTable,
   songs,
   users,
   venues,
@@ -163,6 +167,7 @@ const tags = z
   .transform((t) => [...new Set(t)])
 
 const bySlug = z.object({ slug: z.string() })
+const byId = z.object({ id: z.uuid() })
 
 /** Optional 'HH:MM'; "" becomes null. */
 const time = z
@@ -310,9 +315,32 @@ const songFields = z.object({
   tuning: optText(200),
   notes: optText(10_000),
   tags,
+  // Custom field values by field id; single line, empty ones dropped.
+  custom: z
+    .record(z.uuid(), z.string().trim().max(100).regex(/^[^\r\n]*$/))
+    .default({})
+    .transform((c) => Object.fromEntries(Object.entries(c).filter(([, v]) => v))),
 })
 
 export type SongFields = z.input<typeof songFields>
+
+const activeSongFields = (tx: Tx, bandId: string) =>
+  tx
+    .select({ id: songFieldsTable.id, name: songFieldsTable.name })
+    .from(songFieldsTable)
+    .where(and(eq(songFieldsTable.bandId, bandId), isNull(songFieldsTable.archivedAt)))
+    .orderBy(asc(songFieldsTable.createdAt))
+
+/**
+ * Custom values to store: the form's values for active fields, plus whatever the song already
+ * had for archived ones (the form doesn't show those, and archiving must keep them).
+ */
+async function customValues(tx: Tx, bandId: string, input: Record<string, string>, old: Record<string, string> = {}) {
+  const active = new Set((await activeSongFields(tx, bandId)).map((f) => f.id))
+  const kept = Object.entries(old).filter(([id]) => !active.has(id))
+  const given = Object.entries(input).filter(([id]) => active.has(id))
+  return Object.fromEntries([...kept, ...given])
+}
 
 const songOps = {
   listSongs: bandOp('reader', z.object({ archived: z.boolean().default(false) }), ({ tx, bandId }, { archived }) =>
@@ -345,9 +373,10 @@ const songOps = {
 
   createSong: bandOp('member', songFields, async ({ tx, bandId }, fields) => {
     const slug = await freeSlug(tx, songs, bandId, numbered(slugify(fields.title)))
+    const custom = await customValues(tx, bandId, fields.custom)
     const [song] = await tx
       .insert(songs)
-      .values({ bandId, slug, ...fields })
+      .values({ bandId, slug, ...fields, custom })
       .returning()
     return song
   }),
@@ -360,9 +389,11 @@ const songOps = {
         ? slug
         : await freeSlug(tx, songs, bandId, numbered(slugify(fields.title)), old.id)
     if (newSlug !== slug) await redirectOldSlug(tx, bandId, 'song', slug, old.id)
+    const [{ custom: oldCustom }] = await tx.select({ custom: songs.custom }).from(songs).where(eq(songs.id, old.id))
+    const custom = await customValues(tx, bandId, fields.custom, oldCustom)
     const [song] = await tx
       .update(songs)
-      .set({ ...fields, slug: newSlug })
+      .set({ ...fields, custom, slug: newSlug })
       .where(eq(songs.id, old.id))
       .returning()
     return song
@@ -377,6 +408,88 @@ const songOps = {
     const { id } = await rowBySlug(tx, songs, bandId, slug)
     await tx.update(songs).set({ archivedAt: null }).where(eq(songs.id, id))
   }),
+}
+
+// Custom song fields and which fields each person shows -----------------------
+
+const fieldName = z.string().trim().min(1).max(40)
+
+/** Names a custom field can't have: the fixed fields, in every language (case-insensitive). */
+const reservedNames = new Set(
+  Object.values(dicts).flatMap((t) =>
+    [t.common.title, t.common.duration, t.common.key, t.common.bpm, t.common.tuning, t.common.notes, t.common.tags].map((n) => n.toLowerCase()),
+  ),
+)
+
+async function assertFreeName(tx: Tx, bandId: string, name: string, exceptId?: string) {
+  if (reservedNames.has(name.toLowerCase())) throw new Error('songFieldReserved')
+  const [taken] = await tx
+    .select({ id: songFieldsTable.id })
+    .from(songFieldsTable)
+    .where(
+      and(
+        eq(songFieldsTable.bandId, bandId),
+        sql`lower(${songFieldsTable.name}) = ${name.toLowerCase()}`,
+        exceptId ? ne(songFieldsTable.id, exceptId) : undefined,
+      ),
+    )
+  if (taken) throw new Error('songFieldExists')
+}
+
+async function updateSongField(tx: Tx, bandId: string, id: string, set: Partial<typeof songFieldsTable.$inferInsert>) {
+  const [row] = await tx
+    .update(songFieldsTable)
+    .set(set)
+    .where(and(eq(songFieldsTable.id, id), eq(songFieldsTable.bandId, bandId)))
+    .returning({ id: songFieldsTable.id })
+  if (!row) throw new NotFound()
+}
+
+/** Your shown fields per output; the defaults until you change them. */
+async function shownFor(tx: Tx, bandId: string, userId: string): Promise<Shown> {
+  const [row] = await tx
+    .select({ fields: shownFields.fields })
+    .from(shownFields)
+    .where(and(eq(shownFields.bandId, bandId), eq(shownFields.userId, userId)))
+  return { ...defaultShown, ...(row?.fields as Partial<Shown> | undefined) }
+}
+
+const songFieldOps = {
+  /** All of them, archived too (Settings lists both). */
+  listSongFields: bandOp('reader', z.object({}), ({ tx, bandId }) =>
+    tx
+      .select({ id: songFieldsTable.id, name: songFieldsTable.name, archivedAt: songFieldsTable.archivedAt })
+      .from(songFieldsTable)
+      .where(eq(songFieldsTable.bandId, bandId))
+      .orderBy(asc(songFieldsTable.createdAt)),
+  ),
+
+  addSongField: bandOp('member', z.object({ name: fieldName }), async ({ tx, bandId }, { name }) => {
+    await assertFreeName(tx, bandId, name)
+    const [row] = await tx.insert(songFieldsTable).values({ bandId, name }).returning({ id: songFieldsTable.id, name: songFieldsTable.name })
+    return row
+  }),
+
+  renameSongField: bandOp('member', byId.extend({ name: fieldName }), async ({ tx, bandId }, { id, name }) => {
+    await assertFreeName(tx, bandId, name, id)
+    await updateSongField(tx, bandId, id, { name })
+  }),
+
+  archiveSongField: bandOp('member', byId, ({ tx, bandId }, { id }) => updateSongField(tx, bandId, id, { archivedAt: new Date() })),
+
+  restoreSongField: bandOp('member', byId, ({ tx, bandId }, { id }) => updateSongField(tx, bandId, id, { archivedAt: null })),
+
+  /** Your own choice of fields per output; readers too. */
+  setShownFields: bandOp(
+    'reader',
+    z.object(Object.fromEntries(outputs.map((o) => [o, z.array(z.string().max(40)).max(100)])) as Record<(typeof outputs)[number], z.ZodArray<z.ZodString>>),
+    async ({ tx, bandId, userId }, fields) => {
+      await tx
+        .insert(shownFields)
+        .values({ bandId, userId, fields })
+        .onConflictDoUpdate({ target: [shownFields.bandId, shownFields.userId], set: { fields } })
+    },
+  ),
 }
 
 // Events -------------------------------------------------------------------
@@ -667,7 +780,6 @@ const eventOps = {
 
 // Venues & contacts (edited from band settings) ------------------------------
 
-const byId = z.object({ id: z.uuid() })
 
 const venueFields = z.object({
   name: z.string().trim().min(1).max(200),
@@ -806,7 +918,18 @@ async function assertOwnSongs(tx: Tx, bandId: string, ids: string[]) {
   if (found.length !== unique.length) throw new NotFound()
 }
 
-const songSummary = { id: songs.id, slug: songs.slug, title: songs.title, key: songs.key, durationSec: songs.durationSec }
+// Everything a setlist can show (page, show mode, print, Excel; see lib/song-fields.ts).
+const songSummary = {
+  id: songs.id,
+  slug: songs.slug,
+  title: songs.title,
+  key: songs.key,
+  durationSec: songs.durationSec,
+  bpm: songs.bpm,
+  tuning: songs.tuning,
+  notes: songs.notes,
+  custom: songs.custom,
+}
 
 async function eventBySlug(tx: Tx, bandId: string, slug: string) {
   const [ev] = await tx
@@ -827,8 +950,7 @@ async function readSets(tx: Tx, setlistId: string | undefined) {
     .orderBy(asc(sets.position))
   if (!setRows.length) return []
   const items = await tx
-    // Notes/BPM/tuning too: show mode reads the same setlist.
-    .select({ setId: setItems.setId, ...songSummary, bpm: songs.bpm, tuning: songs.tuning, notes: songs.notes })
+    .select({ setId: setItems.setId, ...songSummary })
     .from(setItems)
     .innerJoin(songs, eq(songs.id, setItems.songId))
     .where(
@@ -1148,7 +1270,7 @@ type Change = typeof changes.$inferSelect
 type Row = Record<string, unknown>
 
 const entities: Record<string, string> = {
-  songs: 'song', venues: 'venue', contacts: 'contact', events: 'event', blocks: 'block', setlists: 'setlist',
+  songs: 'song', venues: 'venue', contacts: 'contact', events: 'event', blocks: 'block', setlists: 'setlist', song_fields: 'songField',
 }
 /** A column as a word in the viewer's language: "duration_sec" → "duration" / "duur". */
 const human = (t: Dict, column: string) => label(t.history.field, column.replace(/_(id|sec)$/, '')).replaceAll('_', ' ')
@@ -1278,6 +1400,13 @@ async function diff(tx: Tx, t: Dict, rows: Change[]): Promise<Diff[]> {
     for (const f of found) names.set(f.id, f.name)
   }
   const name = (id: unknown) => (typeof id === 'string' ? (names.get(id) ?? h.deleted) : '–')
+  // Custom song field names, for songs' `custom` values (keyed by field id).
+  const fieldIds = new Set(rows.flatMap((c) => [c.before, c.after].flatMap((r) => Object.keys(((r as Row | null)?.custom as object) ?? {}))))
+  const fieldNames = new Map(
+    fieldIds.size
+      ? (await tx.select({ id: songFieldsTable.id, name: songFieldsTable.name }).from(songFieldsTable).where(inArray(songFieldsTable.id, [...fieldIds]))).map((f) => [f.id, f.name])
+      : [],
+  )
   const requestEvent = await requestEvents(tx, t, rows)
   const enums: Record<string, object> = { role: t.role, booking_status: t.booking, payment_status: t.payment, answer: t.answer }
   const show = (k: string, v: unknown) => {
@@ -1308,6 +1437,13 @@ async function diff(tx: Tx, t: Dict, rows: Change[]): Promise<Diff[]> {
       const what = `${label(h.entityTitle, entity)} “${r.title ?? r.name}”`
       for (const k of Object.keys(r)) {
         if (hidden.has(k)) continue
+        if (k === 'custom') {
+          const b = (before?.custom ?? {}) as Row
+          const a = (after?.custom ?? {}) as Row
+          for (const id of new Set([...Object.keys(b), ...Object.keys(a)]))
+            if (b[id] !== a[id]) out.push({ what, field: fieldNames.get(id) ?? h.deleted, from: show(id, b[id]), to: show(id, a[id]) })
+          continue
+        }
         const from = show(k, before?.[k])
         const to = show(k, after?.[k])
         if (from !== to) out.push({ what, field: human(t, k), from, to })
@@ -1666,14 +1802,16 @@ export function calendarByToken(db: Db, token: string) {
 
 /** Every band-scoped operation. The authorisation tests run all of them, so add new ones here. */
 export const bandOps = {
-  getBand: bandOp('reader', z.object({}), async ({ tx, bandId, role }) => {
+  getBand: bandOp('reader', z.object({}), async ({ tx, bandId, userId, role }) => {
     const [band] = await tx
       .select({ slug: bands.slug, name: bands.name })
       .from(bands)
       .where(eq(bands.id, bandId))
-    return { ...band, role }
+    // Every band page can show songs, so the custom fields and your shown fields come along.
+    return { ...band, role, songFields: await activeSongFields(tx, bandId), shown: await shownFor(tx, bandId, userId) }
   }),
   ...songOps,
+  ...songFieldOps,
   ...fileOps,
   ...feedbackOps,
   ...memberOps,
@@ -1786,7 +1924,7 @@ export async function deleteBandForever(db: Db, slug: string) {
       .where(and(eq(bands.slug, slug), isNotNull(bands.archivedAt)))
     if (!band) throw new NotFound()
     // Children before parents (foreign keys).
-    for (const table of [calendarFeeds, eventPeople, availabilityResponses, availabilityRequests, files, feedback, setItems, sets, setlists, blockSongs, blocks, eventContacts, events, contacts, venues, songs, slugRedirects, memberships])
+    for (const table of [calendarFeeds, shownFields, songFieldsTable, eventPeople, availabilityResponses, availabilityRequests, files, feedback, setItems, sets, setlists, blockSongs, blocks, eventContacts, events, contacts, venues, songs, slugRedirects, memberships])
       await tx.delete(table).where(eq(table.bandId, band.id))
     await tx.delete(slugRedirects).where(and(eq(slugRedirects.type, 'band'), eq(slugRedirects.entityId, band.id)))
     await tx.delete(bands).where(eq(bands.id, band.id))

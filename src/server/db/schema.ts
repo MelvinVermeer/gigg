@@ -81,10 +81,39 @@ export const songs = pgTable(
     tuning: text('tuning'),
     notes: text('notes'),
     tags: text('tags').array().notNull().default(sql`'{}'`),
+    // Values of the band's custom song fields, by song_fields.id. Only filled ones are stored.
+    custom: jsonb('custom').$type<Record<string, string>>().notNull().default({}),
     createdAt: createdAt(),
     archivedAt: archivedAt(),
   },
   (t) => [unique().on(t.bandId, t.slug), trgm('songs_title_trgm', t.title)],
+)
+
+// Custom song fields: single-line text the band adds to every song ("Lead vocal"). Shown in
+// creation order, after the fixed fields. Archiving hides it but keeps the values in songs.custom.
+// Names are unique per band ignoring case, archived ones included (restoring never collides).
+export const songFields = pgTable(
+  'song_fields',
+  {
+    id: id(),
+    bandId: bandId(),
+    name: text('name').notNull(),
+    createdAt: createdAt(),
+    archivedAt: archivedAt(),
+  },
+  (t) => [uniqueIndex('song_fields_name').on(t.bandId, sql`lower(${t.name})`)],
+)
+
+// Which song fields each person shows per setlist output (page, show, print, excel). No row = the
+// defaults (see lib/song-fields.ts). Not audited: a personal view setting, not band data.
+export const shownFields = pgTable(
+  'shown_fields',
+  {
+    bandId: bandId(),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    fields: jsonb('fields').$type<Record<string, string[]>>().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.bandId, t.userId] })],
 )
 
 // Venues & contacts -------------------------------------------------------

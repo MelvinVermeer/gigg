@@ -21,7 +21,8 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
       <>
         <H>Songs</H>
         <P>
-          Your repertoire: title, duration, key, BPM, tuning, notes and tags. Attach lyrics, charts or recordings as files on the song page (up to 100 MB
+          Your repertoire: title, duration, key, BPM, tuning, notes and tags, plus extra fields your band adds under Settings → Songs (like “Lead
+          vocal”). Which fields you see in setlists, show mode, print and Excel is up to you: Settings → Setlists. Attach lyrics, charts or recordings as files on the song page (up to 100 MB
           each). Notes on songs and events can use markdown: **bold**, *italic*, # headings, - lists, - [ ] checklists, links and tables.
         </P>
         <H>Events</H>
@@ -76,7 +77,8 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
       <>
         <H>Nummers</H>
         <P>
-          Je repertoire: titel, duur, toonsoort, BPM, stemming, notities en tags. Voeg teksten, akkoordenschema's of opnames toe als bestanden op de pagina
+          Je repertoire: titel, duur, toonsoort, BPM, stemming, notities en tags, plus extra velden die je band toevoegt onder Instellingen → Nummers
+          (zoals “Leadzang”). Welke velden je ziet in setlists, showmodus, printen en Excel bepaal je zelf: Instellingen → Setlists. Voeg teksten, akkoordenschema's of opnames toe als bestanden op de pagina
           van het nummer (tot 100 MB per stuk). Notities bij nummers en optredens mogen markdown bevatten: **vet**, *cursief*, # kopjes, - lijstjes,
           - [ ] afvinklijstjes, links en tabellen.
         </P>

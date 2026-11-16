@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { asMember, asReader, signIn } from './helpers'
 
@@ -107,4 +108,55 @@ test.describe('reader', () => {
     expect(ics).not.toContain('Rained-out Festival')
     expect(ics).toContain('/demo-band/events/rusty-anchor-friday')
   })
+})
+
+test('a member adds a song field; a reader shows it in their setlist and Excel', async ({ browser }) => {
+  const field = `Lead ${Date.now()}`
+  const member = await (await browser.newContext(asMember)).newPage()
+  await member.goto('/demo-band/settings')
+  await member.getByLabel('New song field').fill(field)
+  await member.getByRole('button', { name: 'Add field' }).click()
+  await expect(member.getByLabel(`Name of ${field}`)).toHaveValue(field)
+  await member.getByLabel('New song field').fill(field.toUpperCase())
+  await member.getByRole('button', { name: 'Add field' }).click()
+  await expect(member.getByRole('alert')).toHaveText('A song field with this name already exists')
+
+  await member.goto('/demo-band/songs/closer/edit')
+  await member.getByLabel(field).fill('Anna')
+  await member.getByRole('button', { name: 'Save' }).first().click()
+  await expect(member.locator('.fields')).toContainText(`${field}Anna`)
+
+  // Hidden for everyone until ticked: the reader ticks it for the page and Excel, and drops the key from the page.
+  const reader = await (await browser.newContext(asReader)).newPage()
+  await reader.goto('/demo-band/setlists')
+  await reader.getByRole('link', { name: 'Short club set' }).click()
+  const closer = reader.locator('.song-list li', { hasText: 'Closer' }).first()
+  await expect(closer).toContainText('G')
+  await expect(closer).not.toContainText('Anna')
+  const setlist = reader.url()
+
+  await reader.goto('/demo-band/settings')
+  await reader.getByRole('checkbox', { name: `Show ${field} in Page` }).click()
+  await reader.getByRole('checkbox', { name: `Show ${field} in Excel` }).click()
+  await reader.getByRole('checkbox', { name: 'Show Key in Page' }).click()
+  await reader.getByRole('checkbox', { name: 'Show # in Page' }).click()
+  await expect(reader.getByRole('checkbox', { name: 'Show Key in Page' })).not.toBeChecked()
+  await reader.reload()
+  await expect(reader.getByRole('checkbox', { name: `Show ${field} in Page` })).toBeChecked()
+
+  await reader.goto(setlist)
+  await expect(closer).toContainText('Anna')
+  await expect(closer.locator('.title')).toHaveText('Closer Anna')
+  await expect(closer).not.toContainText(/\d+\./) // no 1. 2. in front
+  const download = reader.waitForEvent('download')
+  await reader.getByRole('button', { name: 'Download' }).click()
+  await reader.getByRole('menuitem', { name: 'Excel' }).click()
+  const csv = readFileSync(await (await download).path(), 'utf8')
+  expect(csv).toContain(`#;Title;Key;BPM;Tuning;Duration;${field}\r\n`)
+  expect(csv).toMatch(/;Closer;G;140;;5:00;Anna\r\n/)
+
+  // Settings stay per person: the member still sees the key, not the field.
+  await member.goto(setlist)
+  await expect(member.locator('.song-list li', { hasText: 'Closer' }).first().locator('.title')).toHaveText('Closer G')
+  await expect(member.locator('.song-list li', { hasText: 'Closer' }).first()).toContainText(/\d+\./)
 })

@@ -54,6 +54,8 @@ export const en = {
 
   /** Messages for errors the server throws by key. */
   errors: {
+    songFieldExists: 'A song field with this name already exists',
+    songFieldReserved: 'That name is already a standard song field',
     availabilityClosed: 'The availability check is closed',
     cannotRemoveYourself: 'You cannot remove yourself',
     startTimeNeeded: 'Add a start time too',
@@ -123,8 +125,8 @@ export const en = {
     deleted: 'deleted',
     yes: 'yes',
     // Plain-language lines; `name` already holds the quoted title.
-    entity: { song: 'song', venue: 'venue', contact: 'contact', event: 'event', block: 'block', setlist: 'setlist' },
-    entityTitle: { song: 'Song', venue: 'Venue', contact: 'Contact', event: 'Event', block: 'Block', setlist: 'Setlist' },
+    entity: { song: 'song', venue: 'venue', contact: 'contact', event: 'event', block: 'block', setlist: 'setlist', songField: 'song field' },
+    entityTitle: { song: 'Song', venue: 'Venue', contact: 'Contact', event: 'Event', block: 'Block', setlist: 'Setlist', songField: 'Song field' },
     added: (what: string) => `Added ${what}`,
     removed: (what: string) => `Removed ${what}`,
     archived: (what: string) => `Archived ${what}`,
@@ -151,6 +153,7 @@ export const en = {
       fee: 'fee', payment_status: 'payment status', address: 'address', organisation: 'organisation', email: 'email', phone: 'phone',
       archived_at: 'archived', role: 'role', answer: 'answer', note: 'note', contact: 'contact', songs: 'songs', sets: 'sets',
       setlist: 'setlist', event: 'event', song: 'song', block: 'block', closed_at: 'closed', standard: 'standard setlist',
+      custom: 'custom fields',
     },
   },
 
@@ -384,6 +387,22 @@ export const en = {
     invite: 'Invite',
     invited: 'Invited',
     couldNotInvite: 'Could not invite',
+    songs: 'Songs',
+    songFieldsIntro: (band: string) => `Extra fields every song of ${band} gets, like “Lead vocal” or “Capo”. One line of text each.`,
+    noSongFields: 'No extra song fields yet.',
+    songField: 'Song field',
+    newSongField: 'New song field',
+    addSongField: 'Add field',
+    renameSongField: (name: string) => `Name of ${name}`,
+    archiveSongField: (name: string) => `Archive ${name}`,
+    restoreSongField: (name: string) => `Restore ${name}`,
+    archivedSongFields: (n: number) => `Archived (${n})`,
+    setlists: 'Setlists',
+    shownIntro: (band: string) => `Which song fields you see in ${band}'s setlists. Just for you.`,
+    shownHint: 'New song fields are hidden until you tick them.',
+    field: 'Field',
+    outputs: { page: 'Page', show: 'Show mode', print: 'Print', excel: 'Excel' },
+    show: (field: string, output: string) => `Show ${field} in ${output}`,
   },
 
   admin: {
