@@ -436,6 +436,13 @@ export const nl: Dict = {
     deleteForever: 'Definitief verwijderen',
   },
 
+  install: {
+    banner: 'Installeer Gigg op dit apparaat voor snelle toegang, ook offline.',
+    button: 'App installeren',
+    later: 'Niet nu',
+    title: 'App',
+  },
+
   notifications: {
     title: 'Meldingen',
     intro: 'Krijg een melding op je telefoon of computer. Zet je er een aan, dan vraagt je browser op dit apparaat om toestemming.',

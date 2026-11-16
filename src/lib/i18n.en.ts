@@ -438,6 +438,13 @@ export const en = {
     deleteForever: 'Delete permanently',
   },
 
+  install: {
+    banner: 'Install Gigg on this device for quick access, also offline.',
+    button: 'Install app',
+    later: 'Not now',
+    title: 'App',
+  },
+
   notifications: {
     title: 'Notifications',
     intro: 'Get a notification on your phone or computer. Turning one on asks your browser for permission on this device.',

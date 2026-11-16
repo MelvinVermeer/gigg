@@ -3,6 +3,7 @@ import { HeadContent, Link, Outlet, Scripts, createRootRoute, useParams } from '
 import lockup from '../assets/gigg-lockup.svg'
 import lockupInk from '../assets/gigg-lockup-ink.svg'
 import { useEffect } from 'react'
+import { InstallBanner } from '#/components/InstallApp'
 import { HeaderSearch } from '#/components/HeaderSearch'
 import { PasskeyPrompt } from '#/components/PasskeyPrompt'
 import { UserMenu } from '#/components/UserMenu'
@@ -90,6 +91,7 @@ function RootLayout() {
         </div>
         </div>
       </header>
+      {me && <InstallBanner />}
       {me && <PasskeyPrompt />}
       <ConfirmHost />
       <Outlet />

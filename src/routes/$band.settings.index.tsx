@@ -12,6 +12,7 @@ import { Input } from '#/components/ui/input'
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { Separator } from '#/components/ui/separator'
 import { bandOp, getNotifications, inviteMember, setLocale } from '#/server/fns'
+import { InstallButton } from '#/components/InstallApp'
 import { NotificationSettings } from '#/components/NotificationSettings'
 import { currentTheme, setTheme } from '#/lib/theme'
 import type { Theme } from '#/lib/theme'
@@ -264,6 +265,7 @@ function Settings() {
                 </Field>
                 <Separator />
                 <NotificationSettings initial={notifications} publicKey={notifications.publicKey} />
+                <InstallButton />
               </>
             )}
           </CardContent>
