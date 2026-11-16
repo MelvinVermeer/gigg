@@ -11,6 +11,7 @@ import { slugify } from '#/lib/slug'
 import { defaultShown, outputs } from '#/lib/song-fields'
 import type { Shown } from '#/lib/song-fields'
 import type { Db } from './db'
+import { sendPush } from './push'
 import {
   availabilityAnswer,
   availabilityRequests,
@@ -55,7 +56,14 @@ export class NotFound extends Error {
 
 export type Role = 'reader' | 'member'
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0]
-type Ctx = { tx: Tx; bandId: string; userId: string; role: Role }
+type Ctx = {
+  tx: Tx
+  bandId: string
+  userId: string
+  role: Role
+  /** Run once the transaction committed (push notifications): its failure doesn't undo the change. */
+  after: (fn: (db: Db) => Promise<unknown>) => void
+}
 
 /**
  * A band-scoped operation. Checks membership and role *before* reading the input, then runs
@@ -67,8 +75,9 @@ function bandOp<S extends z.ZodType, O>(
   run: (ctx: Ctx, input: z.output<S>) => Promise<O>,
 ) {
   /** readOnly: Postgres rejects any write, so reads can safely be served over GET. */
-  const op = (db: Db, userId: string, bandSlug: string, rawInput: unknown, readOnly = false): Promise<O> =>
-    db.transaction(async (tx) => {
+  const op = async (db: Db, userId: string, bandSlug: string, rawInput: unknown, readOnly = false): Promise<O> => {
+    const after: ((db: Db) => Promise<unknown>)[] = []
+    const result = await db.transaction(async (tx) => {
       if (readOnly) await tx.execute(sql`set transaction read only`)
       const [m] = await tx
         .select({ bandId: bands.id, role: memberships.role })
@@ -84,8 +93,11 @@ function bandOp<S extends z.ZodType, O>(
         )
       if (!m || (minRole === 'member' && m.role !== 'member')) throw new Forbidden()
       await tx.execute(sql`select set_config('app.user_id', ${userId}, true)`)
-      return run({ tx, bandId: m.bandId, userId, role: m.role }, input.parse(rawInput))
+      return run({ tx, bandId: m.bandId, userId, role: m.role, after: (fn) => after.push(fn) }, input.parse(rawInput))
     })
+    for (const fn of after) await fn(db).catch((e) => console.error(e))
+    return result
+  }
   return Object.assign(op, { minRole, input })
 }
 
@@ -567,8 +579,11 @@ const bandPeople = (tx: Tx, bandId: string) =>
     .where(and(eq(memberships.bandId, bandId), isNull(memberships.archivedAt)))
     .orderBy(asc(users.name), asc(users.email))
 
-/** Put exactly these band people on the event. New ones are not asked yet; removed ones lose their answer and link. */
-async function setEventPeople(tx: Tx, bandId: string, eventId: string, userIds: string[] | undefined) {
+/**
+ * Put exactly these band people on the event. New ones are not asked yet (and get the "added" push);
+ * removed ones lose their answer and link.
+ */
+async function setEventPeople({ tx, bandId, userId: actor, after }: Ctx, eventId: string, userIds: string[] | undefined) {
   if (!userIds) return
   const ids = [...new Set(userIds)]
   if (ids.length) {
@@ -581,11 +596,13 @@ async function setEventPeople(tx: Tx, bandId: string, eventId: string, userIds: 
   await tx
     .delete(eventPeople)
     .where(and(eq(eventPeople.eventId, eventId), ids.length ? notInArray(eventPeople.userId, ids) : undefined))
-  if (ids.length)
-    await tx
-      .insert(eventPeople)
-      .values(ids.map((userId) => ({ bandId, eventId, userId })))
-      .onConflictDoNothing()
+  if (!ids.length) return
+  const added = await tx
+    .insert(eventPeople)
+    .values(ids.map((userId) => ({ bandId, eventId, userId })))
+    .onConflictDoNothing()
+    .returning({ userId: eventPeople.userId })
+  if (added.length) after((db) => sendPush(db, 'added', eventId, added.map((a) => a.userId), actor))
 }
 
 async function setEventContacts(tx: Tx, bandId: string, eventId: string, contactIds: string[]) {
@@ -750,7 +767,8 @@ const eventOps = {
   }),
 
   /** Create an event. Its setlist is chosen afterwards, on the event page. */
-  createEvent: bandOp('member', eventFieldsChecked, async ({ tx, bandId, userId }, fields) => {
+  createEvent: bandOp('member', eventFieldsChecked, async (ctx, fields) => {
+    const { tx, bandId, userId } = ctx
     const { venueId, contactIds } = await resolveRefs(tx, bandId, fields)
     const { venue: _v, contacts: _c, people, ...rest } = fields
     const slug = await freeSlug(tx, events, bandId, eventSlugs(fields.title, fields.date))
@@ -759,12 +777,13 @@ const eventOps = {
       .values({ ...rest, bandId, slug, venueId, createdBy: userId })
       .returning()
     await setEventContacts(tx, bandId, event.id, contactIds)
-    await setEventPeople(tx, bandId, event.id, people)
+    await setEventPeople(ctx, event.id, people)
     return event
   }),
 
   /** Update an event. A new title gets a new slug; the old one keeps working as a redirect. */
-  updateEvent: bandOp('member', bySlug.extend({ fields: eventFieldsChecked }), async ({ tx, bandId }, { slug, fields }) => {
+  updateEvent: bandOp('member', bySlug.extend({ fields: eventFieldsChecked }), async (ctx, { slug, fields }) => {
+    const { tx, bandId } = ctx
     const old = await rowBySlug(tx, events, bandId, slug)
     const { venueId, contactIds } = await resolveRefs(tx, bandId, fields)
     const { venue: _v, contacts: _c, people, ...rest } = fields
@@ -779,7 +798,7 @@ const eventOps = {
       .where(eq(events.id, old.id))
       .returning()
     await setEventContacts(tx, bandId, event.id, contactIds)
-    await setEventPeople(tx, bandId, event.id, people)
+    await setEventPeople(ctx, event.id, people)
     return event
   }),
 
@@ -1648,9 +1667,9 @@ const availabilityOps = {
   listBandPeople: bandOp('reader', z.object({}), ({ tx, bandId }) => bandPeople(tx, bandId)),
 
   /** Put exactly these people on the event (the participants dialog saves each change right away). */
-  setParticipants: bandOp('member', z.object({ event: z.string(), people: z.array(z.uuid()).max(100) }), async ({ tx, bandId }, { event: slug, people }) => {
-    const event = await availabilityEvent(tx, bandId, slug)
-    await setEventPeople(tx, bandId, event.id, people)
+  setParticipants: bandOp('member', z.object({ event: z.string(), people: z.array(z.uuid()).max(100) }), async (ctx, { event: slug, people }) => {
+    const event = await availabilityEvent(ctx.tx, ctx.bandId, slug)
+    await setEventPeople(ctx, event.id, people)
   }),
 
   /**
@@ -1658,7 +1677,7 @@ const availabilityOps = {
    * stale). Returns what the caller needs to mail each person their personal link; the tokens exist nowhere
    * else (only hashes are stored).
    */
-  askAvailability: bandOp('member', z.object({ event: z.string(), user: z.uuid().optional() }), async ({ tx, bandId }, { event: slug, user }) => {
+  askAvailability: bandOp('member', z.object({ event: z.string(), user: z.uuid().optional() }), async ({ tx, bandId, userId, after }, { event: slug, user }) => {
     const event = await availabilityEvent(tx, bandId, slug)
     const people = await onEvent(
       tx,
@@ -1673,6 +1692,7 @@ const availabilityOps = {
         .set({ tokenHash: sha256(r.token), askedFor: event.date, answer: null, note: null, answeredAt: null })
         .where(eq(eventPeople.id, r.id))
     if (event.closedAt) await tx.update(events).set({ availabilityClosedAt: null }).where(eq(events.id, event.id)) // asking (re)opens
+    if (people.length) after((db) => sendPush(db, 'asked', event.id, people.map((p) => p.userId), userId))
     const [band] = await tx.select({ name: bands.name, slug: bands.slug }).from(bands).where(eq(bands.id, bandId))
     return { band, event, recipients }
   }),

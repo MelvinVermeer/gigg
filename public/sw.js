@@ -25,3 +25,26 @@ self.addEventListener('fetch', (e) => {
     ),
   )
 })
+
+// Push notifications (src/server/push.ts sends { title, body, url, tag }). One tag per event, so a newer
+// one replaces the older instead of stacking.
+self.addEventListener('push', (e) => {
+  const { title, body, url, tag } = e.data.json()
+  e.waitUntil(
+    self.registration.showNotification(title, { body, tag, renotify: true, icon: '/pwa-192.png', badge: '/badge-96.png', data: { url } }),
+  )
+})
+
+// Open the event: in a Gigg window that's already open if there is one, otherwise a new one.
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close()
+  const url = new URL(e.notification.data.url, location.origin).href
+  e.waitUntil(
+    (async () => {
+      const [win] = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      if (!win) return self.clients.openWindow(url)
+      await win.focus()
+      return win.navigate(url).catch(() => self.clients.openWindow(url))
+    })(),
+  )
+})

@@ -160,3 +160,22 @@ test('a member adds a song field; a reader shows it in their setlist and Excel',
   await expect(member.locator('.song-list li', { hasText: 'Closer' }).first().locator('.title')).toHaveText('Closer G')
   await expect(member.locator('.song-list li', { hasText: 'Closer' }).first()).toContainText(/\d+\./)
 })
+
+test.describe('notifications', () => {
+  test.use(asReader)
+
+  test('are off by default; a choice is saved for the account', async ({ page }) => {
+    await page.goto('/demo-band/settings')
+    const asked = page.getByLabel('When I’m asked for availability')
+    await expect(asked).not.toBeChecked()
+    await expect(page.getByLabel('When I’m added as a participant')).not.toBeChecked()
+    await asked.click()
+    // No VAPID keys in local mode, so this browser can't sign up for push.
+    await expect(page.getByRole('status').filter({ hasText: 'can’t show notifications' })).toBeVisible()
+    await page.reload()
+    await expect(asked).toBeChecked()
+    await asked.click()
+    await page.reload()
+    await expect(asked).not.toBeChecked()
+  })
+})

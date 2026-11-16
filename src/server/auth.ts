@@ -30,7 +30,14 @@ export const auth = betterAuth({
   // Local mode is dev/test only; E2E tests sign in many times in a row.
   rateLimit: { enabled: !isLocal },
   // The user's language: set on invite (the inviter's), changeable in Settings (setLocale in fns.ts).
-  user: { additionalFields: { locale: { type: 'string', required: false, defaultValue: 'en', input: false } } },
+  // Push notification choices (Settings → Notifications, setNotifications in fns.ts).
+  user: {
+    additionalFields: {
+      locale: { type: 'string', required: false, defaultValue: 'en', input: false },
+      notifyAsked: { type: 'boolean', required: false, defaultValue: false, input: false },
+      notifyAdded: { type: 'boolean', required: false, defaultValue: false, input: false },
+    },
+  },
   databaseHooks: {
     user: {
       // An admin signing themselves up gets their browser's language.

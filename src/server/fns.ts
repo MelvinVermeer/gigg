@@ -3,13 +3,14 @@
 import { notFound, redirect } from '@tanstack/react-router'
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders, getRequestUrl } from '@tanstack/react-start/server'
-import { eq } from 'drizzle-orm'
-import type { z } from 'zod'
+import { and, eq } from 'drizzle-orm'
+import { z } from 'zod'
 import { dicts, isLocale, localeOf, pickLocale } from '#/lib/i18n'
 import { formatLongDate } from '#/lib/date'
 import { auth, isAdminEmail } from './auth'
 import { db, schema } from './db'
 import { sendMail } from './mail'
+import { vapidPublicKey } from './push'
 import { answerByToken, archiveBand, availabilityByToken, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, listFeedback, myBands, NotFound, setFeedbackDone } from './ops'
 import type { BandOpName, BandOps } from './ops'
 
@@ -41,6 +42,48 @@ export const setLocale = createServerFn({ method: 'POST' })
   .handler(async ({ context, data }) => {
     if (!isLocale(data.locale)) throw new Error('Unknown language')
     await db.update(schema.users).set({ locale: data.locale }).where(eq(schema.users.id, context.userId))
+  })
+
+/** Settings → Notifications: your choices (account-wide) and the key a device needs to sign up. */
+export const getNotifications = createServerFn({ method: 'GET' })
+  .middleware([authed])
+  .handler(async ({ context }) => {
+    const [u] = await db
+      .select({ asked: schema.users.notifyAsked, added: schema.users.notifyAdded })
+      .from(schema.users)
+      .where(eq(schema.users.id, context.userId))
+    return { ...u, publicKey: vapidPublicKey }
+  })
+
+export const setNotifications = createServerFn({ method: 'POST' })
+  .middleware([authed])
+  .validator(z.object({ asked: z.boolean(), added: z.boolean() }))
+  .handler(async ({ context, data }) => {
+    await db.update(schema.users).set({ notifyAsked: data.asked, notifyAdded: data.added }).where(eq(schema.users.id, context.userId))
+  })
+
+const pushSubscription = z.object({
+  endpoint: z.url({ protocol: /^https$/ }).max(2000),
+  keys: z.object({ p256dh: z.string().max(200), auth: z.string().max(100) }),
+})
+
+/** Sign up this device (browser). An endpoint is one device: if someone else signed up here before, it's yours now. */
+export const savePushSubscription = createServerFn({ method: 'POST' })
+  .middleware([authed])
+  .validator(pushSubscription)
+  .handler(async ({ context, data }) => {
+    const row = { userId: context.userId, endpoint: data.endpoint, p256dh: data.keys.p256dh, auth: data.keys.auth }
+    await db.insert(schema.pushSubscriptions).values(row).onConflictDoUpdate({ target: schema.pushSubscriptions.endpoint, set: row })
+  })
+
+/** Logging out: this device stops getting your notifications. */
+export const removePushSubscription = createServerFn({ method: 'POST' })
+  .middleware([authed])
+  .validator(z.object({ endpoint: z.string().max(2000) }))
+  .handler(async ({ context, data }) => {
+    await db
+      .delete(schema.pushSubscriptions)
+      .where(and(eq(schema.pushSubscriptions.endpoint, data.endpoint), eq(schema.pushSubscriptions.userId, context.userId)))
   })
 
 // Instance admin (ADMIN_EMAILS). Others get a 404, like outsiders of a band.

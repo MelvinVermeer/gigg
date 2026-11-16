@@ -206,6 +206,16 @@ export const calendarFeeds = pgTable(
   (t) => [primaryKey({ columns: [t.bandId, t.userId] })],
 )
 
+// Push notifications: one row per signed-up device (browser). Not audited: it's per device, not band data.
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: id(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  createdAt: createdAt(),
+})
+
 // Availability ------------------------------------------------------------
 
 export const availabilityAnswer = pgEnum('availability_answer', ['yes', 'no', 'maybe'])

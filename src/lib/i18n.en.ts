@@ -434,6 +434,19 @@ export const en = {
     deleteForever: 'Delete permanently',
   },
 
+  notifications: {
+    title: 'Notifications',
+    intro: 'Get a notification on your phone or computer. Turning one on asks your browser for permission on this device.',
+    asked: 'When I’m asked for availability',
+    added: 'When I’m added as a participant',
+    notOnDevice: 'Not enabled on this device.',
+    enable: 'Enable on this device',
+    blocked: 'Notifications are blocked for Gigg in this browser. Allow them in the browser’s site settings.',
+    unsupported: 'This browser can’t show notifications. On an iPhone or iPad, add Gigg to your home screen first and open it from there.',
+    pushAsked: (event: string) => `Can you make ${event}?`,
+    pushAdded: (event: string) => `You’ve been added to ${event}`,
+  },
+
   mail: {
     signInSubject: 'Sign in to Gigg',
     signInText: (url: string) => `Sign in: ${url}`,

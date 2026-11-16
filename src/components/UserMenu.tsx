@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '#/components/ui/dropdown-menu'
 import { authClient } from '#/lib/auth-client'
+import { forgetDevice } from '#/lib/push'
 import { useT } from '#/lib/i18n'
 
 type Props = { name: string; bands: { slug: string; name: string }[]; isAdmin: boolean }
@@ -22,6 +23,7 @@ export function UserMenu({ name, bands, isAdmin }: Props) {
   const t = useT()
 
   async function logOut() {
+    await forgetDevice() // still signed in: the server removes it from this account
     await authClient.signOut()
     // The offline cache holds band data too (public/sw.js).
     for (const key of (await globalThis.caches?.keys()) ?? []) await caches.delete(key)

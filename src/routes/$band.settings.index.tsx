@@ -11,7 +11,8 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Input } from '#/components/ui/input'
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { Separator } from '#/components/ui/separator'
-import { bandOp, inviteMember, setLocale } from '#/server/fns'
+import { bandOp, getNotifications, inviteMember, setLocale } from '#/server/fns'
+import { NotificationSettings } from '#/components/NotificationSettings'
 import { currentTheme, setTheme } from '#/lib/theme'
 import type { Theme } from '#/lib/theme'
 import { dicts, errorText, locales, useT } from '#/lib/i18n'
@@ -25,6 +26,7 @@ export const Route = createFileRoute('/$band/settings/')({
     members: (await bandOp('getBand', params.band, {})).role === 'member' ? await bandOp('listMembers', params.band, {}) : [],
     feed: await bandOp('calendarFeed', params.band, {}),
     songFields: await bandOp('listSongFields', params.band, {}),
+    notifications: await getNotifications(),
   }),
   component: Settings,
 })
@@ -38,7 +40,7 @@ const themes = [
 ] as const
 
 function Settings() {
-  const { members, feed, songFields } = Route.useLoaderData()
+  const { members, feed, songFields, notifications } = Route.useLoaderData()
   const router = useRouter()
   const { user: me, locale } = rootRoute.useLoaderData()
   const t = useT()
@@ -238,6 +240,8 @@ function Settings() {
                     ))}
                   </NativeSelect>
                 </Field>
+                <Separator />
+                <NotificationSettings initial={notifications} publicKey={notifications.publicKey} />
               </>
             )}
           </CardContent>

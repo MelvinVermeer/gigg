@@ -1,6 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm'
-import { describe, expect, it, onTestFinished } from 'vitest'
-import { bands, changes, contacts, events, memberships, setlists, songs, users, venues } from './db/schema'
+import { describe, expect, it, onTestFinished, vi } from 'vitest'
+import { bands, changes, contacts, events, memberships, pushSubscriptions, setlists, songs, users, venues } from './db/schema'
+import { pushMessages } from './push'
 import { answerByToken, archiveBand, availabilityByToken, bandOps, calendarByToken, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, setFeedbackDone, slugify } from './ops'
 import type { BandOpName } from './ops'
 import { testDb } from './test-db'
@@ -571,7 +572,7 @@ describe('audit trail', () => {
 
   it('is attached to every table except auth internals', async () => {
     const t = await testDb()
-    const notAudited = ['changes', 'sessions', 'accounts', 'verifications', 'passkeys', 'calendar_feeds', 'shown_fields'] // feeds: history would show the secret token; shown fields: a personal view setting
+    const notAudited = ['changes', 'sessions', 'accounts', 'verifications', 'passkeys', 'calendar_feeds', 'shown_fields', 'push_subscriptions'] // feeds: history would show the secret token; shown fields, push devices: personal, not band data
     const { rows } = (await t.db.execute(sql`
       select table_name from information_schema.tables
       where table_schema = 'public' and table_type = 'BASE TABLE'
@@ -807,6 +808,32 @@ describe('availability', () => {
     expect((await lines(t))[0]).toBe('Removed “Dev Reader” from event “Gig”')
     // Only band people can be added.
     await expect(bandOps.updateEvent(t.db, t.member, t.band, { slug: 'gig', fields: { ...fields, people: [t.outsider] } })).rejects.toBeInstanceOf(NotFound)
+  })
+
+  it('pushes "added" and "asked" to people who turned them on, never to whoever acted', async () => {
+    const t = await testDb()
+    for (const [userId, endpoint] of [[t.member, 'https://push.example/m'], [t.reader, 'https://push.example/r']])
+      await t.db.insert(pushSubscriptions).values({ userId, endpoint, p256dh: 'k', auth: 'a' })
+    await t.db.update(users).set({ notifyAsked: true, notifyAdded: true })
+    // No VAPID keys in tests: each push is logged instead of sent.
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+    onTestFinished(() => log.mockRestore())
+    const pushes = () => log.mock.calls.map(([line]) => String(line)).filter((l) => l.startsWith('[push]'))
+
+    await gig(t) // created by the member, with the member and the reader on it
+    await ask(t)
+    expect(pushes()).toEqual([expect.stringMatching(/^\[push\] You’ve been added to Gig: .+ · /), expect.stringMatching(/^\[push\] Can you make Gig\?/)])
+
+    const [event] = await t.db.select({ id: events.id }).from(events).where(eq(events.slug, 'gig'))
+    expect(await pushMessages(t.db, 'asked', event.id, [t.member, t.reader], t.member)).toEqual([
+      {
+        subscription: { endpoint: 'https://push.example/r', keys: { p256dh: 'k', auth: 'a' } },
+        payload: { title: 'Can you make Gig?', body: expect.stringContaining(' · '), url: '/demo-band/events/gig', tag: `event-${event.id}` },
+      },
+    ])
+    // Turned off: nothing.
+    await t.db.update(users).set({ notifyAdded: false }).where(eq(users.id, t.reader))
+    expect(await pushMessages(t.db, 'added', event.id, [t.reader], t.member)).toEqual([])
   })
 
   it('the participants dialog sets the list right away; only members can, and only band people', async () => {

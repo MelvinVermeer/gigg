@@ -432,6 +432,19 @@ export const nl: Dict = {
     deleteForever: 'Definitief verwijderen',
   },
 
+  notifications: {
+    title: 'Meldingen',
+    intro: 'Krijg een melding op je telefoon of computer. Zet je er een aan, dan vraagt je browser op dit apparaat om toestemming.',
+    asked: 'Als mijn beschikbaarheid gevraagd wordt',
+    added: 'Als ik als deelnemer word toegevoegd',
+    notOnDevice: 'Niet aan op dit apparaat.',
+    enable: 'Aanzetten op dit apparaat',
+    blocked: 'Meldingen van Gigg zijn geblokkeerd in deze browser. Sta ze toe in de site-instellingen van je browser.',
+    unsupported: 'Deze browser kan geen meldingen tonen. Op een iPhone of iPad: zet Gigg eerst op je beginscherm en open het van daaruit.',
+    pushAsked: (event) => `Kun je bij ${event}?`,
+    pushAdded: (event) => `Je bent toegevoegd aan ${event}`,
+  },
+
   mail: {
     signInSubject: 'Inloggen bij Gigg',
     signInText: (url) => `Inloggen: ${url}`,

@@ -17,7 +17,7 @@ Source of truth: [`src/server/db/schema.ts`](src/server/db/schema.ts) (app table
 
 Tables: `bands`, `memberships`, `slug_redirects`, `songs`, `venues`, `contacts`, `events`,
 `event_contacts`, `setlists`, `sets`, `set_items`, `blocks`, `block_songs`, `files`, `feedback`,
-`event_people`, `availability_requests` / `availability_responses` (legacy, read only), `calendar_feeds`, `song_fields`, `shown_fields`, `changes`.
+`event_people`, `availability_requests` / `availability_responses` (legacy, read only), `calendar_feeds`, `push_subscriptions`, `song_fields`, `shown_fields`, `changes`.
 
 Decisions made while building:
 - **Child tables have `band_id` too** (`sets`, `set_items`, `event_contacts`, `block_songs`), so every audit entry has a band and every query can filter on band.
@@ -27,7 +27,8 @@ Decisions made while building:
 - **Calendar feed**: `calendar_feeds` holds one random token per person per band (stored as is, so settings can show the link again; reset replaces it). `/api/calendar/<token>.ics` serves option and confirmed events from a year ago on, as UTC times. Leaving the band (archived membership) makes the token return 404. Not audited: history would show the token.
 - **Custom song fields**: `song_fields` (name, archived_at; unique per band on `lower(name)`) defines them; values live in `songs.custom` jsonb keyed by field id (only filled ones). History shows them per field name.
 - **Shown fields**: `shown_fields` is one row per person per band with `fields` jsonb `{ page, show, print, excel }` → field keys (`key`, `bpm`, `tuning`, `durationSec`, `notes` or a custom field id). No row = defaults (`src/lib/song-fields.ts`). Not audited: a personal view setting. `getBand` returns the active fields and your shown fields, so every band page has them (and offline too).
-- `users` comes from Better Auth, plus `locale` (`en` | `nl`, the user's language; an `additionalField` in auth.ts). Anonymisation (`anonymised_at`) is added when member removal is built.
+- **Push**: `push_subscriptions` holds one row per signed-up device (Web Push endpoint + keys), unique by endpoint. Removed on logout and when the push service says it's gone (404/410). Not audited: per device, not band data.
+- `users` comes from Better Auth, plus `locale` (`en` | `nl`, the user's language) and `notify_asked` / `notify_added` (push choices, default off); `additionalField`s in auth.ts. Anonymisation (`anonymised_at`) is added when member removal is built.
 
 ## Hidden settings
 
