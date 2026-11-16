@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { bandOp } from '#/server/fns'
 import type { SearchResult } from '#/server/ops'
+import { searchOffline } from '#/lib/offline-search'
 import { useT } from '#/lib/i18n'
 import type { Dict } from '#/lib/i18n'
 
@@ -8,7 +9,8 @@ export const Route = createFileRoute('/$band/search')({
   validateSearch: (search: Record<string, unknown>): { q?: string } =>
     typeof search.q === 'string' && search.q ? { q: search.q } : {},
   loaderDeps: ({ search }) => ({ q: search.q ?? '' }),
-  loader: ({ params, deps }) => bandOp('search', params.band, { q: deps.q }),
+  loader: ({ params, deps }) =>
+    bandOp('search', params.band, { q: deps.q }).catch((e) => searchOffline(params.band, deps.q, e)),
   component: Search,
 })
 
