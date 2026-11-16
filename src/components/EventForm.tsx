@@ -297,7 +297,7 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
 
       <div className="grid grid-cols-2 gap-4">
         <Field label={t.events.booking}>
-          <NativeSelect name="bookingStatus" defaultValue={initial.bookingStatus ?? 'lead'} className="w-full">
+          <NativeSelect name="bookingStatus" defaultValue={initial.bookingStatus ?? 'option'} className="w-full">
             {bookingStatuses.map((s) => (
               <NativeSelectOption key={s} value={s}>
                 {t.booking[s]}

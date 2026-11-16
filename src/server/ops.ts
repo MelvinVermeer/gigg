@@ -514,7 +514,7 @@ const eventFields = z.object({
   contacts: z.array(contactRef).max(20).default([]),
   /** Band members/readers on the event (user ids). Left out = unchanged. */
   people: z.array(z.uuid()).max(100).optional(),
-  bookingStatus: z.enum(bookingStatus.enumValues).default('lead'),
+  bookingStatus: z.enum(bookingStatus.enumValues).default('option'),
   paymentStatus: z.enum(paymentStatus.enumValues).default('open'),
   fee: optText(200),
   tags,

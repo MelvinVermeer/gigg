@@ -88,7 +88,7 @@ function Event() {
             </dd>
             <dt className="text-muted-foreground">{t.events.booking}</dt>
             <dd>
-              <Badge variant={event.bookingStatus === 'confirmed' ? 'default' : 'outline'}>{t.booking[event.bookingStatus]}</Badge>
+              <Badge variant={event.bookingStatus === 'confirmed' ? 'default' : event.bookingStatus === 'cancelled' ? 'destructive' : 'outline'}>{t.booking[event.bookingStatus]}</Badge>
             </dd>
             <dt className="text-muted-foreground">{t.events.payment}</dt>
             <dd>

@@ -138,7 +138,7 @@ function Events() {
               </span>
               </span>
               <span className="status flex shrink-0 gap-1">
-                <Badge variant={e.bookingStatus === 'confirmed' ? 'default' : 'outline'}>{t.booking[e.bookingStatus]}</Badge>
+                <Badge variant={e.bookingStatus === 'confirmed' ? 'default' : e.bookingStatus === 'cancelled' ? 'destructive' : 'outline'}>{t.booking[e.bookingStatus]}</Badge>
               </span>
             </li>
           ))}
