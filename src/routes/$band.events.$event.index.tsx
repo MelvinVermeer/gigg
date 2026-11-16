@@ -226,7 +226,7 @@ function ChooseSetlist({ event, standards }: { event: string; standards: { id: s
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {standards.map((s) => (
+        {[...standards].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })).map((s) => (
           <DropdownMenuItem key={s.id} onSelect={() => use(s.id)}>
             {s.name}
           </DropdownMenuItem>
