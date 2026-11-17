@@ -3,6 +3,8 @@ import { ArrowDown, ArrowUp, GripVertical, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Combobox } from '#/components/Combobox'
+import { AudioPlayer } from '#/components/AudioPlayer'
+import type { AudioFile } from '#/components/AudioPlayer'
 import { formatDuration } from '#/lib/duration'
 import { withLabels } from '#/lib/labels'
 import { bandOp } from '#/server/fns'
@@ -39,6 +41,8 @@ type Props = {
   fields?: string[]
   /** Drops handled by a parent with several lists (a setlist's sets). Without it this list is its own drag scope. */
   onDrop?: OnDrop
+  /** Audio files per song id; songs with any get a play button when `fields` has 'play'. */
+  audio?: Record<string, AudioFile[]>
 }
 
 export const totalDuration = (songs: SongRef[]) => songs.reduce((sum, s) => sum + (s.durationSec ?? 0), 0)
@@ -47,11 +51,14 @@ export const totalDuration = (songs: SongRef[]) => songs.reduce((sum, s) => sum 
  * An ordered list of songs: drag to reorder or out to remove (long-press on touch, grip handle with a mouse), remove, add from the repertoire.
  * Up/down buttons stay for the keyboard, visible on focus. Used for sets and blocks.
  */
-export function SongListEditor({ band, label, songs, repertoire, blocks = [], editable, onChange, onDrop, fields = defaultShown.page }: Props) {
+export function SongListEditor({ band, label, songs, repertoire, blocks = [], editable, onChange, onDrop, fields = defaultShown.page, audio = {} }: Props) {
   const router = useRouter()
   const t = useT()
   const [text, setText] = useState('')
   const numbered = fields.includes('number')
+  const playable = fields.includes('play')
+  // Rows without audio keep the play column's width, so durations line up.
+  const playColumn = playable && Object.keys(audio).length > 0
   const options = useMemo(() => withLabels(repertoire, (s) => s.title, (s) => s.key), [repertoire])
 
   const blockLabel = (b: { name: string; songs: SongRef[] }) => t.songList.block(b.name, b.songs.length)
@@ -93,11 +100,12 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
         <ol className={cn('song-list divide-y', editable && 'editable')}>
           {songs.map((s, i) => (
             <li
-              key={`${s.id}-${i}`}
+              // Keyed by song (and which copy), not position, so a playing song keeps playing when moved.
+              key={`${s.id}-${songs.slice(0, i).filter((o) => o.id === s.id).length}`}
               className={cn(
                 'grid items-center gap-1 py-1.5 text-sm',
-                numbered ? 'grid-cols-[1.75rem_1fr_3.25rem_auto]' : 'grid-cols-[1fr_3.25rem_auto]',
-                editable && (numbered ? 'pointer-fine:grid-cols-[1.25rem_1.75rem_1fr_3.25rem_auto]' : 'pointer-fine:grid-cols-[1.25rem_1fr_3.25rem_auto]'),
+                numbered ? 'grid-cols-[1.75rem_1fr_3.25rem_auto_auto]' : 'grid-cols-[1fr_3.25rem_auto_auto]',
+                editable && (numbered ? 'pointer-fine:grid-cols-[1.25rem_1.75rem_1fr_3.25rem_auto_auto]' : 'pointer-fine:grid-cols-[1.25rem_1fr_3.25rem_auto_auto]'),
               )}
               {...(editable && { 'data-drag-row': '', onPointerDown: (e) => onRowPointerDown(e, drop) })}
             >
@@ -118,7 +126,7 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
                 {inlineText(s, fields, ['durationSec']) && <span className="text-xs font-normal text-muted-foreground"> {inlineText(s, fields, ['durationSec'])}</span>}
                 {fields.includes('notes') && s.notes && <span className="block text-xs font-normal whitespace-pre-wrap text-muted-foreground">{s.notes}</span>}
               </span>
-              <span className="text-muted-foreground tabular-nums">{fields.includes('durationSec') && formatDuration(s.durationSec)}</span>
+              <span className="text-right text-muted-foreground tabular-nums">{fields.includes('durationSec') && formatDuration(s.durationSec)}</span>
               {editable ? (
                 <span className="flex gap-0.5">
                   <Button
@@ -148,6 +156,7 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
               ) : (
                 <span />
               )}
+              {playable && audio[s.id] ? <AudioPlayer files={audio[s.id]} label={s.title} next /> : <span className={cn(playColumn && 'w-8')} />}
             </li>
           ))}
         </ol>

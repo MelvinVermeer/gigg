@@ -1,7 +1,7 @@
 // Band data operations as plain functions: (db, userId, bandSlug, input) → result.
 // Server functions (fns.ts) are thin wrappers around these, so everything here is testable without HTTP.
 import { createHash, randomBytes } from 'node:crypto'
-import { and, asc, desc, eq, exists, gte, inArray, isNotNull, isNull, lt, ne, notInArray, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, exists, gte, inArray, isNotNull, isNull, like, lt, ne, notInArray, or, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { formatDuration } from '#/lib/duration'
@@ -1097,9 +1097,21 @@ const repertoire = (tx: Tx, bandId: string) =>
     .where(and(eq(songs.bandId, bandId), isNull(songs.archivedAt)))
     .orderBy(asc(songs.title))
 
-/** Everything the setlist builder needs besides the sets: repertoire and blocks. */
+/** The band's audio files per song id, in upload order: what the setlist's play buttons play. */
+async function songAudio(tx: Tx, bandId: string) {
+  const rows = await tx
+    .select({ songId: files.songId, id: files.id, name: files.name })
+    .from(files)
+    .where(and(eq(files.bandId, bandId), isNotNull(files.songId), isNull(files.archivedAt), like(files.contentType, 'audio/%')))
+    .orderBy(asc(files.createdAt))
+  const audio: Record<string, { id: string; name: string }[]> = {}
+  for (const { songId, ...f } of rows) (audio[songId!] ??= []).push(f)
+  return audio
+}
+
+/** Everything the setlist builder needs besides the sets: repertoire, blocks and audio. */
 async function builderData(tx: Tx, bandId: string) {
-  return { songs: await repertoire(tx, bandId), blocks: await readBlocks(tx, bandId, false) }
+  return { songs: await repertoire(tx, bandId), blocks: await readBlocks(tx, bandId, false), audio: await songAudio(tx, bandId) }
 }
 
 /** Standalone setlists (templates) an event can use. */

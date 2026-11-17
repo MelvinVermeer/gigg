@@ -7,7 +7,7 @@ import { Checkbox } from '#/components/ui/checkbox'
 import { Input } from '#/components/ui/input'
 import { bandOp } from '#/server/fns'
 import { errorText, useT } from '#/lib/i18n'
-import { columns, fieldName, fixedFields, outputs } from '#/lib/song-fields'
+import { columns, fieldName, fixedFields, outputs, playOutputs } from '#/lib/song-fields'
 import type { CustomField, Output, Shown } from '#/lib/song-fields'
 
 type Field = { id: string; name: string; archivedAt: Date | string | null }
@@ -128,7 +128,7 @@ export function ShownFieldsCard({ band, custom, shown, online }: { band: { slug:
   const queue = useRef(Promise.resolve())
   const [error, setError] = useState('')
   const c = t.common
-  const rows = ['number', ...fixedFields, ...custom.map((f) => f.id), 'notes']
+  const rows = ['number', ...fixedFields, ...custom.map((f) => f.id), 'notes', 'play']
   const nameOf = (f: string) => fieldName(t, f, custom)
 
   function toggle(output: Output, field: string, on: boolean) {
@@ -182,7 +182,7 @@ export function ShownFieldsCard({ band, custom, shown, online }: { band: { slug:
                     <td key={o} className="px-2 py-2 text-center">
                       <Checkbox
                         checked={value[o].includes(f)}
-                        disabled={!online}
+                        disabled={!online || (f === 'play' && !playOutputs.includes(o))}
                         aria-label={s.show(nameOf(f), s.outputs[o])}
                         onCheckedChange={(on) => toggle(o, f, on === true)}
                       />

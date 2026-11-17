@@ -9,6 +9,7 @@ import { bandOp } from '#/server/fns'
 import { cn } from '#/lib/utils'
 import { useT } from '#/lib/i18n'
 import { confirmDialog } from '#/components/ConfirmDialog'
+import { AudioPlayer, isAudio } from '#/components/AudioPlayer'
 
 type FileRow = { id: string; name: string; sizeBytes: number; contentType: string }
 type Props = { band: string; owner: { song: string } | { event: string }; files: FileRow[]; canEdit: boolean }
@@ -119,9 +120,13 @@ export function Files({ band, owner, files, canEdit }: Props) {
         {files.length > 0 ? (
           <ul aria-label={t.files.title} className="divide-y">
             {files.map((f) => (
-              <li key={f.id} className="flex items-center gap-2 py-2 text-sm">
-                <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-                <a href={`/api/files/${f.id}`} className="truncate font-medium underline-offset-4 hover:underline">
+              <li key={f.id} className="flex flex-wrap items-center gap-x-2 py-2 text-sm">
+                {isAudio(f.contentType) ? (
+                  <AudioPlayer files={[f]} label={f.name} />
+                ) : (
+                  <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                )}
+                <a href={`/api/files/${f.id}`} className="min-w-0 flex-1 truncate font-medium underline-offset-4 hover:underline">
                   {f.name}
                 </a>
                 <span className="hidden shrink-0 text-muted-foreground sm:inline">({size(f.sizeBytes)})</span>
@@ -129,7 +134,7 @@ export function Files({ band, owner, files, canEdit }: Props) {
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    className="ml-auto text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive"
                     aria-label={t.files.remove(f.name)}
                     onClick={() => remove(f)}
                   >

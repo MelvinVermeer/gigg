@@ -297,6 +297,19 @@ export const en = {
     add: 'Add files',
   },
 
+  audio: {
+    play: (what: string) => `Play ${what}`,
+    playButton: 'Play button',
+    player: (name: string) => `Playing ${name}`,
+    pause: 'Pause',
+    resume: 'Play',
+    restart: 'Restart',
+    position: 'Position',
+    next: 'Next recording',
+    stop: 'Stop',
+    failed: 'Couldn’t load audio',
+  },
+
   participants: {
     title: 'Participants',
     select: 'Select',

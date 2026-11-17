@@ -20,8 +20,16 @@ export const Route = createFileRoute('/api/files/$id')({
           if (directUploads) return Response.redirect(await signedDownloadUrl(file.blobPath), 302)
           const body = await getLocalFile(file.blobPath)
           if (!body) return new Response('Not found', { status: 404 })
-          return new Response(body, {
+          // A byte range (`bytes=start-` or `bytes=start-end`): audio players need it to seek.
+          const range = /^bytes=(\d+)-(\d*)$/.exec(request.headers.get('range') ?? '')
+          const start = range ? Number(range[1]) : 0
+          const end = range?.[2] ? Math.min(Number(range[2]), body.length - 1) : body.length - 1
+          if (range && start > end) return new Response(null, { status: 416, headers: { 'content-range': `bytes */${body.length}` } })
+          return new Response(range ? body.subarray(start, end + 1) : body, {
+            status: range ? 206 : 200,
             headers: {
+              'accept-ranges': 'bytes',
+              ...(range && { 'content-range': `bytes ${start}-${end}/${body.length}` }),
               'content-type': file.contentType,
               'content-disposition': `${inline.test(file.contentType) ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(file.name)}`,
               'x-content-type-options': 'nosniff',

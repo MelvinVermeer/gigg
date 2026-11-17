@@ -7,6 +7,7 @@ import { Input } from '#/components/ui/input'
 import { cn } from '#/lib/utils'
 import { SongListEditor, totalDuration } from '#/components/SongListEditor'
 import type { SongRef } from '#/components/SongListEditor'
+import type { AudioFile } from '#/components/AudioPlayer'
 import { formatDuration } from '#/lib/duration'
 import { bandOp } from '#/server/fns'
 import { useT } from '#/lib/i18n'
@@ -24,6 +25,8 @@ type Props = {
     sets: Set[]
     songs: SongRef[]
     blocks: { id: string; name: string; songs: SongRef[] }[]
+    /** Audio files per song id, for the play buttons. */
+    audio: Record<string, AudioFile[]>
   }
   editable: boolean
   /** Shown at the end of the song-count line, e.g. the download menu. */
@@ -111,6 +114,7 @@ export function SetlistBuilder({ band, target, data, editable, actions }: Props)
             blocks={data.blocks}
             editable={editable}
             fields={cols}
+            audio={data.audio}
             // Removing the last song removes the set.
             onDrop={drop}
             onChange={(songs) => persist(songs.length || !set.songs.length ? updateSet(i, { songs }) : shown.filter((_, j) => j !== i))}

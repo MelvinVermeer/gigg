@@ -296,6 +296,19 @@ export const nl: Dict = {
     add: 'Bestanden toevoegen',
   },
 
+  audio: {
+    play: (what) => `${what} afspelen`,
+    playButton: 'Afspeelknop',
+    player: (name) => `${name} speelt`,
+    pause: 'Pauzeren',
+    resume: 'Afspelen',
+    restart: 'Opnieuw',
+    position: 'Positie',
+    next: 'Volgende opname',
+    stop: 'Stoppen',
+    failed: 'Audio kon niet laden',
+  },
+
   participants: {
     title: 'Deelnemers',
     select: 'Selecteer',

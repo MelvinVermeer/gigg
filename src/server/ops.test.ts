@@ -147,7 +147,7 @@ describe('song fields', () => {
   it('shown fields: defaults until you pick, per person', async () => {
     const t = await testDb()
     const before = (await bandOps.getBand(t.db, t.reader, t.band, {})).shown
-    expect(before).toEqual({ page: ['number', 'key', 'durationSec'], show: ['number', 'key', 'notes'], print: ['number', 'key'], excel: ['number', 'key', 'bpm', 'tuning', 'durationSec'] })
+    expect(before).toEqual({ page: ['number', 'key', 'durationSec', 'play'], show: ['number', 'key', 'notes'], print: ['number', 'key'], excel: ['number', 'key', 'bpm', 'tuning', 'durationSec'] })
     const mine = { page: ['bpm'], show: [], print: ['key', 'notes'], excel: ['key'] }
     await bandOps.setShownFields(t.db, t.reader, t.band, mine)
     await bandOps.setShownFields(t.db, t.reader, t.band, { ...mine, show: ['tuning'] })
@@ -163,6 +163,19 @@ describe('song fields', () => {
     await bandOps.saveSetlist(t.db, t.member, t.band, { event: 'summer-party', sets: [{ name: 'Set 1', songIds: [closer.id] }] })
     const { sets } = await bandOps.getSetlist(t.db, t.reader, t.band, { event: 'summer-party' })
     expect(sets[0].songs[0]).toMatchObject({ bpm: 128, notes: 'loud', custom: { [lead.id]: 'Anna' } })
+  })
+
+  it("setlists carry each song's audio files, in upload order, for the play buttons", async () => {
+    const t = await testDb()
+    const file = (name: string, contentType: string, n: number) => ({ name, contentType, sizeBytes: 10, blobPath: `00000000-0000-4000-8000-00000000000${n}`, song: 'closer' })
+    const demo = await bandOps.addFile(t.db, t.member, t.band, file('demo.mp3', 'audio/mpeg', 1))
+    await bandOps.addFile(t.db, t.member, t.band, file('chords.pdf', 'application/pdf', 2))
+    const live = await bandOps.addFile(t.db, t.member, t.band, file('live.m4a', 'audio/mp4', 3))
+    const gone = await bandOps.addFile(t.db, t.member, t.band, file('old.wav', 'audio/wav', 4))
+    await bandOps.archiveFile(t.db, t.member, t.band, { id: gone.id })
+    const { audio, songs: all } = await bandOps.getSetlist(t.db, t.reader, t.band, { event: 'summer-party' })
+    const closer = all.find((s) => s.slug === 'closer')!
+    expect(audio).toEqual({ [closer.id]: [{ id: demo.id, name: 'demo.mp3' }, { id: live.id, name: 'live.m4a' }] })
   })
 })
 

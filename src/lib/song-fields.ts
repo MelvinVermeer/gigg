@@ -8,12 +8,12 @@ export type Output = (typeof outputs)[number]
 
 /** Fixed song fields that can be shown, in display order; custom fields go before notes. */
 export const fixedFields = ['key', 'bpm', 'tuning', 'durationSec'] as const
-/** Field keys: 'number' (the 1. 2. in front), a fixed field name, 'notes', or a custom field's id. */
+/** Field keys: 'number' (the 1. 2. in front), a fixed field name, 'notes', a custom field's id, or 'play' (the play button, page only). */
 export type Shown = Record<Output, string[]>
 
 /** Before someone picks: what each output showed before this setting existed. */
 export const defaultShown: Shown = {
-  page: ['number', 'key', 'durationSec'],
+  page: ['number', 'key', 'durationSec', 'play'],
   show: ['number', 'key', 'notes'],
   print: ['number', 'key'],
   excel: ['number', 'key', 'bpm', 'tuning', 'durationSec'],
@@ -30,9 +30,12 @@ export type SongValues = {
   custom?: Record<string, string>
 }
 
-/** The ticked fields of one output in display order: number, fixed, custom (active ones, creation order), notes. */
+/** Outputs that can show the play button: the others can't play anything. */
+export const playOutputs: readonly Output[] = ['page']
+
+/** The ticked fields of one output in display order: number, fixed, custom (active ones, creation order), notes, play. */
 export function columns(ticked: string[], custom: CustomField[]) {
-  const all = ['number', ...fixedFields, ...custom.map((f) => f.id), 'notes']
+  const all = ['number', ...fixedFields, ...custom.map((f) => f.id), 'notes', 'play']
   return all.filter((f) => ticked.includes(f))
 }
 
@@ -57,7 +60,7 @@ export function fieldText(song: SongValues, field: string, bare = false): string
 /** The small text after a title: filled fields except notes (own line) and `except`, joined by " · ". */
 export const inlineText = (song: SongValues, cols: string[], except: string[] = []) =>
   cols
-    .filter((c) => c !== 'number' && c !== 'notes' && !except.includes(c))
+    .filter((c) => c !== 'number' && c !== 'notes' && c !== 'play' && !except.includes(c))
     .map((c) => fieldText(song, c))
     .filter(Boolean)
     .join(' · ')
@@ -65,7 +68,7 @@ export const inlineText = (song: SongValues, cols: string[], except: string[] = 
 /** A field's name: fixed ones in the viewer's language, custom ones as typed. */
 export function fieldName(t: Dict, field: string, custom: CustomField[]) {
   const c = t.common
-  const fixed: Record<string, string> = { number: '#', key: c.key, bpm: c.bpm, tuning: c.tuning, durationSec: c.duration, notes: c.notes }
+  const fixed: Record<string, string> = { number: '#', key: c.key, bpm: c.bpm, tuning: c.tuning, durationSec: c.duration, notes: c.notes, play: t.audio.playButton }
   return fixed[field] ?? custom.find((f) => f.id === field)?.name ?? field
 }
 
