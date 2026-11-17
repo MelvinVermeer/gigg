@@ -15,8 +15,8 @@ export const Route = createFileRoute('/$band/search')({
 })
 
 const groups = (t: Dict): { type: SearchResult['type']; title: string }[] => [
-  { type: 'song', title: t.common.songs },
   { type: 'event', title: t.common.events },
+  { type: 'song', title: t.common.songs },
   { type: 'venue', title: t.common.venues },
   { type: 'contact', title: t.common.contacts },
   { type: 'file', title: t.files.title },
