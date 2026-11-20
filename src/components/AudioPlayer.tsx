@@ -114,8 +114,9 @@ export function AudioPlayer({ files, label, next = false }: Props) {
         }}
         onError={failed}
       />
+      {/* -my-1.5: the 32px tap target overlaps the row's padding, so rows with audio are no taller than rows without. */}
       {index === null ? (
-        <span className="flex items-center">
+        <span className="-my-1.5 flex items-center">
           {many ? (
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>{playButton}</DropdownMenuTrigger>
@@ -137,7 +138,7 @@ export function AudioPlayer({ files, label, next = false }: Props) {
           )}
         </span>
       ) : (
-        <span aria-hidden className="size-8" />
+        <span aria-hidden className="-my-1.5 size-8" />
       )}
       {index !== null && (
         <div role="group" aria-label={a.player(files[index].name)} className="col-span-full order-last flex basis-full flex-wrap items-center gap-1 pb-1">

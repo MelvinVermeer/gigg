@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 import { ChevronLeft, ChevronRight, Printer, X } from 'lucide-react'
+import { Markdown } from '#/components/Markdown'
 import { Button } from '#/components/ui/button'
 import { small, stageFontMm } from '#/lib/stage'
 import { useT } from '#/lib/i18n'
 import { inlineText, useShownFields } from '#/lib/song-fields'
 import type { SongValues } from '#/lib/song-fields'
 
-type Set = { name: string; songs: SongValues[] }
+type Set = { name: string; songs: (SongValues & { lyrics?: string | null })[] }
 
 /** The link back to the setlist, styled by the view; the route supplies where it goes. */
 type Back = (props: { className?: string; 'aria-label'?: string; children: ReactNode }) => ReactElement
@@ -35,11 +36,14 @@ const keys: Record<string, number> = { ArrowRight: 1, PageDown: 1, ' ': 1, Arrow
  * One set per screen, songs in big type sized to fit. Swiping is native horizontal scroll with
  * snapping; the ‹ › buttons and arrow / page keys (Bluetooth page-turner pedals) go to the next set.
  */
-export function ShowMode({ title, sets, back }: { title: string; sets: Set[]; back: Back }) {
+export function ShowMode({ title, sets, back, lyrics = false }: { title: string; sets: Set[]; back: Back; lyrics?: boolean }) {
   const track = useRef<HTMLDivElement>(null)
   const t = useT()
   const { cols } = useShownFields('show')
   const notes = cols.includes('notes')
+  // Lyrics mode: one song per screen, straight across sets.
+  const songs = sets.flatMap((set) => set.songs.map((song, j) => ({ set, song, j })))
+  const pages = lyrics ? songs.length : sets.length
   useWakeLock()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -62,22 +66,34 @@ export function ShowMode({ title, sets, back }: { title: string; sets: Set[]; ba
           {back({ 'aria-label': t.setlist.closeShow, children: <X className="size-6" /> })}
         </Button>
         <span className="flex-1 truncate text-muted-foreground">{title}</span>
-        {sets.length > 1 && (
+        {pages > 1 && (
           <>
-            <Button variant="ghost" size="icon-lg" aria-label={t.setlist.previousSet} onClick={() => step(-1)}>
+            <Button variant="ghost" size="icon-lg" aria-label={lyrics ? t.setlist.previousSong : t.setlist.previousSet} onClick={() => step(-1)}>
               <ChevronLeft className="size-7" />
             </Button>
-            <Button variant="ghost" size="icon-lg" aria-label={t.setlist.nextSet} onClick={() => step(1)}>
+            <Button variant="ghost" size="icon-lg" aria-label={lyrics ? t.setlist.nextSong : t.setlist.nextSet} onClick={() => step(1)}>
               <ChevronRight className="size-7" />
             </Button>
           </>
         )}
       </div>
-      {sets.length === 0 ? (
+      {pages === 0 ? (
         <p className="p-6 text-muted-foreground">{t.common.noSetlistYet}</p>
       ) : (
-        <div className="show-track flex flex-1 snap-x snap-mandatory overflow-x-auto outline-none" ref={track} aria-label={t.setlist.sets}>
-          {sets.map((set, i) => (
+        <div className="show-track flex flex-1 snap-x snap-mandatory overflow-x-auto outline-none" ref={track} aria-label={lyrics ? t.setlist.songs : t.setlist.sets}>
+          {lyrics
+            ? songs.map(({ set, song, j }, i) => (
+                <article key={i} className="show-set flex-[0_0_100%] snap-start snap-always overflow-y-auto px-5 pt-4 pb-6" aria-label={song.title}>
+                  <p className="text-sm text-muted-foreground">
+                    {set.name} · {j + 1}/{set.songs.length}
+                  </p>
+                  <h2 className="mt-1 mb-0 text-3xl font-bold">{song.title}</h2>
+                  {inlineText(song, cols) && <p className="text-muted-foreground">{inlineText(song, cols)}</p>}
+                  {song.lyrics && <Markdown className="lyrics mt-4 text-2xl leading-snug">{song.lyrics}</Markdown>}
+                  <p className="mt-6 text-lg text-muted-foreground">{songs[i + 1] ? t.setlist.next(songs[i + 1].song.title) : t.setlist.end}</p>
+                </article>
+              ))
+            : sets.map((set, i) => (
             <article
               key={i}
               className="show-set flex-[0_0_100%] snap-start snap-always overflow-y-auto px-5 pt-4 pb-6"

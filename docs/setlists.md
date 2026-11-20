@@ -17,8 +17,9 @@ Setlist
 - Blocks are managed on the Setlists page (`/<band>/setlists`).
 - Clonable.
 - Total duration per set / setlist.
-- **Download menu** (right of the song count, not while editing): Excel, Print, Show mode.
+- **Download menu** (right of the song count, not while editing): Excel, Print, Show mode, Show mode (lyrics).
 - **Shown fields** (Settings → Setlists, per person per band): a grid of song fields × outputs (page, show mode, print, Excel). Title always; # (the 1. 2. in front, off removes the numbering), key, BPM, tuning, duration, the custom fields and notes can be ticked; tags not. Defaults (until you tick anything): # everywhere, plus page key + duration, show mode key + notes, print key, Excel key, BPM, tuning, duration. New custom fields start unticked for everyone. One order everywhere: key, BPM, tuning, duration, custom fields (creation order), notes. Page, show mode and print: small muted text after the title joined by " · " (BPM as "120 BPM", other values without labels), notes on their own line as plain text; duration keeps its right-hand column on the page. Blocks always show key + duration.
 - **Excel**: a CSV built in the browser (works offline): `# ; Title ;` then your ticked fields with their names as headers, numbered per set, a blank row between sets, semicolons, UTF-8 with BOM. Named after the setlist (or event). A real .xlsx is still on the list.
 - **Show mode** (single person): one whole set per screen in big type, swipe to the next set, screen stays on, per-song notes visible, works offline. Also for standalone setlists.
+- **Show mode (lyrics)** (`…/lyrics`): one song per screen, swiping straight across sets. Each screen: “Set 1 · 3/12”, the title, the small inline fields ticked for show mode, then the lyrics in large type (scroll down for long ones); a song without lyrics shows just its title. Otherwise like show mode: ‹ › and arrow / page keys, screen stays on, works offline.
 - **Stage-floor PDF export**: one page per set, via the print stylesheet. Blocks are not shown as headings, only their songs. The font shrinks to fit the extra text and note lines too. Also for standalone setlists.

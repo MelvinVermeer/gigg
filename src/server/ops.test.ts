@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import { bands, changes, contacts, events, memberships, pushSubscriptions, setlists, songs, users, venues } from './db/schema'
+import { bands, changes, contacts, eventPeople, events, memberships, pushSubscriptions, setlists, songs, users, venues } from './db/schema'
 import { pushMessages } from './push'
 import { answerByToken, archiveBand, availabilityByToken, bandOps, calendarByToken, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, setFeedbackDone, slugify } from './ops'
 import type { BandOpName } from './ops'
@@ -158,11 +158,11 @@ describe('song fields', () => {
   it('setlists carry every field a view can show', async () => {
     const t = await testDb()
     const lead = await bandOps.addSongField(t.db, t.member, t.band, { name: 'Lead vocal' })
-    await bandOps.updateSong(t.db, t.member, t.band, { slug: 'closer', fields: { title: 'Closer', bpm: 128, notes: 'loud', custom: { [lead.id]: 'Anna' } } })
+    await bandOps.updateSong(t.db, t.member, t.band, { slug: 'closer', fields: { title: 'Closer', bpm: 128, notes: 'loud', lyrics: 'La\nla', custom: { [lead.id]: 'Anna' } } })
     const [closer] = (await bandOps.listSongs(t.db, t.member, t.band, {})).filter((s) => s.slug === 'closer')
     await bandOps.saveSetlist(t.db, t.member, t.band, { event: 'summer-party', sets: [{ name: 'Set 1', songIds: [closer.id] }] })
     const { sets } = await bandOps.getSetlist(t.db, t.reader, t.band, { event: 'summer-party' })
-    expect(sets[0].songs[0]).toMatchObject({ bpm: 128, notes: 'loud', custom: { [lead.id]: 'Anna' } })
+    expect(sets[0].songs[0]).toMatchObject({ bpm: 128, notes: 'loud', lyrics: 'La\nla', custom: { [lead.id]: 'Anna' } })
   })
 
   it("setlists carry each song's audio files, in upload order, for the play buttons", async () => {
@@ -1044,5 +1044,29 @@ describe('language', () => {
     expect(await bandOps.inviteMember(t.db, t.member, t.band, { email: 'new@example.com', role: 'reader' })).toMatchObject({ locale: 'nl' })
     expect(await localeOf(t, 'new@example.com')).toBe('nl')
     expect(await bandOps.inviteMember(t.db, t.member, t.band, { email: 'reader@example.com', role: 'member' })).toMatchObject({ locale: 'en' })
+  })
+})
+
+describe('other-band conflicts', () => {
+  it("flags this band's people on another band's event that day, unless cancelled, archived or answered no", async () => {
+    const t = await testDb()
+    const other = await createBand(t.db, { name: 'Other', email: 'member@example.com' })
+    const date = '2026-11-20'
+    const busy = () => bandOps.getBusyElsewhere(t.db, t.reader, t.band, { date })
+    expect(await busy()).toEqual([])
+    const ev = await bandOps.createEvent(t.db, t.member, other.slug, { title: 'Elsewhere', date, people: [t.member] })
+    expect(await busy()).toEqual([t.member])
+    // The band's own events and other dates don't count.
+    await bandOps.createEvent(t.db, t.member, t.band, { title: 'Here', date, people: [t.reader] })
+    expect(await bandOps.getBusyElsewhere(t.db, t.reader, t.band, { date: '2026-11-21' })).toEqual([])
+    expect(await busy()).toEqual([t.member])
+    const { busyElsewhere } = (await bandOps.getEvent(t.db, t.reader, t.band, { slug: 'here' })) as { busyElsewhere: string[] }
+    expect(busyElsewhere).toEqual([t.member])
+    await t.db.update(eventPeople).set({ answer: 'no' }).where(eq(eventPeople.userId, t.member))
+    expect(await busy()).toEqual([])
+    await t.db.update(eventPeople).set({ answer: 'maybe' }).where(eq(eventPeople.userId, t.member))
+    expect(await busy()).toEqual([t.member])
+    await t.db.update(events).set({ bookingStatus: 'cancelled' }).where(eq(events.slug, ev.slug))
+    expect(await busy()).toEqual([])
   })
 })

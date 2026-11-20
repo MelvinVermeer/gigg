@@ -23,6 +23,8 @@ type Props = {
   states?: Record<string, ParticipantState>
   /** The check was closed: nobody can answer until it's reopened. */
   closed?: boolean
+  /** People with an event in another band on this date (user ids): a warning, nothing more. */
+  elsewhere?: string[]
   canEdit: boolean
   /** Tick or untick people. */
   onChange: (ids: string[], on: boolean) => Promise<void>
@@ -63,7 +65,7 @@ export function AvailabilityPill({ counts }: { counts: Record<Count, number> }) 
  * Clicking opens a dialog to add and remove people, ask their availability and close or reopen the check.
  * Readers see it read-only.
  */
-export function Participants({ people, chosen, states = {}, closed = false, canEdit, onChange, onAskAll, onAsk, onClose, onReopen }: Props) {
+export function Participants({ people, chosen, states = {}, closed = false, elsewhere = [], canEdit, onChange, onAskAll, onAsk, onClose, onReopen }: Props) {
   const t = useT()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -173,6 +175,7 @@ export function Participants({ people, chosen, states = {}, closed = false, canE
                       {s.answer ? t.answer[s.answer] : t.availability.waiting}
                     </Badge>
                   )}
+                  {elsewhere.includes(p.id) && <span className="text-amber-700 dark:text-amber-400">{t.participants.busyElsewhere}</span>}
                   {chosen.has(p.id) && s.stale && <span className="text-muted-foreground">({t.availability.movedShort})</span>}
                   {chosen.has(p.id) && s.note && <span className="text-muted-foreground">“{s.note}”</span>}
                   {canEdit && checkOpen && onAsk && chosen.has(p.id) && (!s.asked || s.stale) && (

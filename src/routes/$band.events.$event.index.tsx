@@ -32,7 +32,7 @@ export const Route = createFileRoute('/$band/events/$event/')({
 const bandRoute = getRouteApi('/$band')
 
 function Event() {
-  const { event, venue, contacts, setlist, standardName, standards, files, availability, bandPeople } = Route.useLoaderData()
+  const { event, venue, contacts, setlist, standardName, standards, files, availability, bandPeople, busyElsewhere } = Route.useLoaderData()
   const band = bandRoute.useLoaderData()
   const params = { band: band.slug, event: event.slug }
   const canEdit = useCanEdit()
@@ -92,7 +92,7 @@ function Event() {
             )}
             <dt className="text-muted-foreground">{t.participants.title}</dt>
             <dd>
-              <EventParticipants band={band.slug} event={event.slug} people={bandPeople} availability={availability} canEdit={canEdit && !event.archivedAt} />
+              <EventParticipants band={band.slug} event={event.slug} people={bandPeople} availability={availability} busy={busyElsewhere} canEdit={canEdit && !event.archivedAt} />
             </dd>
             <dt className="text-muted-foreground">{t.events.booking}</dt>
             <dd>
@@ -142,12 +142,14 @@ function EventParticipants({
   event,
   people,
   availability,
+  busy,
   canEdit,
 }: {
   band: string
   event: string
   people: { id: string; name: string; email: string; role: string }[]
   availability: { closed: boolean; people: { userId: string; asked: boolean; stale: boolean; answer: 'yes' | 'maybe' | 'no' | null; note: string | null }[] }
+  busy: string[]
   canEdit: boolean
 }) {
   const router = useRouter()
@@ -166,6 +168,7 @@ function EventParticipants({
       chosen={chosen}
       states={states}
       closed={availability.closed}
+      elsewhere={busy}
       canEdit={canEdit}
       onChange={async (ids, on) => {
         const next = on ? [...new Set([...chosen, ...ids])] : [...chosen].filter((id) => !ids.includes(id))

@@ -327,6 +327,7 @@ const songFields = z.object({
     .transform((v) => v ?? null),
   tuning: optText(200),
   notes: optText(10_000),
+  lyrics: optText(20_000),
   tags,
   // Custom field values by field id; single line, empty ones dropped.
   custom: z
@@ -430,7 +431,7 @@ const fieldName = z.string().trim().min(1).max(40)
 /** Names a custom field can't have: the fixed fields, in every language (case-insensitive). */
 const reservedNames = new Set(
   Object.values(dicts).flatMap((t) =>
-    [t.common.title, t.common.duration, t.common.key, t.common.bpm, t.common.tuning, t.common.notes, t.common.tags].map((n) => n.toLowerCase()),
+    [t.common.title, t.common.duration, t.common.key, t.common.bpm, t.common.tuning, t.common.notes, t.common.lyrics, t.common.tags].map((n) => n.toLowerCase()),
   ),
 )
 
@@ -617,6 +618,30 @@ async function setEventContacts(tx: Tx, bandId: string, eventId: string, contact
       .onConflictDoNothing()
 }
 
+/**
+ * Ids of this band's people who are on an event of another band on `date`: not cancelled, not
+ * archived, and they didn't answer no. Only the ids: which band or event stays private.
+ */
+async function busyElsewhere(tx: Tx, bandId: string, date: string) {
+  const rows = await tx
+    .selectDistinct({ id: eventPeople.userId })
+    .from(eventPeople)
+    .innerJoin(events, eq(events.id, eventPeople.eventId))
+    .innerJoin(bands, eq(bands.id, events.bandId))
+    .innerJoin(memberships, and(eq(memberships.userId, eventPeople.userId), eq(memberships.bandId, bandId), isNull(memberships.archivedAt)))
+    .where(
+      and(
+        ne(events.bandId, bandId),
+        eq(events.date, date),
+        isNull(events.archivedAt),
+        isNull(bands.archivedAt),
+        ne(events.bookingStatus, 'cancelled'),
+        or(isNull(eventPeople.answer), ne(eventPeople.answer, 'no')),
+      ),
+    )
+  return rows.map((r) => r.id)
+}
+
 const eventOps = {
   /**
    * Upcoming (today and later, soonest first), past (latest first) or archived: every status and everyone's,
@@ -661,6 +686,9 @@ const eventOps = {
         .orderBy(when === 'upcoming' ? asc(events.date) : desc(events.date), asc(events.title)),
   ),
 
+  /** This band's people who play elsewhere on `date` (see busyElsewhere), for the conflict warning. */
+  getBusyElsewhere: bandOp('reader', z.object({ date: z.iso.date() }), ({ tx, bandId }, { date }) => busyElsewhere(tx, bandId, date)),
+
   /** An event with its venue and contacts. An old slug returns `{ moved: true, slug }` instead. */
   getEvent: bandOp('reader', bySlug, async ({ tx, bandId }, { slug }) => {
     const [row] = await tx
@@ -698,6 +726,7 @@ const eventOps = {
       standardName: row.event.setlistId ? (await setlistById(tx, bandId, row.event.setlistId)).name : null,
       standards: await standardSetlists(tx, bandId),
       files: await filesOf(tx, 'event', row.event.id),
+      busyElsewhere: await busyElsewhere(tx, bandId, row.event.date),
     }
   }),
 
@@ -963,6 +992,7 @@ const songSummary = {
   bpm: songs.bpm,
   tuning: songs.tuning,
   notes: songs.notes,
+  lyrics: songs.lyrics, // lyrics show mode, offline too
   custom: songs.custom,
 }
 

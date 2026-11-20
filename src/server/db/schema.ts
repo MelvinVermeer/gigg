@@ -80,6 +80,7 @@ export const songs = pgTable(
     bpm: integer('bpm'),
     tuning: text('tuning'),
     notes: text('notes'),
+    lyrics: text('lyrics'),
     tags: text('tags').array().notNull().default(sql`'{}'`),
     // Values of the band's custom song fields, by song_fields.id. Only filled ones are stored.
     custom: jsonb('custom').$type<Record<string, string>>().notNull().default({}),

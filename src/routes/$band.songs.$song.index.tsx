@@ -71,6 +71,12 @@ function Song() {
             <dd>{song.tags.length ? song.tags.join(', ') : '–'}</dd>
           </dl>
           {song.notes && <Markdown className="notes mt-4 border-t pt-4 text-sm">{song.notes}</Markdown>}
+          {song.lyrics && (
+            <section className="mt-4 border-t pt-4">
+              <h2 className="mb-2 text-base">{t.common.lyrics}</h2>
+              <Markdown className="lyrics text-sm">{song.lyrics}</Markdown>
+            </section>
+          )}
         </CardContent>
       </Card>
       <Files band={band.slug} owner={{ song: song.slug }} files={files} canEdit={canEdit && !song.archivedAt} />

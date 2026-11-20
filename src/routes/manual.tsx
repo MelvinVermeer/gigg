@@ -21,9 +21,9 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
       <>
         <H>Songs</H>
         <P>
-          Your repertoire: title, duration, key, BPM, tuning, notes and tags, plus extra fields your band adds under Settings → Songs (like “Lead
-          vocal”). Which fields you see in setlists, show mode, print and Excel is up to you: Settings → Setlists. Attach lyrics, charts or recordings as files on the song page (up to 100 MB
-          each). Notes on songs and events can use markdown: **bold**, *italic*, # headings, - lists, - [ ] checklists, links and tables.
+          Your repertoire: title, duration, key, BPM, tuning, notes, lyrics and tags, plus extra fields your band adds under Settings → Songs (like “Lead
+          vocal”). Which fields you see in setlists, show mode, print and Excel is up to you: Settings → Setlists. Attach charts or recordings as files on the song page (up to 100 MB
+          each). Notes and lyrics can use markdown: **bold**, *italic*, # headings, - lists, - [ ] checklists, links and tables.
         </P>
         <H>Events</H>
         <P>
@@ -42,6 +42,7 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
         <H>On stage</H>
         <P>
           <strong>Show mode</strong> shows the setlist full-screen in big type, one set per screen; swipe for the next. The screen stays on.{' '}
+          <strong>Show mode (lyrics)</strong> shows one song per screen with its lyrics; swipe for the next song.{' '}
           <strong>Print</strong> gives one A4 page per set for the stage floor.
         </P>
         <H>Offline</H>
@@ -77,9 +78,9 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
       <>
         <H>Nummers</H>
         <P>
-          Je repertoire: titel, duur, toonsoort, BPM, stemming, notities en tags, plus extra velden die je band toevoegt onder Instellingen → Nummers
-          (zoals “Leadzang”). Welke velden je ziet in setlists, showmodus, printen en Excel bepaal je zelf: Instellingen → Setlists. Voeg teksten, akkoordenschema's of opnames toe als bestanden op de pagina
-          van het nummer (tot 100 MB per stuk). Notities bij nummers en optredens mogen markdown bevatten: **vet**, *cursief*, # kopjes, - lijstjes,
+          Je repertoire: titel, duur, toonsoort, BPM, stemming, notities, songtekst en tags, plus extra velden die je band toevoegt onder Instellingen → Nummers
+          (zoals “Leadzang”). Welke velden je ziet in setlists, showmodus, printen en Excel bepaal je zelf: Instellingen → Setlists. Voeg akkoordenschema's of opnames toe als bestanden op de pagina
+          van het nummer (tot 100 MB per stuk). Notities en songteksten mogen markdown bevatten: **vet**, *cursief*, # kopjes, - lijstjes,
           - [ ] afvinklijstjes, links en tabellen.
         </P>
         <H>Optredens</H>
@@ -99,6 +100,7 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
         <H>Op het podium</H>
         <P>
           <strong>Showmodus</strong> toont de setlist schermvullend in grote letters, één set per scherm; veeg voor de volgende. Het scherm blijft aan.{' '}
+          <strong>Showmodus (songteksten)</strong> toont één nummer per scherm met de songtekst; veeg voor het volgende nummer.{' '}
           <strong>Printen</strong> geeft één A4 per set voor op de vloer.
         </P>
         <H>Offline</H>

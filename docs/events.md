@@ -7,6 +7,7 @@ The term is **events** (URL `/<band>/events/<slug>`).
 - Linked **venue** (own record, reusable)
 - Linked **contact(s)** (own record, reusable)
 - Picking a date that already has another event (not cancelled, not archived; times ignored) shows a non-blocking warning under the date field, linking to those events.
+- **Other bands**: someone who is a participant of another band's event that day (not cancelled, not archived, and they didn't answer no) gets a non-blocking warning: “Melvin already has an event for another band on this date.” Never which band or event. In the new-event form under Participants (for the ticked people), in the edit form under the date (for the event's participants), and in the participants dialog next to their name (“Event in another band”). The person themselves isn't told.
 - Venue and contacts are **search boxes** in the event form. A new name creates the venue/contact right there (a “+ New …” row in the dropdown), without leaving the form. Picking a venue suggests the contacts used last time at that venue.
 - Band start page = upcoming events. Past events are behind a filter.
 - One filter menu on the events list: upcoming/past, statuses, mine/everyone. Mine = you're one of the event's participants or you created it (see [availability.md](availability.md)).

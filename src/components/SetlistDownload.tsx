@@ -1,4 +1,4 @@
-import { Download, FileSpreadsheet, MonitorPlay, Printer } from 'lucide-react'
+import { Download, FileSpreadsheet, MicVocal, MonitorPlay, Printer } from 'lucide-react'
 import { cloneElement } from 'react'
 import type { ReactElement } from 'react'
 import { Button } from '#/components/ui/button'
@@ -13,11 +13,12 @@ type Props = {
   sets: Parameters<typeof setlistCsv>[0]
   /** Childless links to the show and print routes; the menu fills in icon and label. */
   show: ReactElement
+  lyrics: ReactElement
   print: ReactElement
 }
 
 /** Excel (CSV, built here so it works offline), print and show mode in one menu. */
-export function SetlistDownload({ file, sets, show, print }: Props) {
+export function SetlistDownload({ file, sets, show, lyrics, print }: Props) {
   const t = useT()
   const { cols, custom } = useShownFields('excel')
 
@@ -49,6 +50,9 @@ export function SetlistDownload({ file, sets, show, print }: Props) {
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           {cloneElement(show, {}, <><MonitorPlay aria-hidden /> {t.setlist.showMode}</>)}
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          {cloneElement(lyrics, {}, <><MicVocal aria-hidden /> {t.setlist.lyricsMode}</>)}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

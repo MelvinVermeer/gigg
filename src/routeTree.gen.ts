@@ -37,10 +37,12 @@ import { Route as BandContactsContactIndexRouteImport } from './routes/$band.con
 import { Route as BandContactsContactEditRouteImport } from './routes/$band.contacts.$contact.edit'
 import { Route as BandEventsEventIndexRouteImport } from './routes/$band.events.$event.index'
 import { Route as BandEventsEventEditRouteImport } from './routes/$band.events.$event.edit'
+import { Route as BandEventsEventLyricsRouteImport } from './routes/$band.events.$event.lyrics'
 import { Route as BandEventsEventPrintRouteImport } from './routes/$band.events.$event.print'
 import { Route as BandEventsEventSetlistRouteImport } from './routes/$band.events.$event.setlist'
 import { Route as BandEventsEventShowRouteImport } from './routes/$band.events.$event.show'
 import { Route as BandSetlistsSetlistIndexRouteImport } from './routes/$band.setlists.$setlist.index'
+import { Route as BandSetlistsSetlistLyricsRouteImport } from './routes/$band.setlists.$setlist.lyrics'
 import { Route as BandSetlistsSetlistPrintRouteImport } from './routes/$band.setlists.$setlist.print'
 import { Route as BandSetlistsSetlistShowRouteImport } from './routes/$band.setlists.$setlist.show'
 import { Route as BandSongsSongIndexRouteImport } from './routes/$band.songs.$song.index'
@@ -189,6 +191,11 @@ const BandEventsEventEditRoute = BandEventsEventEditRouteImport.update({
   path: '/events/$event/edit',
   getParentRoute: () => BandRoute,
 } as any)
+const BandEventsEventLyricsRoute = BandEventsEventLyricsRouteImport.update({
+  id: '/events/$event/lyrics',
+  path: '/events/$event/lyrics',
+  getParentRoute: () => BandRoute,
+} as any)
 const BandEventsEventPrintRoute = BandEventsEventPrintRouteImport.update({
   id: '/events/$event/print',
   path: '/events/$event/print',
@@ -208,6 +215,12 @@ const BandSetlistsSetlistIndexRoute =
   BandSetlistsSetlistIndexRouteImport.update({
     id: '/setlists/$setlist/',
     path: '/setlists/$setlist/',
+    getParentRoute: () => BandRoute,
+  } as any)
+const BandSetlistsSetlistLyricsRoute =
+  BandSetlistsSetlistLyricsRouteImport.update({
+    id: '/setlists/$setlist/lyrics',
+    path: '/setlists/$setlist/lyrics',
     getParentRoute: () => BandRoute,
   } as any)
 const BandSetlistsSetlistPrintRoute =
@@ -269,9 +282,11 @@ export interface FileRoutesByFullPath {
   '/$band/songs/': typeof BandSongsIndexRoute
   '/$band/contacts/$contact/edit': typeof BandContactsContactEditRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
+  '/$band/events/$event/lyrics': typeof BandEventsEventLyricsRoute
   '/$band/events/$event/print': typeof BandEventsEventPrintRoute
   '/$band/events/$event/setlist': typeof BandEventsEventSetlistRoute
   '/$band/events/$event/show': typeof BandEventsEventShowRoute
+  '/$band/setlists/$setlist/lyrics': typeof BandSetlistsSetlistLyricsRoute
   '/$band/setlists/$setlist/print': typeof BandSetlistsSetlistPrintRoute
   '/$band/setlists/$setlist/show': typeof BandSetlistsSetlistShowRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
@@ -308,9 +323,11 @@ export interface FileRoutesByTo {
   '/$band/songs': typeof BandSongsIndexRoute
   '/$band/contacts/$contact/edit': typeof BandContactsContactEditRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
+  '/$band/events/$event/lyrics': typeof BandEventsEventLyricsRoute
   '/$band/events/$event/print': typeof BandEventsEventPrintRoute
   '/$band/events/$event/setlist': typeof BandEventsEventSetlistRoute
   '/$band/events/$event/show': typeof BandEventsEventShowRoute
+  '/$band/setlists/$setlist/lyrics': typeof BandSetlistsSetlistLyricsRoute
   '/$band/setlists/$setlist/print': typeof BandSetlistsSetlistPrintRoute
   '/$band/setlists/$setlist/show': typeof BandSetlistsSetlistShowRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
@@ -349,9 +366,11 @@ export interface FileRoutesById {
   '/$band/songs/': typeof BandSongsIndexRoute
   '/$band/contacts/$contact/edit': typeof BandContactsContactEditRoute
   '/$band/events/$event/edit': typeof BandEventsEventEditRoute
+  '/$band/events/$event/lyrics': typeof BandEventsEventLyricsRoute
   '/$band/events/$event/print': typeof BandEventsEventPrintRoute
   '/$band/events/$event/setlist': typeof BandEventsEventSetlistRoute
   '/$band/events/$event/show': typeof BandEventsEventShowRoute
+  '/$band/setlists/$setlist/lyrics': typeof BandSetlistsSetlistLyricsRoute
   '/$band/setlists/$setlist/print': typeof BandSetlistsSetlistPrintRoute
   '/$band/setlists/$setlist/show': typeof BandSetlistsSetlistShowRoute
   '/$band/songs/$song/edit': typeof BandSongsSongEditRoute
@@ -391,9 +410,11 @@ export interface FileRouteTypes {
     | '/$band/songs/'
     | '/$band/contacts/$contact/edit'
     | '/$band/events/$event/edit'
+    | '/$band/events/$event/lyrics'
     | '/$band/events/$event/print'
     | '/$band/events/$event/setlist'
     | '/$band/events/$event/show'
+    | '/$band/setlists/$setlist/lyrics'
     | '/$band/setlists/$setlist/print'
     | '/$band/setlists/$setlist/show'
     | '/$band/songs/$song/edit'
@@ -430,9 +451,11 @@ export interface FileRouteTypes {
     | '/$band/songs'
     | '/$band/contacts/$contact/edit'
     | '/$band/events/$event/edit'
+    | '/$band/events/$event/lyrics'
     | '/$band/events/$event/print'
     | '/$band/events/$event/setlist'
     | '/$band/events/$event/show'
+    | '/$band/setlists/$setlist/lyrics'
     | '/$band/setlists/$setlist/print'
     | '/$band/setlists/$setlist/show'
     | '/$band/songs/$song/edit'
@@ -470,9 +493,11 @@ export interface FileRouteTypes {
     | '/$band/songs/'
     | '/$band/contacts/$contact/edit'
     | '/$band/events/$event/edit'
+    | '/$band/events/$event/lyrics'
     | '/$band/events/$event/print'
     | '/$band/events/$event/setlist'
     | '/$band/events/$event/show'
+    | '/$band/setlists/$setlist/lyrics'
     | '/$band/setlists/$setlist/print'
     | '/$band/setlists/$setlist/show'
     | '/$band/songs/$song/edit'
@@ -695,6 +720,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BandEventsEventEditRouteImport
       parentRoute: typeof BandRoute
     }
+    '/$band/events/$event/lyrics': {
+      id: '/$band/events/$event/lyrics'
+      path: '/events/$event/lyrics'
+      fullPath: '/$band/events/$event/lyrics'
+      preLoaderRoute: typeof BandEventsEventLyricsRouteImport
+      parentRoute: typeof BandRoute
+    }
     '/$band/events/$event/print': {
       id: '/$band/events/$event/print'
       path: '/events/$event/print'
@@ -721,6 +753,13 @@ declare module '@tanstack/react-router' {
       path: '/setlists/$setlist'
       fullPath: '/$band/setlists/$setlist/'
       preLoaderRoute: typeof BandSetlistsSetlistIndexRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/setlists/$setlist/lyrics': {
+      id: '/$band/setlists/$setlist/lyrics'
+      path: '/setlists/$setlist/lyrics'
+      fullPath: '/$band/setlists/$setlist/lyrics'
+      preLoaderRoute: typeof BandSetlistsSetlistLyricsRouteImport
       parentRoute: typeof BandRoute
     }
     '/$band/setlists/$setlist/print': {
@@ -783,9 +822,11 @@ interface BandRouteChildren {
   BandSongsIndexRoute: typeof BandSongsIndexRoute
   BandContactsContactEditRoute: typeof BandContactsContactEditRoute
   BandEventsEventEditRoute: typeof BandEventsEventEditRoute
+  BandEventsEventLyricsRoute: typeof BandEventsEventLyricsRoute
   BandEventsEventPrintRoute: typeof BandEventsEventPrintRoute
   BandEventsEventSetlistRoute: typeof BandEventsEventSetlistRoute
   BandEventsEventShowRoute: typeof BandEventsEventShowRoute
+  BandSetlistsSetlistLyricsRoute: typeof BandSetlistsSetlistLyricsRoute
   BandSetlistsSetlistPrintRoute: typeof BandSetlistsSetlistPrintRoute
   BandSetlistsSetlistShowRoute: typeof BandSetlistsSetlistShowRoute
   BandSongsSongEditRoute: typeof BandSongsSongEditRoute
@@ -812,9 +853,11 @@ const BandRouteChildren: BandRouteChildren = {
   BandSongsIndexRoute: BandSongsIndexRoute,
   BandContactsContactEditRoute: BandContactsContactEditRoute,
   BandEventsEventEditRoute: BandEventsEventEditRoute,
+  BandEventsEventLyricsRoute: BandEventsEventLyricsRoute,
   BandEventsEventPrintRoute: BandEventsEventPrintRoute,
   BandEventsEventSetlistRoute: BandEventsEventSetlistRoute,
   BandEventsEventShowRoute: BandEventsEventShowRoute,
+  BandSetlistsSetlistLyricsRoute: BandSetlistsSetlistLyricsRoute,
   BandSetlistsSetlistPrintRoute: BandSetlistsSetlistPrintRoute,
   BandSetlistsSetlistShowRoute: BandSetlistsSetlistShowRoute,
   BandSongsSongEditRoute: BandSongsSongEditRoute,

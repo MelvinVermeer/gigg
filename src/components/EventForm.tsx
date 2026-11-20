@@ -1,6 +1,6 @@
 import { Plus, X } from 'lucide-react'
 import { Link, useParams } from '@tanstack/react-router'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Combobox } from '#/components/Combobox'
 import { Participants } from '#/components/Participants'
 import { Field, FormError } from '#/components/Field'
@@ -12,7 +12,7 @@ import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { Textarea } from '#/components/ui/textarea'
 import { withLabels } from '#/lib/labels'
 import type { EventFields } from '#/server/ops'
-import { askAvailability } from '#/server/fns'
+import { askAvailability, bandOp } from '#/server/fns'
 import { errorText, useT } from '#/lib/i18n'
 
 type Venue = { id: string; name: string; address: string | null }
@@ -45,6 +45,8 @@ type Props = {
   id?: string
   /** Show the Participants field (creating only: an existing event manages them on its page). */
   withParticipants?: boolean
+  /** In edit: the event's participants (user ids), for the other-band warning. */
+  participants?: string[]
   /** Save the event; returns its slug. */
   onSubmit: (fields: EventFields) => Promise<string>
   /** After saving (and asking availability, if wanted). */
@@ -62,7 +64,7 @@ let nextKey = 0
 
 const matches = (label: string, text: string) => label.toLowerCase().includes(text.trim().toLowerCase())
 
-export function EventForm({ data, initial = {}, submitLabel, id, withParticipants, onSubmit, onSaved }: Props) {
+export function EventForm({ data, initial = {}, submitLabel, id, withParticipants, participants = [], onSubmit, onSaved }: Props) {
   const t = useT()
   const { band } = useParams({ strict: false }) as { band: string }
   const venues = useMemo(() => withLabels(data.venues, (v) => v.name, (v) => v.address), [data.venues])
@@ -80,6 +82,22 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
   const [startTime, setStartTime] = useState(initial.startTime?.slice(0, 5) ?? '')
   const [endTime, setEndTime] = useState(initial.endTime?.slice(0, 5) ?? '')
   const [people, setPeople] = useState(() => new Set<string>())
+  // Band people with an event in another band on this date. Offline it just stays empty.
+  const [elsewhere, setElsewhere] = useState<string[]>([])
+  useEffect(() => {
+    setElsewhere([])
+    if (!date) return
+    let live = true
+    bandOp('getBusyElsewhere', band, { date }).then((ids) => live && setElsewhere(ids), () => {})
+    return () => void (live = false)
+  }, [band, date])
+  const onEvent = withParticipants ? people : new Set(participants)
+  const busyNames = data.people.filter((p) => onEvent.has(p.id) && elsewhere.includes(p.id)).map((p) => p.name || p.email)
+  const busyNote = busyNames.length > 0 && (
+    <p role="status" className={`${withParticipants ? '' : '-mt-3 '}text-sm text-amber-700 dark:text-amber-400`}>
+      {t.eventForm.busyElsewhere(busyNames)}
+    </p>
+  )
   const [tags, setTags] = useState(initial.tags ?? [])
   const [tagText, setTagText] = useState('')
   const form = useRef<HTMLFormElement>(null)
@@ -181,6 +199,7 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
           ))}
         </p>
       )}
+      {!withParticipants && busyNote}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={t.eventForm.start} hint={t.common.optional}>
           <Input name="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required={!!endTime} />
@@ -283,6 +302,7 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
             <Participants
               people={data.people}
               chosen={people}
+              elsewhere={elsewhere}
               canEdit
               onChange={async (ids, on) =>
                 setPeople((s) => new Set(on ? [...s, ...ids] : [...s].filter((id) => !ids.includes(id))))
@@ -291,6 +311,7 @@ export function EventForm({ data, initial = {}, submitLabel, id, withParticipant
               onAskAll={async () => void setTimeout(() => form.current?.requestSubmit(askButton.current))}
             />
           </div>
+          {busyNote}
           <button ref={askButton} type="submit" name="ask" hidden />
         </div>
       )}

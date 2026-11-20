@@ -70,7 +70,7 @@ test.describe('member', () => {
     // Show mode: one set per screen, next set by button or key.
     await page.getByRole('link', { name: '3 songs · 12:50' }).click()
     await page.getByRole('button', { name: 'Download' }).click()
-    await page.getByRole('menuitem', { name: 'Show mode' }).click()
+    await page.getByRole('menuitem', { name: 'Show mode', exact: true }).click()
     const set = (name: string) => page.getByRole('article', { name })
     await expect(set('Set 1')).toBeInViewport()
     await expect(set('Set 1').locator('li')).toHaveText(['Slow One Am', 'Opening Song E'])
@@ -80,6 +80,22 @@ test.describe('member', () => {
     await expect(set('Set 2')).toContainText('End of setlist')
     await page.keyboard.press('ArrowLeft')
     await expect(set('Set 1')).toBeInViewport()
+    await page.getByRole('link', { name: 'Close show mode' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Setlist')
+
+    // Lyrics show mode: one song per screen, straight across sets; no lyrics = just the title.
+    await page.getByRole('button', { name: 'Download' }).click()
+    await page.getByRole('menuitem', { name: 'Show mode (lyrics)' }).click()
+    const song = (name: string) => page.getByRole('article', { name })
+    await expect(song('Slow One')).toBeInViewport()
+    await expect(song('Slow One')).toContainText('Set 1 · 1/2')
+    await expect(song('Slow One')).toContainText('Next: Opening Song')
+    await page.getByRole('button', { name: 'Next song' }).click()
+    await expect(song('Opening Song')).toBeInViewport()
+    await page.keyboard.press('ArrowRight')
+    await expect(song('Closer')).toBeInViewport()
+    await expect(song('Closer')).toContainText('Set 2 · 1/1')
+    await expect(song('Closer')).toContainText('End of setlist')
     await page.getByRole('link', { name: 'Close show mode' }).click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Setlist')
 
@@ -168,7 +184,7 @@ test.describe('standalone setlists', () => {
 
     // Show mode and stage-floor PDF, like an event's setlist.
     await page.getByRole('button', { name: 'Download' }).click()
-    await page.getByRole('menuitem', { name: 'Show mode' }).click()
+    await page.getByRole('menuitem', { name: 'Show mode', exact: true }).click()
     await expect(page.getByRole('article', { name: 'Set 1' })).toContainText('Neon Harbour')
     await page.getByRole('link', { name: 'Close show mode' }).click()
     await page.getByRole('button', { name: 'Download' }).click()

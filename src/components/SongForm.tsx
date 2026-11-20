@@ -38,6 +38,7 @@ export function SongForm({ initial = {}, customFields, submitLabel, onSubmit }: 
         bpm: num(f.get('bpm')),
         tuning: String(f.get('tuning')),
         notes: String(f.get('notes')),
+        lyrics: String(f.get('lyrics')),
         tags: String(f.get('tags'))
           .split(',')
           .map((t) => t.trim())
@@ -76,6 +77,9 @@ export function SongForm({ initial = {}, customFields, submitLabel, onSubmit }: 
       ))}
       <Field label={t.common.notes}>
         <Textarea name="notes" rows={5} maxLength={10_000} defaultValue={initial.notes ?? ''} />
+      </Field>
+      <Field label={t.common.lyrics}>
+        <Textarea name="lyrics" rows={14} maxLength={20_000} defaultValue={initial.lyrics ?? ''} />
       </Field>
       <Field label={t.common.tags} hint={t.common.commaSeparated}>
         <Input name="tags" defaultValue={(initial.tags ?? []).join(', ')} />

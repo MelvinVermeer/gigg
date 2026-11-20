@@ -125,6 +125,7 @@ function Setlist() {
               file={data.event.slug}
               sets={data.sets}
               show={<Link to="/$band/events/$event/show" params={params} />}
+              lyrics={<Link to="/$band/events/$event/lyrics" params={params} />}
               print={<Link to="/$band/events/$event/print" params={params} />}
             />
           )

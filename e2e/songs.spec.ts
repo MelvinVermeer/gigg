@@ -15,9 +15,13 @@ test.describe('member', () => {
     await page.getByLabel('BPM').fill('120')
     await page.getByLabel(/Tags/).fill('ballad, cover')
     await page.getByLabel('Notes').fill('Capo **2**\nslow intro\n\n- [ ] new strings\n\n<b id="raw">raw</b>')
+    await page.getByLabel('Lyrics').fill('**Verse**\nFirst line\nSecond line')
     await page.getByRole('button', { name: 'Add song' }).click()
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
+    // Lyrics: markdown, every line break kept.
+    await expect(page.getByRole('heading', { name: 'Lyrics' })).toBeVisible()
+    await expect(page.locator('.lyrics p')).toHaveText('Verse\nFirst line\nSecond line', { useInnerText: true })
     await expect(page.locator('.fields')).toContainText('3:45')
     await expect(page.locator('.fields')).toContainText('ballad, cover')
     // Notes render as markdown; single line breaks stay, raw HTML doesn't render.
