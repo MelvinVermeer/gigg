@@ -288,3 +288,25 @@
 .drag-line {
   @apply pointer-events-none fixed z-40 -mt-px h-[3px] rounded-full bg-stage;
 }
+
+/* Launch splash (__root.tsx): covers the empty start page while members are sent to their band.
+   Gone once any page renders its <main>; fades out after a few seconds regardless, so an error page
+   is never hidden behind it. */
+#splash {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--background);
+  animation: splash-out 0.3s 6s forwards;
+}
+body:has(main) #splash {
+  display: none;
+}
+@keyframes splash-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}

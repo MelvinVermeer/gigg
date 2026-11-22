@@ -11,20 +11,39 @@ self.addEventListener('fetch', (e) => {
   const req = e.request
   const url = new URL(req.url)
   if (req.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return
-  e.respondWith(
-    fetch(req).then(
-      (res) => {
-        // Redirected pages would hydrate under the wrong URL, so they are not cached.
-        if (res.ok && !res.redirected) {
-          const copy = res.clone()
-          e.waitUntil(caches.open(CACHE).then((c) => c.put(req, copy)))
-        }
-        return res
-      },
-      async (err) => (await caches.match(req)) ?? Promise.reject(err),
-    ),
-  )
+  // Hashed build files never change: straight from the cache. Also keeps a cached start page working
+  // after a deploy, when the server no longer has its old files.
+  if (url.pathname.startsWith('/assets/')) {
+    e.respondWith(caches.match(req).then((hit) => hit ?? networkFirst(e)))
+    return
+  }
+  // The start page (app launch) is cache-first, refreshed in the background: the app opens without
+  // waiting for the server. Only members' "/" is cached; it holds no band data, it only redirects
+  // (src/routes/index.tsx, __root.tsx).
+  // ponytail: one launch after a deploy runs the previous version; the next one has the new.
+  if (req.mode === 'navigate' && url.pathname === '/' && !url.search) {
+    const fresh = networkFirst(e)
+    e.waitUntil(fresh.catch(() => {}))
+    e.respondWith(caches.match(req).then((hit) => hit ?? fresh))
+    return
+  }
+  e.respondWith(networkFirst(e))
 })
+
+function networkFirst(e) {
+  const req = e.request
+  return fetch(req).then(
+    (res) => {
+      // Redirected pages would hydrate under the wrong URL, so they are not cached.
+      if (res.ok && !res.redirected) {
+        const copy = res.clone()
+        e.waitUntil(caches.open(CACHE).then((c) => c.put(req, copy)))
+      }
+      return res
+    },
+    async (err) => (await caches.match(req)) ?? Promise.reject(err),
+  )
+}
 
 // Push notifications (src/server/push.ts sends { title, body, url, tag }). One tag per event, so a newer
 // one replaces the older instead of stacking.

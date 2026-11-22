@@ -129,6 +129,7 @@ function Settings() {
 
   async function pickLanguage(next: string) {
     await setLocale({ data: { locale: next } })
+    await globalThis.caches?.open('gigg').then((c) => c.delete('/')) // the cached start page (public/sw.js)
     // Everything on the page, and the cached header, renders in the new language.
     window.location.reload()
   }

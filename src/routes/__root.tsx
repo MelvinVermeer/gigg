@@ -48,6 +48,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        {/* Launch splash: CSS hides it as soon as a page renders its <main> (styles.css). */}
+        <div id="splash" aria-hidden>
+          <img className="logo-on-light" src={lockupInk} alt="" height={48} width={146} />
+          <img className="logo-on-dark" src={lockup} alt="" height={48} width={146} />
+        </div>
         {children}
         <Scripts />
       </body>
@@ -63,6 +68,10 @@ function RootLayout() {
   useEffect(() => {
     if (import.meta.env.PROD) navigator.serviceWorker?.register('/sw.js')
   }, [])
+  // The service worker opens the app from a cached "/" (public/sw.js); that copy must be a member's.
+  useEffect(() => {
+    if (!me) void globalThis.caches?.open('gigg').then((c) => c.delete('/'))
+  }, [me])
   // Search is per band: the band you're in, otherwise your first band.
   const searchBand = useParams({ strict: false }).band ?? me?.bands[0]?.slug
   return (
