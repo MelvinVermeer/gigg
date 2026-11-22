@@ -124,7 +124,10 @@ export function Files({ band, owner, files, canEdit }: Props) {
                 {isAudio(f.contentType) ? (
                   <AudioPlayer files={[f]} label={f.name} />
                 ) : (
-                  <FileText aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                  // Same 32px slot as the play button, so every name starts at the same x.
+                  <span className="-my-1.5 flex size-8 shrink-0 items-center justify-center">
+                    <FileText aria-hidden className="size-4 text-muted-foreground" />
+                  </span>
                 )}
                 <a href={`/api/files/${f.id}`} className="min-w-0 flex-1 truncate font-medium underline-offset-4 hover:underline">
                   {f.name}
