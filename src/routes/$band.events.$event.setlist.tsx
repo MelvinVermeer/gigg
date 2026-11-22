@@ -123,10 +123,10 @@ function Setlist() {
           !editing && (
             <SetlistDownload
               file={data.event.slug}
+              title={`${data.event.title} · ${formatWhen(data.event, t.intl)}`}
               sets={data.sets}
               show={<Link to="/$band/events/$event/show" params={params} />}
               lyrics={<Link to="/$band/events/$event/lyrics" params={params} />}
-              print={<Link to="/$band/events/$event/print" params={params} />}
             />
           )
         }

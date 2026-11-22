@@ -89,10 +89,10 @@ function Setlist() {
           !editing && (
             <SetlistDownload
               file={slugify(name)}
+              title={data.setlist.name}
               sets={data.sets}
               show={<Link to="/$band/setlists/$setlist/show" params={params} />}
               lyrics={<Link to="/$band/setlists/$setlist/lyrics" params={params} />}
-              print={<Link to="/$band/setlists/$setlist/print" params={params} />}
             />
           )
         }

@@ -216,8 +216,6 @@ export const nl: Dict = {
   },
 
   setlist: {
-    back: '← Setlist',
-    printPdf: 'Printen of opslaan als pdf',
     showMode: 'Showmodus',
     lyricsMode: 'Showmodus (songteksten)',
     download: 'Downloaden',

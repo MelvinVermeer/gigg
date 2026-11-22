@@ -173,30 +173,39 @@
 }
 
 /* Stage-floor print: one A4 page per set. */
+.print-sheet {
+  display: none;
+}
 @page {
   size: A4;
   margin: 12mm;
 }
 @media print {
+  /* Paper is white whatever the theme: light colors, overriding the dark theme's (hence !important). */
   :root {
-    --background: #fff;
-    --foreground: #000;
+    --background: #fff !important;
+    --foreground: #000 !important;
+    --muted-foreground: oklch(0.556 0 0) !important;
+    color-scheme: light !important;
   }
   .site-header,
   .band-nav,
   .no-print {
     display: none !important;
   }
+  .print-sheet {
+    display: block;
+  }
   main {
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
   }
+  /* The setlist menu's Print: only the stage sheets (StagePrint), not the page behind them. */
+  body:has(> .print-sheet) > :not(.print-sheet) {
+    display: none !important;
+  }
   .stage-page {
-    border: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    box-shadow: none !important;
     break-after: page;
   }
   .stage-page:last-child {

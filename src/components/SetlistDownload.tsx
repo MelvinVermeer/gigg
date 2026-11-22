@@ -6,19 +6,21 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useT } from '#/lib/i18n'
 import { setlistCsv } from '#/lib/setlist-csv'
 import { fieldName, useShownFields } from '#/lib/song-fields'
+import { StagePrint } from '#/components/SetlistViews'
 
 type Props = {
   /** File name without extension, already slugified. */
   file: string
-  sets: Parameters<typeof setlistCsv>[0]
-  /** Childless links to the show and print routes; the menu fills in icon and label. */
+  sets: Parameters<typeof StagePrint>[0]['sets']
+  /** Heading on every printed page, after the set name. */
+  title: string
+  /** Childless links to the show routes; the menu fills in icon and label. */
   show: ReactElement
   lyrics: ReactElement
-  print: ReactElement
 }
 
 /** Excel (CSV, built here so it works offline), print and show mode in one menu. */
-export function SetlistDownload({ file, sets, show, lyrics, print }: Props) {
+export function SetlistDownload({ file, title, sets, show, lyrics }: Props) {
   const t = useT()
   const { cols, custom } = useShownFields('excel')
 
@@ -35,6 +37,8 @@ export function SetlistDownload({ file, sets, show, lyrics, print }: Props) {
   }
 
   return (
+    <>
+    <StagePrint title={title} sets={sets} />
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="ml-auto">
@@ -45,8 +49,8 @@ export function SetlistDownload({ file, sets, show, lyrics, print }: Props) {
         <DropdownMenuItem onSelect={excel}>
           <FileSpreadsheet aria-hidden /> {t.setlist.excel}
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          {cloneElement(print, {}, <><Printer aria-hidden /> {t.setlist.print}</>)}
+        <DropdownMenuItem onSelect={() => window.print()}>
+          <Printer aria-hidden /> {t.setlist.print}
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           {cloneElement(show, {}, <><MonitorPlay aria-hidden /> {t.setlist.showMode}</>)}
@@ -56,5 +60,6 @@ export function SetlistDownload({ file, sets, show, lyrics, print }: Props) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    </>
   )
 }

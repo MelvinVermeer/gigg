@@ -114,7 +114,6 @@ test.describe('member', () => {
     expect(pdf.match(/\/Type\s*\/Page\b(?!s)/g)).toHaveLength(2)
 
     // Tapping a match adds it right away; an unknown title is offered as a new song.
-    await page.getByRole('link', { name: '← Setlist' }).click()
     await page.getByRole('button', { name: 'Edit', exact: true }).click()
     await page.getByLabel('Add song to Set 2').fill('Neon')
     await page.getByRole('option', { name: /Neon Harbour/ }).click()
@@ -210,7 +209,12 @@ test.describe('standalone setlists', () => {
     await page.getByRole('button', { name: 'Download' }).click()
     await page.getByRole('menuitem', { name: 'Print' }).click()
     await expect(page.locator('.stage-page').first()).toContainText(`Set 1 · Festival ${ts}`)
-    await page.getByRole('link', { name: '← Setlist' }).click()
+    // Printed in dark mode: still black on white, like light mode.
+    await page.evaluate(() => (document.documentElement.dataset.theme = 'dark'))
+    await page.emulateMedia({ media: 'print', colorScheme: 'dark' })
+    await expect(page.locator('.stage-page li').first()).toHaveCSS('color', 'rgb(0, 0, 0)')
+    await page.emulateMedia({ media: null, colorScheme: null })
+    await page.evaluate(() => delete document.documentElement.dataset.theme)
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Festival ${ts}`)
 
     // An event picks it from "Choose setlist" and uses it as the standard: read-only, customizing clones it.

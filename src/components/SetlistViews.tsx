@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactElement, ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, Printer, X } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Markdown } from '#/components/Markdown'
 import { Button } from '#/components/ui/button'
 import { small, stageFontMm } from '#/lib/stage'
@@ -123,21 +124,18 @@ export function ShowMode({ title, sets, back, lyrics = false }: { title: string;
   )
 }
 
-/** Stage-floor setlist: one page per set, big titles only. Print it or save it as PDF. */
-export function StagePrint({ title, sets, back }: { title: string; sets: Set[]; back: Back }) {
-  const t = useT()
+/** Stage-floor setlist: one page per set, big titles only. Hidden on screen; window.print() prints only this (styles.css). */
+export function StagePrint({ title, sets }: { title: string; sets: Set[] }) {
   const { cols } = useShownFields('print')
   const notes = cols.includes('notes')
-  return (
-    <>
-      <div className="no-print mb-4 flex items-center justify-between gap-3">
-        {back({ className: 'text-sm text-muted-foreground hover:text-foreground', children: t.setlist.back })}
-        <Button onClick={() => window.print()}>
-          <Printer aria-hidden /> {t.setlist.printPdf}
-        </Button>
-      </div>
+  // Portal to <body> so the print stylesheet can hide everything else; after mount, since there's no document on the server.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  if (!mounted) return null
+  return createPortal(
+    <div className="print-sheet">
       {sets.map((set, i) => (
-        <section key={i} className="stage-page my-4 rounded-xl border bg-card p-4 shadow-sm">
+        <section key={i} className="stage-page">
           <header className="text-[4mm] text-muted-foreground">
             <strong className="text-foreground">{set.name}</strong> · {title}
           </header>
@@ -164,6 +162,7 @@ export function StagePrint({ title, sets, back }: { title: string; sets: Set[]; 
           </ol>
         </section>
       ))}
-    </>
+    </div>,
+    document.body,
   )
 }

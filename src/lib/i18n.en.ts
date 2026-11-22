@@ -217,8 +217,6 @@ export const en = {
   },
 
   setlist: {
-    back: '← Setlist',
-    printPdf: 'Print or save as PDF',
     showMode: 'Show mode',
     lyricsMode: 'Show mode (lyrics)',
     download: 'Download',
