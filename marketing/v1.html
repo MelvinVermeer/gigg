@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gigg · Backstage</title>
+<meta name="description" content="Gigs, setlists and riders for bands. Free and open source.">
+<link rel="icon" href="img/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
+<style>
+/* Layout: a gig poster. One loud yellow headline, phones fanned like a stage plot, then the night in running order. Dark only, on purpose. */
+:root {
+  --ink: #111111;
+  --ink-2: #1b1b1b;
+  --ink-3: #262626;
+  --stage: #ffd400;
+  --paper: #f4f4f2;
+  --mute: #9a9a96;
+  --line: rgba(255,255,255,.12);
+  --display: 'Archivo', 'Arial Narrow', system-ui, sans-serif;
+  --body: 'Archivo', system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--ink); color: var(--paper); font: 400 1.0625rem/1.6 var(--body); font-stretch: 100%; -webkit-font-smoothing: antialiased; }
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+
+/* nav */
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1.25rem; }
+.nav img { height: 36px; width: auto; }
+.nav-links { display: flex; gap: 1.5rem; align-items: center; font-weight: 600; font-size: .95rem; }
+.nav-links a { text-decoration: none; color: var(--mute); }
+.nav-links a:hover { color: var(--paper); }
+.nav-links .btn { color: var(--ink); }
+@media (max-width: 640px) { .nav-links .hide-sm { display: none; } }
+
+.btn { display: inline-flex; align-items: center; gap: .5rem; padding: .8rem 1.3rem; border-radius: 999px; font-weight: 700; text-decoration: none; background: var(--stage); color: var(--ink); border: 2px solid var(--stage); transition: transform .15s ease; }
+.btn:hover { transform: translateY(-2px); }
+.btn.ghost { background: transparent; color: var(--paper); border-color: var(--line); }
+.btn:focus-visible, a:focus-visible { outline: 3px solid var(--stage); outline-offset: 3px; }
+
+/* hero */
+.hero { padding-block: 3rem 0; position: relative; overflow: hidden; }
+.eyebrow { font-weight: 700; font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; color: var(--stage); }
+.hero h1 { font-family: var(--display); font-stretch: 68%; font-weight: 900; text-transform: uppercase; line-height: .86; letter-spacing: -.01em; font-size: clamp(3.4rem, 11.5vw, 10rem); margin: .75rem 0 0; text-wrap: balance; }
+.hero h1 em { font-style: normal; color: var(--stage); }
+.hero .lede { max-width: 34rem; font-size: 1.2rem; color: #cfcfcb; margin: 1.5rem 0 2rem; }
+.cta-row { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.cta-note { font-size: .875rem; color: var(--mute); }
+
+.stage { position: relative; margin-top: 3.5rem; height: clamp(360px, 62vw, 640px); }
+.stage::before { content: ""; position: absolute; left: 50%; top: 8%; width: 80%; height: 120%; transform: translateX(-50%); background: radial-gradient(closest-side, rgba(255,212,0,.28), rgba(255,212,0,0) 70%); pointer-events: none; }
+.phone { position: absolute; width: clamp(150px, 24vw, 300px); aspect-ratio: 390 / 844; border-radius: clamp(22px, 3.2vw, 40px); padding: clamp(5px, .7vw, 9px); background: #2a2a2a; box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 40px 80px rgba(0,0,0,.6); max-width: 100%; }
+.phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: clamp(17px, 2.6vw, 32px); }
+.p1 { left: 50%; top: 0; transform: translateX(-50%); z-index: 3; }
+.p2 { left: 50%; top: 9%; transform: translateX(-138%) rotate(-7deg); z-index: 2; }
+.p3 { left: 50%; top: 9%; transform: translateX(38%) rotate(7deg); z-index: 2; }
+
+/* marquee strip */
+.strip { background: var(--stage); color: var(--ink); overflow: hidden; border-block: 0; position: relative; z-index: 4; }
+.strip-track { display: flex; gap: 2.5rem; padding-block: 1rem; white-space: nowrap; font-family: var(--display); font-stretch: 75%; font-weight: 900; text-transform: uppercase; font-size: clamp(1.3rem, 3vw, 2rem); animation: slide 38s linear infinite; width: max-content; }
+.strip-track span::after { content: "●"; margin-left: 2.5rem; font-size: .5em; vertical-align: middle; }
+@keyframes slide { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .strip-track { animation: none; } .btn { transition: none; } }
+
+/* running order */
+section { padding-block: clamp(4rem, 9vw, 7.5rem); }
+h2 { font-family: var(--display); font-stretch: 72%; font-weight: 900; text-transform: uppercase; line-height: .92; font-size: clamp(2.4rem, 6vw, 4.6rem); margin: .5rem 0 1rem; text-wrap: balance; }
+.intro { max-width: 40rem; color: #cfcfcb; font-size: 1.15rem; }
+
+.runsheet { margin-top: 3rem; border-top: 1px solid var(--line); }
+.slot { display: grid; grid-template-columns: 10rem minmax(0, 1fr) minmax(0, 300px); gap: 2rem; align-items: center; padding-block: 2.5rem; border-bottom: 1px solid var(--line); }
+.slot time { font-family: var(--display); font-stretch: 70%; font-weight: 800; font-size: 1.6rem; line-height: 1.1; text-transform: uppercase; color: var(--stage); font-variant-numeric: tabular-nums; }
+.slot h3 { font-family: var(--display); font-stretch: 85%; font-weight: 800; font-size: 1.9rem; line-height: 1.05; margin: 0 0 .6rem; }
+.slot p { margin: 0; color: #cfcfcb; max-width: 34rem; }
+.slot ul { margin: 1rem 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: .5rem; }
+.slot li { font-size: .82rem; font-weight: 600; padding: .3rem .7rem; border-radius: 999px; background: var(--ink-3); color: #ddd; }
+.slot .shot { border-radius: 22px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); max-height: 380px; }
+.slot .shot img { width: 100%; }
+@media (max-width: 860px) {
+  .slot { grid-template-columns: 1fr; gap: 1rem; }
+  .slot .shot { max-width: 320px; }
+}
+
+/* show mode feature */
+.showcase { background: #000; }
+.show-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 3rem; align-items: center; }
+.show-grid .big { border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 30px 80px rgba(255,212,0,.12); }
+.facts { display: grid; gap: 1.25rem; margin-top: 2rem; }
+.fact { display: grid; grid-template-columns: 2.5rem 1fr; gap: 1rem; align-items: start; }
+.fact b { display: block; font-size: 1.05rem; }
+.fact span { color: var(--mute); font-size: .97rem; }
+.fact svg { width: 2.5rem; height: 2.5rem; padding: .55rem; border-radius: 10px; background: var(--ink-3); stroke: var(--stage); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 860px) { .show-grid { grid-template-columns: 1fr; } }
+
+/* principles */
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; margin-top: 3rem; }
+.cell { background: var(--ink); padding: 2rem; }
+.cell h3 { font-size: 1.2rem; margin: 0 0 .5rem; }
+.cell p { margin: 0; color: var(--mute); font-size: .97rem; }
+@media (max-width: 860px) { .grid3 { grid-template-columns: 1fr; } }
+
+/* closer */
+.closer { text-align: left; }
+.closer-box { background: var(--stage); color: var(--ink); border-radius: 28px; padding: clamp(2rem, 6vw, 4.5rem); display: grid; grid-template-columns: 1.4fr 1fr; gap: 2rem; align-items: end; }
+.closer-box h2 { margin: 0; color: var(--ink); }
+.closer-box p { margin: 0 0 1.25rem; font-size: 1.1rem; }
+.closer-box .btn { background: var(--ink); color: var(--stage); border-color: var(--ink); }
+.closer-box .btn.ghost { background: transparent; color: var(--ink); border-color: rgba(0,0,0,.25); }
+@media (max-width: 760px) { .closer-box { grid-template-columns: 1fr; } }
+
+footer { padding-block: 2.5rem 3rem; color: var(--mute); font-size: .875rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; }
+footer a { color: var(--mute); }
+</style>
+</head>
+<body>
+
+<header class="wrap nav">
+  <a href="#top" aria-label="Gigg home"><img src="img/gigg-lockup.svg" alt="Gigg" width="110" height="36"></a>
+  <nav class="nav-links" aria-label="Main">
+    <a class="hide-sm" href="#night">How it works</a>
+    <a class="hide-sm" href="#stage">On stage</a>
+    <a class="hide-sm" href="https://github.com/melvinvermeer/gigg">GitHub</a>
+    <a class="btn" href="https://gigg.band/login">Sign in</a>
+  </nav>
+</header>
+
+<main id="top">
+  <div class="hero">
+    <div class="wrap">
+      <div class="eyebrow">For bands that actually play</div>
+      <h1>Gigs. Setlists. <em>Riders.</em> Sorted.</h1>
+      <p class="lede">Gigg keeps your band's bookings, songs and setlists in one place, on every phone in the band. It works offline when the venue Wi-Fi doesn't.</p>
+      <div class="cta-row">
+        <a class="btn" href="https://gigg.band/login">Get started</a>
+        <a class="btn ghost" href="https://github.com/melvinvermeer/gigg">Host your own, free</a>
+      </div>
+      <div class="stage" aria-hidden="true">
+        <div class="phone p2"><img src="img/phone-dark-events.webp" alt=""></div>
+        <div class="phone p3"><img src="img/phone-dark-setlist.webp" alt=""></div>
+        <div class="phone p1"><img src="img/phone-dark-show.webp" alt=""></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="strip" aria-hidden="true">
+    <div class="strip-track">
+      <span>Bookings</span><span>Availability</span><span>Setlists</span><span>Show mode</span><span>Lyrics</span><span>Offline</span><span>Charts &amp; recordings</span><span>Calendar feed</span>
+      <span>Bookings</span><span>Availability</span><span>Setlists</span><span>Show mode</span><span>Lyrics</span><span>Offline</span><span>Charts &amp; recordings</span><span>Calendar feed</span>
+    </div>
+  </div>
+
+  <section id="night">
+    <div class="wrap">
+      <div class="eyebrow">Running order</div>
+      <h2>From first email to last encore</h2>
+      <p class="intro">A gig goes through the same steps every time. Gigg follows along, so nobody has to scroll back through the group chat.</p>
+
+      <div class="runsheet">
+        <article class="slot">
+          <time>Weeks out</time>
+          <div>
+            <h3>Pencil it in</h3>
+            <p>Add the gig with its date, venue and contacts. Type a new venue and it's created on the spot. Track the booking from lead to option to confirmed, and the money from open to invoiced to paid.</p>
+            <ul><li>Lead → Option → Confirmed</li><li>Fee as free text</li><li>Contracts &amp; riders as files</li></ul>
+          </div>
+          <div class="shot"><img src="img/phone-dark-event.webp" alt="An event in Gigg: date, venue, contacts, participants, booking confirmed, payment invoiced" loading="lazy"></div>
+        </article>
+        <article class="slot">
+          <time>Days out</time>
+          <div>
+            <h3>Who's in?</h3>
+            <p>Tick who you need and ask. Everyone gets an email and answers yes, maybe or no, without logging in. A maybe can say why. Move the date and Gigg asks again.</p>
+            <ul><li>Email &amp; push</li><li>No account needed to answer</li><li>Re-ask when the gig moves</li></ul>
+          </div>
+          <div class="shot"><img src="img/phone-dark-participants.webp" alt="Participants dialog: Sam answered yes, Noor answered maybe because of the babysitter" loading="lazy"></div>
+        </article>
+        <article class="slot">
+          <time>The night before</time>
+          <div>
+            <h3>Build the set</h3>
+            <p>Sets, songs and reusable blocks, like the acoustic bit or the encore. Running time adds up as you go. Play a song twice and Gigg flags it.</p>
+            <ul><li>Key, BPM, tuning</li><li>Reusable blocks</li><li>Print one A4 per set</li></ul>
+          </div>
+          <div class="shot"><img src="img/phone-dark-setlist.webp" alt="A setlist with a dinner set of five songs, each with key and duration" loading="lazy"></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="stage" class="showcase">
+    <div class="wrap show-grid">
+      <div class="big"><img src="img/desk-dark-show.webp" alt="Show mode on a tablet: the dinner set in huge type, with notes like Capo 2" loading="lazy"></div>
+      <div>
+        <div class="eyebrow">Showtime</div>
+        <h2>Readable from the drum riser</h2>
+        <p class="intro">Show mode puts the set full-screen in big type. Swipe for the next set. The screen stays on.</p>
+        <div class="facts">
+          <div class="fact">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19v3M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/></svg>
+            <div><b>Lyrics mode</b><span>One song per screen with its lyrics. Swipe to the next song.</span></div>
+          </div>
+          <div class="fact">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 2l20 20M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2-1.5M2 8.8a15 15 0 0 1 4.2-2.6M22 8.8A15 15 0 0 0 10.7 5M12 20h.01"/></svg>
+            <div><b>Offline</b><span>Upcoming gigs and their setlists are saved to your phone automatically.</span></div>
+          </div>
+          <div class="fact">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            <div><b>Paper backup</b><span>Print gives one A4 page per set, black on white, for the stage floor.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">How it's built</div>
+      <h2>Made by a band, for bands</h2>
+      <div class="grid3">
+        <div class="cell"><h3>Nothing gets lost</h3><p>Nothing is ever deleted, only archived. Every change is logged, so you can see who changed what and what it was before.</p></div>
+        <div class="cell"><h3>Two roles, that's it</h3><p>Members can change everything. Readers, like your sound engineer, can only look. Sign in with an email link or a passkey.</p></div>
+        <div class="cell"><h3>Open source</h3><p>Host your own copy on Vercel in an afternoon. The free tiers are enough for a single band. In English and Dutch.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="closer">
+    <div class="wrap">
+      <div class="closer-box">
+        <h2>Next gig's already on the calendar?</h2>
+        <div>
+          <p>gigg.band is invitation only for now. Got an invite? Sign in. Want it today? Run your own.</p>
+          <div class="cta-row">
+            <a class="btn" href="https://gigg.band/login">Sign in</a>
+            <a class="btn ghost" href="https://github.com/melvinvermeer/gigg">View on GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <span>Gigg · Gigs, setlists and riders for bands</span>
+  <span><a href="https://github.com/melvinvermeer/gigg">Source</a> · Installable on any phone</span>
+</footer>
+</body>
+</html>

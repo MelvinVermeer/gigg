@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gigg · Group Chat</title>
+<meta name="description" content="Gigs, setlists and riders for bands. Free and open source.">
+<link rel="icon" href="img/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=DM+Sans:opsz,wght@9..40,400..700&display=swap">
+<style>
+/* Layout: the questions a band asks in its group chat, each answered by a screen in Gigg. Chat bubbles on the left, the app on the right. Light and dark. */
+:root {
+  --bg: #fbfaf6;
+  --surface: #ffffff;
+  --fg: #141414;
+  --muted: #5f5d57;
+  --line: #e6e3da;
+  --accent: #ffd400;
+  --accent-ink: #141414;
+  --bubble: #efede6;
+  --bubble-me: #141414;
+  --bubble-me-fg: #ffffff;
+  --yes: #16a34a; --maybe: #f5b000; --no: #dc2626;
+  --display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --body: 'DM Sans', system-ui, -apple-system, sans-serif;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111111; --surface: #1b1b1b; --fg: #f3f2ee; --muted: #a3a19a; --line: #2c2c2c;
+    --bubble: #232323; --bubble-me: #ffd400; --bubble-me-fg: #111111; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111111; --surface: #1b1b1b; --fg: #f3f2ee; --muted: #a3a19a; --line: #2c2c2c;
+  --bubble: #232323; --bubble-me: #ffd400; --bubble-me-fg: #111111; color-scheme: dark;
+}
+/* screenshot + logo swap per theme */
+.on-dark { display: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .on-dark { display: block; } :root:not([data-theme="light"]) .on-light { display: none; } }
+:root[data-theme="dark"] .on-dark { display: block; }
+:root[data-theme="dark"] .on-light { display: none; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 400 1.05rem/1.6 var(--body); -webkit-font-smoothing: antialiased; }
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: 1140px; margin: 0 auto; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); letter-spacing: -.02em; text-wrap: balance; }
+
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1.1rem; }
+.nav .logo img { height: 34px; width: auto; }
+.nav nav { display: flex; align-items: center; gap: 1.25rem; font-weight: 500; font-size: .95rem; }
+.nav nav a { text-decoration: none; color: var(--muted); }
+.nav nav a.btn { color: var(--accent-ink); }
+@media (max-width: 620px) { .hide-sm { display: none; } }
+
+.btn { display: inline-flex; align-items: center; gap: .5rem; background: var(--accent); color: var(--accent-ink); font-weight: 700; text-decoration: none; padding: .75rem 1.25rem; border-radius: 14px; box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+.btn:hover { filter: brightness(1.04); transform: translateY(-1px); }
+.btn.quiet { background: transparent; color: var(--fg); box-shadow: inset 0 0 0 1.5px var(--line); }
+
+/* hero */
+.hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 3rem; align-items: center; padding-block: 3rem 4rem; }
+.hero h1 { font-size: clamp(2.8rem, 6.4vw, 5.2rem); line-height: .98; font-weight: 800; margin: 0; }
+.hero h1 mark { background: linear-gradient(transparent 58%, var(--accent) 58%, var(--accent) 92%, transparent 92%); color: inherit; padding: 0 .08em; }
+.hero p { font-size: 1.2rem; color: var(--muted); max-width: 32rem; margin: 1.4rem 0 1.8rem; }
+.ctas { display: flex; flex-wrap: wrap; gap: .75rem; }
+
+.chat { background: var(--surface); border: 1px solid var(--line); border-radius: 28px; padding: 1.2rem; box-shadow: 0 30px 60px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: .55rem; max-width: 460px; justify-self: end; width: 100%; }
+.chat-head { display: flex; align-items: center; gap: .7rem; padding-bottom: .8rem; border-bottom: 1px solid var(--line); margin-bottom: .3rem; }
+.chat-head .av { width: 38px; height: 38px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 800; font-family: var(--display); }
+.chat-head b { display: block; line-height: 1.2; }
+.chat-head small { color: var(--muted); }
+.msg { max-width: 82%; padding: .55rem .85rem; border-radius: 18px; background: var(--bubble); font-size: .97rem; line-height: 1.4; animation: pop .4s both; }
+.msg .who { display: block; font-size: .75rem; font-weight: 700; color: var(--muted); }
+.msg.me { align-self: flex-end; background: var(--bubble-me); color: var(--bubble-me-fg); border-bottom-right-radius: 6px; }
+.msg:not(.me) { border-bottom-left-radius: 6px; }
+.msg:nth-child(3) { animation-delay: .15s } .msg:nth-child(4) { animation-delay: .3s } .msg:nth-child(5) { animation-delay: .45s } .msg:nth-child(6) { animation-delay: .6s } .msg:nth-child(7) { animation-delay: .75s }
+@keyframes pop { from { transform: translateY(6px) scale(.98); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .msg { animation: none; } .btn:hover { transform: none; } }
+@media (max-width: 880px) { .hero { grid-template-columns: 1fr; } .chat { justify-self: start; } }
+
+/* Q&A rows */
+.qa-intro { text-align: left; max-width: 42rem; padding-block: 3rem 1rem; }
+.qa-intro h2 { font-size: clamp(2rem, 4.5vw, 3.2rem); line-height: 1.02; margin: 0 0 .8rem; }
+.qa-intro p { color: var(--muted); margin: 0; font-size: 1.15rem; }
+.qa { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: clamp(2rem, 6vw, 5rem); align-items: center; padding-block: 3.5rem; border-bottom: 1px solid var(--line); }
+.qa:nth-of-type(even) { grid-template-columns: minmax(0, 340px) minmax(0, 1fr); }
+.qa:nth-of-type(even) .copy { order: 2; }
+.q { display: inline-block; background: var(--bubble); padding: .6rem 1rem; border-radius: 20px 20px 20px 6px; font-weight: 500; margin-bottom: 1.2rem; }
+.qa h3 { font-size: clamp(1.6rem, 3.2vw, 2.3rem); line-height: 1.05; margin: 0 0 .8rem; font-weight: 750; }
+.qa p { color: var(--muted); margin: 0 0 1rem; max-width: 34rem; }
+.tags { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.tags li { font-size: .82rem; font-weight: 600; border: 1px solid var(--line); border-radius: 999px; padding: .2rem .65rem; color: var(--muted); }
+.device { border-radius: 34px; padding: 8px; background: var(--fg); box-shadow: 0 24px 50px rgba(0,0,0,.14); max-width: 340px; justify-self: center; width: 100%; }
+.device img { border-radius: 27px; width: 100%; aspect-ratio: 390 / 700; object-fit: cover; object-position: top; }
+.pill { display: inline-flex; border-radius: 999px; overflow: hidden; font-size: .78rem; font-weight: 700; vertical-align: middle; }
+.pill span { padding: .05rem .5rem; color: #fff; }
+.pill .y { background: var(--yes); } .pill .m { background: var(--maybe); color: #111; } .pill .n { background: var(--no); }
+@media (max-width: 820px) {
+  .qa, .qa:nth-of-type(even) { grid-template-columns: 1fr; }
+  .qa:nth-of-type(even) .copy { order: 0; }
+}
+
+/* everything else */
+.more { padding-block: 5rem 3rem; }
+.more h2 { font-size: clamp(2rem, 4.5vw, 3rem); margin: 0 0 2rem; }
+.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 1.4rem; }
+.card h3 { font-size: 1.15rem; margin: 0 0 .4rem; }
+.card p { margin: 0; color: var(--muted); font-size: .95rem; }
+@media (max-width: 960px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .cards { grid-template-columns: 1fr; } }
+
+.end { margin-block: 3rem 4rem; background: var(--accent); color: var(--accent-ink); border-radius: 32px; padding: clamp(2rem, 6vw, 4rem); display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: center; }
+.end h2 { margin: 0 0 .5rem; font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1; }
+.end p { margin: 0; font-size: 1.1rem; max-width: 34rem; }
+.end .btn { background: #141414; color: #ffd400; }
+.end .btn.quiet { background: transparent; color: #141414; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.3); }
+@media (max-width: 760px) { .end { grid-template-columns: 1fr; } }
+footer { padding-block: 0 3rem; color: var(--muted); font-size: .875rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; }
+</style>
+</head>
+<body>
+
+<header class="wrap nav">
+  <a class="logo" href="#top" aria-label="Gigg home">
+    <img class="on-light" src="img/gigg-lockup-ink.svg" alt="Gigg" width="104" height="34">
+    <img class="on-dark" src="img/gigg-lockup.svg" alt="Gigg" width="104" height="34">
+  </a>
+  <nav aria-label="Main">
+    <a class="hide-sm" href="#answers">What it does</a>
+    <a class="hide-sm" href="https://github.com/melvinvermeer/gigg">GitHub</a>
+    <a class="btn" href="https://gigg.band/login">Sign in</a>
+  </nav>
+</header>
+
+<main id="top">
+  <div class="wrap hero">
+    <div>
+      <h1>Get your band out of the <mark>group chat</mark>.</h1>
+      <p>Gigg keeps your gigs, songs and setlists in one place every bandmate can open. So the answer is already there before anyone asks.</p>
+      <div class="ctas">
+        <a class="btn" href="https://gigg.band/login">Try Gigg</a>
+        <a class="btn quiet" href="https://github.com/melvinvermeer/gigg">Host it yourself</a>
+      </div>
+    </div>
+    <div class="chat" aria-label="An example band group chat">
+      <div class="chat-head"><span class="av" aria-hidden="true">N</span><div><b>The Night Owls</b><small>Sam, Noor, Jesse, Mo</small></div></div>
+      <div class="msg"><span class="who">Jesse</span>what time is load-in saturday?</div>
+      <div class="msg"><span class="who">Mo</span>who has the setlist for the wedding</div>
+      <div class="msg"><span class="who">Noor</span>might not make the 8th, depends on the babysitter</div>
+      <div class="msg"><span class="who">Jesse</span>is Little Fires in Em or G??</div>
+      <div class="msg me">it's all in Gigg 🙃</div>
+    </div>
+  </div>
+
+  <div class="wrap" id="answers">
+    <div class="qa-intro">
+      <h2>Every question, answered once</h2>
+      <p>Here's what those messages look like in Gigg.</p>
+    </div>
+
+    <article class="qa">
+      <div class="copy">
+        <span class="q">what time is load-in saturday?</span>
+        <h3>The gig page has it all</h3>
+        <p>Date and times, the venue with a map link, the promoter's number, notes like the dress code, and files like the contract and rider. Booking and payment status sit right there too.</p>
+        <ul class="tags"><li>Lead → option → confirmed</li><li>Open → invoiced → paid</li><li>Google &amp; Apple Calendar feed</li></ul>
+      </div>
+      <div class="device">
+        <img class="on-light" src="img/phone-light-event.webp" alt="The wedding gig: date, venue, contacts, booking confirmed, payment invoiced, load-in note" loading="lazy">
+        <img class="on-dark" src="img/phone-dark-event.webp" alt="" loading="lazy">
+      </div>
+    </article>
+
+    <article class="qa">
+      <div class="copy">
+        <span class="q">might not make the 8th, depends on the babysitter</span>
+        <h3>Availability with a reason</h3>
+        <p>Ask everyone with one tap. They answer yes, maybe or no from the email, no account needed, and a maybe can say why. The gig shows the count at a glance: <span class="pill" aria-label="1 yes, 1 maybe"><span class="y">1</span><span class="m">1</span></span></p>
+        <ul class="tags"><li>No login to answer</li><li>Push notifications</li><li>Re-ask if the date moves</li></ul>
+      </div>
+      <div class="device">
+        <img class="on-light" src="img/phone-light-participants.webp" alt="Participants: Sam said yes; Noor said maybe, depends on the babysitter" loading="lazy">
+        <img class="on-dark" src="img/phone-dark-participants.webp" alt="" loading="lazy">
+      </div>
+    </article>
+
+    <article class="qa">
+      <div class="copy">
+        <span class="q">who has the setlist for the wedding</span>
+        <h3>Everybody does</h3>
+        <p>Build it from sets, songs and reusable blocks. Running times add up as you go, and every change saves at once. On the night, show mode puts it on screen in big type, and it works offline.</p>
+        <ul class="tags"><li>Show mode</li><li>Lyrics mode</li><li>Print one A4 per set</li><li>Offline</li></ul>
+      </div>
+      <div class="device">
+        <img class="on-light" src="img/phone-light-setlist.webp" alt="The wedding setlist: dinner set with five songs, keys and durations" loading="lazy">
+        <img class="on-dark" src="img/phone-dark-setlist.webp" alt="" loading="lazy">
+      </div>
+    </article>
+
+    <article class="qa">
+      <div class="copy">
+        <span class="q">is Little Fires in Em or G??</span>
+        <h3>Look it up, typos and all</h3>
+        <p>Every song keeps its key, BPM, tuning, notes, lyrics and attached charts or demos. Search finds it even when you can't spell it.</p>
+        <ul class="tags"><li>Custom song fields</li><li>Files up to 100 MB</li><li>Markdown notes</li></ul>
+      </div>
+      <div class="device">
+        <img class="on-light" src="img/phone-light-search.webp" alt="Searching for lighthose finds Lighthouse Keeper in F sharp minor" loading="lazy">
+        <img class="on-dark" src="img/phone-dark-search.webp" alt="" loading="lazy">
+      </div>
+    </article>
+  </div>
+
+  <div class="wrap more">
+    <h2>And the boring stuff, done right</h2>
+    <div class="cards">
+      <div class="card"><h3>Nothing deleted</h3><p>Items are archived, never removed, and every change shows who made it and what it was before.</p></div>
+      <div class="card"><h3>Members &amp; readers</h3><p>Members edit. Readers, like the sound engineer, only look.</p></div>
+      <div class="card"><h3>No passwords</h3><p>Sign in with a link in your email, or with a passkey.</p></div>
+      <div class="card"><h3>On your home screen</h3><p>Install it like an app on any phone. In English and Dutch.</p></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="end">
+      <div>
+        <h2>Mute the group chat.</h2>
+        <p>gigg.band is invitation only for now. Gigg is open source, so you can also run your own on Vercel's free tier.</p>
+      </div>
+      <div class="ctas">
+        <a class="btn" href="https://gigg.band/login">Sign in</a>
+        <a class="btn quiet" href="https://github.com/melvinvermeer/gigg">GitHub</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="wrap">
+  <span>Gigg · Gigs, setlists and riders for bands</span>
+  <span>Free &amp; open source</span>
+</footer>
+</body>
+</html>

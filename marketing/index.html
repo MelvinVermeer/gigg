@@ -1,0 +1,61 @@
+<title>Gigg Homepage Options</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..800&display=swap">
+<style>
+/* Layout: a contact sheet of the four directions, two by two, each card opens the full page. */
+:root {
+  --bg: #f6f6f4; --surface: #ffffff; --fg: #111111; --muted: #66665f; --line: #deded8; --accent: #ffd400;
+  --sans: 'Schibsted Grotesk', system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #101010; --surface: #1a1a1a; --fg: #f2f2ee; --muted: #a2a29b; --line: #2c2c2b; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #101010; --surface: #1a1a1a; --fg: #f2f2ee; --muted: #a2a29b; --line: #2c2c2b; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 400 1rem/1.55 var(--sans); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 2.5rem 4rem; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
+header img { width: 48px; height: 48px; }
+h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); letter-spacing: -.02em; margin: 0; line-height: 1.1; text-wrap: balance; }
+header p { margin: .2rem 0 0; color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+@media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+a.card { display: grid; text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; transition: transform .15s ease, border-color .15s ease; }
+a.card:hover { transform: translateY(-3px); border-color: var(--accent); }
+a.card:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.card img { width: 100%; aspect-ratio: 683 / 450; object-fit: cover; object-position: top; border-bottom: 1px solid var(--line); display: block; }
+.meta { padding: 1rem 1.2rem 1.2rem; display: grid; gap: .3rem; }
+.meta b { font-size: 1.15rem; letter-spacing: -.01em; }
+.meta b span { display: inline-block; min-width: 1.6rem; height: 1.6rem; line-height: 1.6rem; text-align: center; background: var(--accent); color: #111; border-radius: 6px; margin-right: .5rem; font-size: .9rem; }
+.meta p { margin: 0; color: var(--muted); font-size: .95rem; }
+.meta small { color: var(--muted); font-size: .8rem; }
+@media (prefers-reduced-motion: reduce) { a.card { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <img src="img/icon.svg" alt="">
+    <div>
+      <h1>Four homepages for gigg.band</h1>
+      <p>Each uses real screenshots of the app. Open one to see the full page.</p>
+    </div>
+  </header>
+  <div class="grid">
+    <a class="card" href="v1.html">
+      <img src="img/thumb-v1.webp" alt="Preview of Backstage: black page, giant yellow and white headline, three phones fanned out">
+      <div class="meta"><b><span>1</span>Backstage</b><p>Dark gig-poster look. Huge condensed headline, phones fanned like a stage, then the night in running order.</p><small>Dark only · loud</small></div>
+    </a>
+    <a class="card" href="v2.html">
+      <img src="img/thumb-v2.webp" alt="Preview of Floor Setlist: paper-grey page with a taped A4 setlist and marker notes">
+      <div class="meta"><b><span>2</span>Floor Setlist</b><p>The page is a setlist taped to the stage floor, with marker notes. Each section is a set with its own running time.</p><small>Light only · playful</small></div>
+    </a>
+    <a class="card" href="v3.html">
+      <img src="img/thumb-v3.webp" alt="Preview of Group Chat: headline about leaving the group chat next to a band chat">
+      <div class="meta"><b><span>3</span>Group Chat</b><p>Starts from the band's group chat. Every question in it gets answered by a screen in Gigg.</p><small>Light &amp; dark · friendly</small></div>
+    </a>
+    <a class="card" href="v4.html">
+      <img src="img/thumb-v4.webp" alt="Preview of Tech Rider: Swiss grid layout with a laptop and phone screenshot">
+      <div class="meta"><b><span>4</span>Tech Rider</b><p>Swiss grid and mono labels. Features as a stage input list, house rules, and the self-host steps.</p><small>Light &amp; dark · open source</small></div>
+    </a>
+  </div>
+</div>
