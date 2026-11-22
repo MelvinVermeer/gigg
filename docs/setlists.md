@@ -15,6 +15,7 @@ Setlist
 - Setlists open in display mode with an Edit button.
 - Builder: every change saves immediately; songs move by drag and drop, within a set or between sets (long-press on touch with a small haptic tick on Android (iOS can't), a grip handle with a mouse; a yellow line shows where it lands); dragged out of the setlist (above/below the sets, or to the screen's side edge) removes it. Blocks reorder the same way. ↑ ↓ stay for the keyboard, visible on focus. A new setlist starts empty or as a copy of another setlist (standalone or an event's).
 - Blocks are managed on the Setlists page (`/<band>/setlists`).
+- **Duplicates**: a song that's in the setlist more than once (any set, added alone or via a block) gets a small amber “⚠️ Duplicate” after its title on every copy, on the setlist page (display and edit). A warning only: nothing blocks it, no dismiss; show mode, print, lyrics and Excel don't show it.
 - Clonable.
 - Total duration per set / setlist.
 - **Download menu** (right of the song count, not while editing): Excel, Print, Show mode, Show mode (lyrics).

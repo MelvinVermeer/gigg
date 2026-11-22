@@ -163,6 +163,26 @@ test.describe('drag and drop', () => {
   })
 })
 
+test.describe('duplicates', () => {
+  test.use(asMember)
+
+  test('flags every copy of a song that is in the setlist twice', async ({ page }) => {
+    await newEvent(page, `Dup ${Date.now()}`)
+    await chooseNew(page)
+    await addSong(page, 'Set 1', 'Opening Song')
+    await addSong(page, 'Set 1', 'Slow One')
+    await page.getByRole('button', { name: 'Add set' }).click()
+    await addSong(page, 'Set 2', 'Opening Song')
+    const dup = page.locator('ol.song-list li').filter({ hasText: '⚠️ Duplicate' })
+    await expect(dup).toHaveCount(2)
+    await expect(dup.locator('.title a')).toHaveText(['Opening Song', 'Opening Song'])
+
+    // Removing one copy clears both warnings.
+    await page.locator('section.set').nth(1).getByRole('button', { name: 'Remove Opening Song' }).click()
+    await expect(dup).toHaveCount(0)
+  })
+})
+
 test.describe('standalone setlists', () => {
   test.use(asMember)
 

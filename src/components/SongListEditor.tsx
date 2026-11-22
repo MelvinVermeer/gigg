@@ -43,6 +43,8 @@ type Props = {
   onDrop?: OnDrop
   /** Audio files per song id; songs with any get a play button when `fields` has 'play'. */
   audio?: Record<string, AudioFile[]>
+  /** Song ids that appear more than once in the whole setlist; those rows get a warning. */
+  duplicates?: string[]
 }
 
 export const totalDuration = (songs: SongRef[]) => songs.reduce((sum, s) => sum + (s.durationSec ?? 0), 0)
@@ -51,7 +53,7 @@ export const totalDuration = (songs: SongRef[]) => songs.reduce((sum, s) => sum 
  * An ordered list of songs: drag to reorder or out to remove (long-press on touch, grip handle with a mouse), remove, add from the repertoire.
  * Up/down buttons stay for the keyboard, visible on focus. Used for sets and blocks.
  */
-export function SongListEditor({ band, label, songs, repertoire, blocks = [], editable, onChange, onDrop, fields = defaultShown.page, audio = {} }: Props) {
+export function SongListEditor({ band, label, songs, repertoire, blocks = [], editable, onChange, onDrop, fields = defaultShown.page, audio = {}, duplicates = [] }: Props) {
   const router = useRouter()
   const t = useT()
   const [text, setText] = useState('')
@@ -123,6 +125,7 @@ export function SongListEditor({ band, label, songs, repertoire, blocks = [], ed
                 <Link to="/$band/songs/$song" params={{ band, song: s.slug }} className="underline-offset-4 hover:underline">
                   {s.title}
                 </Link>
+                {duplicates.includes(s.id) && <span className="duplicate text-xs font-normal text-amber-700 dark:text-amber-400"> ⚠️ {t.songList.duplicate}</span>}
                 {inlineText(s, fields, ['durationSec']) && <span className="text-xs font-normal text-muted-foreground"> {inlineText(s, fields, ['durationSec'])}</span>}
                 {fields.includes('notes') && s.notes && <span className="block text-xs font-normal whitespace-pre-wrap text-muted-foreground">{s.notes}</span>}
               </span>

@@ -259,6 +259,7 @@ export const nl: Dict = {
   },
 
   songList: {
+    duplicate: 'Dubbel',
     block: (name, n) => `Blok: ${name} (${n})`,
     moveUp: (title) => `${title} omhoog`,
     moveDown: (title) => `${title} omlaag`,

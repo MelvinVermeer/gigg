@@ -73,6 +73,9 @@ export function SetlistBuilder({ band, target, data, editable, actions }: Props)
     persist(shown.map((s, i) => ({ ...s, songs: next[i] })).filter((s, i) => s.songs.length || !shown[i].songs.length))
   }
 
+  const ids = shown.flatMap((s) => s.songs.map((song) => song.id))
+  const duplicates = ids.filter((id, i) => ids.indexOf(id) !== i)
+
   const total = totalDuration(sets.flatMap((s) => s.songs))
 
   return (
@@ -115,6 +118,7 @@ export function SetlistBuilder({ band, target, data, editable, actions }: Props)
             editable={editable}
             fields={cols}
             audio={data.audio}
+            duplicates={duplicates}
             // Removing the last song removes the set.
             onDrop={drop}
             onChange={(songs) => persist(songs.length || !set.songs.length ? updateSet(i, { songs }) : shown.filter((_, j) => j !== i))}

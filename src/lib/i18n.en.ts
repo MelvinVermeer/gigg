@@ -260,6 +260,7 @@ export const en = {
   },
 
   songList: {
+    duplicate: 'Duplicate',
     block: (name: string, n: number) => `Block: ${name} (${n})`,
     moveUp: (title: string) => `Move ${title} up`,
     moveDown: (title: string) => `Move ${title} down`,

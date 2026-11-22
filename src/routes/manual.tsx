@@ -36,7 +36,7 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
         <H>Setlists</H>
         <P>
           Open an event and build its setlist from sets, songs and blocks. A block (an acoustic bit, an encore) is a reusable group of songs; adding one
-          copies its songs, so changing the block later doesn't touch old setlists. Move songs with ↑ and ↓. Every change saves at once. Setlists without
+          copies its songs, so changing the block later doesn't touch old setlists. Move songs with ↑ and ↓. A song that's in the setlist twice is marked ⚠️ Duplicate. Every change saves at once. Setlists without
           an event live under Setlists.
         </P>
         <H>On stage</H>
@@ -94,7 +94,7 @@ const text: Record<Locale, { title: string; archived: (band: string) => string; 
         <H>Setlists</H>
         <P>
           Open een optreden en bouw de setlist uit sets, nummers en blokken. Een blok (een akoestisch stuk, een toegift) is een herbruikbare groep nummers;
-          een blok toevoegen kopieert de nummers, dus het blok later aanpassen verandert oude setlists niet. Verplaats nummers met ↑ en ↓. Elke wijziging
+          een blok toevoegen kopieert de nummers, dus het blok later aanpassen verandert oude setlists niet. Verplaats nummers met ↑ en ↓. Een nummer dat twee keer in de setlist staat krijgt ⚠️ Dubbel. Elke wijziging
           wordt meteen opgeslagen. Setlists zonder optreden staan onder Setlists.
         </P>
         <H>Op het podium</H>
