@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 import { ChevronLeft, ChevronRight, Printer, X } from 'lucide-react'
 import { Markdown } from '#/components/Markdown'
@@ -44,6 +44,11 @@ export function ShowMode({ title, sets, back, lyrics = false }: { title: string;
   // Lyrics mode: one song per screen, straight across sets.
   const songs = sets.flatMap((set) => set.songs.map((song, j) => ({ set, song, j })))
   const pages = lyrics ? songs.length : sets.length
+  const [page, setPage] = useState(0)
+  const cur = lyrics ? songs[page] : undefined
+  const position = lyrics
+    ? cur && `${cur.set.name} · ${cur.j + 1}/${cur.set.songs.length}`
+    : sets[page] && `${sets[page].name} · ${page + 1}/${sets.length}`
   useWakeLock()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -65,7 +70,8 @@ export function ShowMode({ title, sets, back, lyrics = false }: { title: string;
         <Button asChild variant="ghost" size="icon-lg">
           {back({ 'aria-label': t.setlist.closeShow, children: <X className="size-6" /> })}
         </Button>
-        <span className="flex-1 truncate text-muted-foreground">{title}</span>
+        <span className="min-w-0 flex-1 truncate text-muted-foreground">{title}</span>
+        {position && <span className="shrink-0 font-semibold whitespace-nowrap">{position}</span>}
         {pages > 1 && (
           <>
             <Button variant="ghost" size="icon-lg" aria-label={lyrics ? t.setlist.previousSong : t.setlist.previousSet} onClick={() => step(-1)}>
@@ -80,14 +86,13 @@ export function ShowMode({ title, sets, back, lyrics = false }: { title: string;
       {pages === 0 ? (
         <p className="p-6 text-muted-foreground">{t.common.noSetlistYet}</p>
       ) : (
-        <div className="show-track flex flex-1 snap-x snap-mandatory overflow-x-auto outline-none" ref={track} aria-label={lyrics ? t.setlist.songs : t.setlist.sets}>
+        <div className="show-track flex flex-1 snap-x snap-mandatory overflow-x-auto outline-none" ref={track}
+          onScroll={(e) => setPage(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
+          aria-label={lyrics ? t.setlist.songs : t.setlist.sets}>
           {lyrics
-            ? songs.map(({ set, song, j }, i) => (
+            ? songs.map(({ song }, i) => (
                 <article key={i} className="show-set flex-[0_0_100%] snap-start snap-always overflow-y-auto px-5 pt-4 pb-6" aria-label={song.title}>
-                  <p className="text-sm text-muted-foreground">
-                    {set.name} · {j + 1}/{set.songs.length}
-                  </p>
-                  <h2 className="mt-1 mb-0 text-3xl font-bold">{song.title}</h2>
+                  <h2 className="mt-0 mb-0 text-3xl font-bold">{song.title}</h2>
                   {inlineText(song, cols) && <p className="text-muted-foreground">{inlineText(song, cols)}</p>}
                   {song.lyrics && <Markdown className="lyrics mt-4 text-2xl leading-snug">{song.lyrics}</Markdown>}
                   <p className="mt-6 text-lg text-muted-foreground">{songs[i + 1] ? t.setlist.next(songs[i + 1].song.title) : t.setlist.end}</p>
@@ -100,12 +105,6 @@ export function ShowMode({ title, sets, back, lyrics = false }: { title: string;
               aria-label={set.name}
               style={{ '--n': Math.max(set.songs.length, 6) } as React.CSSProperties}
             >
-              <h2 className="mb-2 text-xl">
-                {set.name}{' '}
-                <small className="font-normal text-muted-foreground">
-                  {i + 1}/{sets.length}
-                </small>
-              </h2>
               <ol className={`m-0 leading-[1.15] font-bold marker:text-muted-foreground ${cols.includes('number') ? 'list-decimal pl-[1.4em]' : 'list-none pl-0'}`}>
                 {set.songs.map((song, j) => (
                   <li key={j}>
