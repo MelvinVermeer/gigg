@@ -19,7 +19,7 @@ export async function sendMail({ locale, ...mail }: Mail) {
   if (!url) throw new Error('SMTP_URL (or RESEND_API_KEY) is not set')
   await nodemailer
     .createTransport(url)
-    .sendMail({ from: process.env.MAIL_FROM ?? 'Gigg <no-reply@gigg.band>', ...mail })
+    .sendMail({ from: process.env.MAIL_FROM ?? `Gigg <no-reply@${new URL(process.env.BETTER_AUTH_URL ?? 'http://localhost').hostname}>`, ...mail })
 }
 
 export type Letter = {

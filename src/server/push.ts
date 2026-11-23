@@ -13,7 +13,7 @@ const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY } = process.env
 /** Browsers need it to sign up a device (applicationServerKey). Empty: push isn't set up. */
 export const vapidPublicKey = VAPID_PUBLIC_KEY ?? ''
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY)
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? 'mailto:no-reply@gigg.band', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? `mailto:no-reply@${new URL(process.env.BETTER_AUTH_URL ?? 'http://localhost').hostname}`, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
 
 /** One message per device: these people, except whoever acted, if they turned this kind on. In their language. */
 export async function pushMessages(db: Db, kind: PushKind, eventId: string, userIds: string[], actorId: string) {

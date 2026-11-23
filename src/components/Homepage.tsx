@@ -4,7 +4,7 @@ import { useT } from '#/lib/i18n'
 import '@fontsource-variable/archivo/wdth.css'
 
 const rootRoute = getRouteApi('__root__')
-const source = 'https://github.com/melvinvermeer/gigg'
+const source = 'https://github.com/MelvinVermeer/gigg'
 
 /** Front page for signed-out visitors (and anyone without a band). Styles: `.home` in styles.css. */
 export function Homepage() {

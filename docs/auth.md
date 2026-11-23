@@ -17,8 +17,8 @@
 URLs:
 
 ```
-gigg.band/one-after-909/events/agnietenhof
-gigg.band/one-after-909/songs/a-day-in-a-life
+gigg.band/the-night-owls/events/wedding-at-hotel-meridian
+gigg.band/the-night-owls/songs/come-together
 ```
 
 Old slugs redirect after a rename.
