@@ -21,6 +21,8 @@ export const Route = createRootRoute({
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { name: 'theme-color', content: '#111111' },
+      // Keep every page out of search engines (vercel.json sends the same as a header, for files and API responses).
+      { name: 'robots', content: 'noindex, nofollow' },
       { title: 'Gigg' },
     ],
     links: [
