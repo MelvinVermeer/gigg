@@ -6,7 +6,7 @@
 
 ## Feedback
 
-Anyone in a band sends feedback from the account menu (`/<band>/feedback`); the admin page lists it and items can be marked done (hidden unless “Show all”).
+Anyone in a band sends feedback from the account menu (`/<band>/feedback`); the admin page lists it and items can be marked done (hidden unless “Show all”). With `GITHUB_REPO` and `GITHUB_TOKEN` set, each one also becomes a GitHub issue (label `feedback`) holding only the text: no name, email or band, since issues on a public repo are public.
 
 ## Manual
 

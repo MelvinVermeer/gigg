@@ -16,6 +16,7 @@ import { personalItems } from '#/lib/onboarding'
 import type { Onboarding } from '#/lib/onboarding'
 import type { Db } from './db'
 import { sendPush } from './push'
+import { feedbackIssue } from './github'
 import {
   availabilityAnswer,
   availabilityRequests,
@@ -260,6 +261,7 @@ const feedbackOps = {
   /** Anyone in the band, readers included, can send feedback to the instance admin. */
   sendFeedback: bandOp('reader', z.object({ body: z.string().trim().min(1).max(5000) }), async ({ tx, bandId, userId }, { body }) => {
     await tx.insert(feedback).values({ bandId, userId, body })
+    await feedbackIssue(body)
   }),
 }
 
