@@ -40,3 +40,9 @@ All UI text lives in `src/lib/i18n.en.ts` (the source) and `src/lib/i18n.nl.ts`;
 4. Set the other variables from `.env.example` (email: a free resend.com account with your domain verified, then `RESEND_API_KEY`).
 5. Run `pnpm db:migrate` against the database, then deploy.
 6. Sign in with an email from `ADMIN_EMAILS`.
+
+## Contributing and license
+
+See [CONTRIBUTING.md](CONTRIBUTING.md); report vulnerabilities privately (see [SECURITY.md](SECURITY.md)).
+
+Code: [MIT](LICENSE). The Gigg name and logo (`src/assets/`, `public/` icons) aren't covered: a public fork under its own name and logo, please.
