@@ -14,7 +14,7 @@ Installable PWA. Everything must be readable on a mobile phone, also offline.
 
 ## Hosting
 
-- gigg.band is **invitation only** at the start, to keep costs down.
+- Sign-up is an instance setting (`OPEN_SIGNUP`), off on gigg.band at the start to keep costs down.
 - **Not in search engines.** Every page has `<meta name="robots" content="noindex, nofollow">` (`src/routes/__root.tsx`) and Vercel sends `X-Robots-Tag: noindex, nofollow` on every response (`vercel.json`). Remove both at launch.
 - Anyone can self-host: deploy to Vercel, link a database, set env vars, done.
 

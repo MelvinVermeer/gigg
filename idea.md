@@ -19,7 +19,6 @@ Backlog only. What's built is described in [docs/](docs/).
 - Generated tech rider / stage plot / input list
 - Notifications (push / email)
 - Keep the in-app manual (`/manual`) up to date automatically using skills
-- Band invites by members (creating a band is admin only for now)
 - Feedback: optional push to GitHub Issues via backend API (users don't need a GitHub account); GitHub Issues should not show factory-related labels
 - Privacy: anonymise a user record when someone leaves
 - Styled invite emails: HTML with branding instead of plain text

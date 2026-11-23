@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 test('signed out, / is the homepage; the header switches language and theme', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Gigs. Setlists. Riders. Sorted.')
-  await expect(page.getByRole('link', { name: 'Get started' })).toHaveAttribute('href', '/login')
+  await expect(page.getByRole('link', { name: 'Get started' })).toHaveAttribute('href', '/signup') // e2e runs with OPEN_SIGNUP on
 
   // Language: a cookie, so it sticks for the next page too.
   await page.getByRole('button', { name: 'Nederlands' }).click()

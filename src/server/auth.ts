@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto'
 import { passkey } from '@better-auth/passkey'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
@@ -16,7 +17,15 @@ const adminEmails = (process.env.ADMIN_EMAILS ?? (isLocal ? 'admin@example.com' 
 
 export const isAdminEmail = (email: string) => adminEmails.includes(email.toLowerCase())
 
-/** Invitation only: accounts are created by an admin (or the seed). Admins may sign themselves up. */
+/** OPEN_SIGNUP: anyone may sign up and start a band (signup.tsx). Off when unset. */
+export const signupOpen = ['1', 'true', 'on', 'yes'].includes(process.env.OPEN_SIGNUP?.trim().toLowerCase() ?? '')
+
+const secret = process.env.BETTER_AUTH_SECRET ?? (isLocal ? 'local-dev-secret-not-for-production-use' : undefined)
+
+/** Signs the sign-up callback (email + band name + time), so only the mailed link can create a band. */
+export const signSignup = (parts: string[]) => createHmac('sha256', secret ?? '').update(parts.join('\n')).digest('base64url')
+
+/** Invitation only unless sign-up is open: accounts are created by an admin (or the seed). Admins may sign themselves up. */
 async function account(email: string) {
   const [user] = await db.select({ locale: schema.users.locale }).from(schema.users).where(eq(schema.users.email, email.toLowerCase()))
   return user
@@ -24,7 +33,7 @@ async function account(email: string) {
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? (isLocal ? 'http://localhost:3000' : undefined),
-  secret: process.env.BETTER_AUTH_SECRET ?? (isLocal ? 'local-dev-secret-not-for-production-use' : undefined),
+  secret,
   database: drizzleAdapter(db, { provider: 'pg', schema, usePlural: true }),
   advanced: { database: { generateId: 'uuid' } },
   // Local mode is dev/test only; E2E tests sign in many times in a row.
@@ -40,10 +49,10 @@ export const auth = betterAuth({
   },
   databaseHooks: {
     user: {
-      // An admin signing themselves up gets their browser's language.
+      // Someone signing themselves up (an admin, or anyone with open sign-up) gets their browser's language.
       create: {
         before: async (user, ctx) =>
-          isAdminEmail(user.email) ? { data: { ...user, locale: pickLocale(ctx?.headers?.get('accept-language')) } } : false,
+          signupOpen || isAdminEmail(user.email) ? { data: { ...user, locale: pickLocale(ctx?.headers?.get('accept-language')) } } : false,
       },
     },
   },
@@ -52,7 +61,7 @@ export const auth = betterAuth({
       sendMagicLink: async ({ email, url }, ctx) => {
         const user = await account(email)
         // Same response either way, so this doesn't reveal who has an account.
-        if (!user && !isAdminEmail(email)) return
+        if (!user && !signupOpen && !isAdminEmail(email)) return
         const t = dicts[user ? localeOf(user.locale) : pickLocale(ctx?.headers?.get('accept-language'))]
         await sendMail({ to: email, subject: t.mail.signInSubject, text: t.mail.signInText(url) })
       },

@@ -7,7 +7,7 @@ import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { dicts, isLocale, localeOf, pickLocale } from '#/lib/i18n'
 import { formatLongDate } from '#/lib/date'
-import { auth, isAdminEmail } from './auth'
+import { auth, isAdminEmail, signSignup, signupOpen } from './auth'
 import { db, schema } from './db'
 import { sendMail } from './mail'
 import { vapidPublicKey } from './push'
@@ -30,10 +30,11 @@ export const getMe = createServerFn({ method: 'GET' }).handler(async () => {
   const session = await auth.api.getSession({ headers })
   if (!session) {
     const picked = /(?:^|;\s*)locale=(\w+)/.exec(headers.get('cookie') ?? '')?.[1]
-    return { locale: isLocale(picked) ? picked : pickLocale(headers.get('accept-language')), user: null }
+    return { signupOpen, locale: isLocale(picked) ? picked : pickLocale(headers.get('accept-language')), user: null }
   }
   const { user } = session
   return {
+    signupOpen,
     locale: localeOf(user.locale),
     user: { email: user.email, name: user.name, isAdmin: isAdminEmail(user.email), bands: await myBands(db, user.id) },
   }
@@ -130,6 +131,30 @@ export const deleteBand = createServerFn({ method: 'POST' })
   .middleware([admin])
   .validator((data: { slug: string }) => data)
   .handler(({ data }) => archiveBand(db, String(data.slug)))
+
+/**
+ * Self-service sign-up (OPEN_SIGNUP): mail a sign-in link whose callback carries the band name,
+ * signed so only that link can create the band (api/signup.ts). Same response whether or not the email has an account.
+ */
+export const signUp = createServerFn({ method: 'POST' })
+  .validator(z.object({ email: z.string().trim().toLowerCase().email().max(200), band: z.string().trim().min(1).max(200) }))
+  .handler(async ({ data }) => {
+    if (!signupOpen) throw notFound()
+    const t = String(Date.now())
+    const query = new URLSearchParams({ band: data.band, t, sig: signSignup([data.email, data.band, t]) })
+    // Through the HTTP handler, not auth.api, so better-auth's rate limit applies like on /login.
+    const headers = new Headers(getRequestHeaders())
+    headers.set('content-type', 'application/json')
+    headers.delete('content-length')
+    const res = await auth.handler(
+      new Request(new URL('/api/auth/sign-in/magic-link', getRequestUrl()), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ email: data.email, callbackURL: `/api/signup?${query}` }),
+      }),
+    )
+    if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? res.statusText)
+  })
 
 export const getMyBands = createServerFn({ method: 'GET' })
   .middleware([authed])

@@ -21,8 +21,8 @@ describe('no hard-coded UI text', () => {
       e.isDirectory() ? (e.name === 'ui' ? [] : files(join(dir, e.name))) : e.name.endsWith('.tsx') ? [join(dir, e.name)] : [],
     )
   const sameInEveryLanguage = ['Gigg', 'Am']
-  // The manual is prose per language, side by side in one file.
-  const checked = [...files('src/routes'), ...files('src/components')].filter((f) => !f.endsWith('manual.tsx'))
+  // The manual and the privacy page are prose per language, side by side in one file.
+  const checked = [...files('src/routes'), ...files('src/components')].filter((f) => !/(manual|privacy)\.tsx$/.test(f))
 
   it.each(checked)('%s', (file) => {
     const src = readFileSync(file, 'utf8')

@@ -16,7 +16,7 @@ export default defineConfig({
   webServer: {
     command: 'rm -rf .pglite-e2e .outbox.jsonl && pnpm build && node .output/server/index.mjs',
     url: `http://localhost:${port}`,
-    env: { PORT: String(port), PGLITE_DIR: '.pglite-e2e', BETTER_AUTH_URL: `http://localhost:${port}` },
+    env: { PORT: String(port), PGLITE_DIR: '.pglite-e2e', BETTER_AUTH_URL: `http://localhost:${port}`, OPEN_SIGNUP: '1' },
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },

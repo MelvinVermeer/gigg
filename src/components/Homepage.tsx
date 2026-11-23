@@ -9,7 +9,7 @@ const source = 'https://github.com/melvinvermeer/gigg'
 /** Front page for signed-out visitors (and anyone without a band). Styles: `.home` in styles.css. */
 export function Homepage() {
   const t = useT()
-  const { locale } = rootRoute.useLoaderData()
+  const { locale, signupOpen } = rootRoute.useLoaderData()
   const h = t.home
   // Screenshots of the demo band in public/home, per theme and language. Show mode is always dark.
   const src = (name: string, theme = 'dark') => `/home/${name.replace('{t}', theme)}${locale === 'nl' ? '-nl' : ''}.webp`
@@ -31,7 +31,7 @@ export function Homepage() {
           </h1>
           <p className="home-lede">{h.lede}</p>
           <div className="home-ctas">
-            <Link className="home-btn" to="/login">
+            <Link className="home-btn" to={signupOpen ? '/signup' : '/login'}>
               {h.start}
             </Link>
             <a className="home-btn home-btn-ghost" href={source}>

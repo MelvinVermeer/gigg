@@ -2,7 +2,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { bands, changes, contacts, eventPeople, events, memberships, pushSubscriptions, setlists, songs, users, venues } from './db/schema'
 import { pushMessages } from './push'
-import { answerByToken, archiveBand, availabilityByToken, bandOps, calendarByToken, createBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, setFeedbackDone, slugify } from './ops'
+import { answerByToken, archiveBand, availabilityByToken, bandOps, calendarByToken, createBand, createSignupBand, deleteBandForever, fileForDownload, Forbidden, listAllBands, listFeedback, myBands, NotFound, setFeedbackDone, slugify } from './ops'
 import type { BandOpName } from './ops'
 import { testDb } from './test-db'
 
@@ -750,8 +750,22 @@ describe('admin', () => {
     await createBand(t.db, { name: 'Second', email: 'member@example.com' })
     expect((await myBands(t.db, t.member)).map((b) => b.slug)).toEqual(['demo-band', 'second'])
     expect((await createBand(t.db, { name: 'Admin', email: 'a@example.com' })).slug).toBe('admin-2')
+    expect((await createBand(t.db, { name: 'Sign up', email: 'a@example.com' })).slug).toBe('sign-up')
+    expect((await createBand(t.db, { name: 'Privacy', email: 'a@example.com' })).slug).toBe('privacy-2')
     await expect(createBand(t.db, { name: 'Ghost', email: '' })).rejects.toThrow()
     expect((await listAllBands(t.db)).map((b) => b.name)).not.toContain('Ghost')
+  })
+
+  it('sign-up creates a band for a new or existing account, once per link', async () => {
+    const t = await testDb()
+    const since = new Date()
+    const fresh = await createSignupBand(t.db, { email: 'new@example.com', name: 'The Newcomers', since })
+    expect(fresh.slug).toBe('the-newcomers')
+    expect(await createSignupBand(t.db, { email: 'new@example.com', name: 'The Newcomers', since })).toMatchObject({ slug: 'the-newcomers' })
+    await createSignupBand(t.db, { email: 'member@example.com', name: 'Demo Band', since })
+    expect((await myBands(t.db, t.member)).map((b) => b.slug)).toEqual(['demo-band', 'demo-band-2'])
+    // A later sign-up with the same name is a new band.
+    expect((await createSignupBand(t.db, { email: 'new@example.com', name: 'The Newcomers', since: new Date(Date.now() + 1000) })).slug).toBe('the-newcomers-2')
   })
 
   it('deletes a band for everyone', async () => {

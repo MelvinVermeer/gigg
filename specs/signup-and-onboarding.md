@@ -1,6 +1,6 @@
 # Spec: sign-up, song CSV import/export, "Get to know gigg"
 
-Status: agreed in a grilling session (2026-11-23). Song CSV import/export is built (see `docs/songs.md`); the rest is not built yet. When built, the behaviour moves into `docs/` and this file goes.
+Status: agreed in a grilling session (2026-11-23). Song CSV import/export is built (see `docs/songs.md`); sign-up and the privacy page are built (see `docs/auth.md`), but land on the band's start page until "Get to know gigg" exists. Storage quota and "Get to know gigg" are not built yet. When built, the behaviour moves into `docs/` and this file goes.
 
 ## Problem Statement
 
@@ -38,7 +38,7 @@ A band can only start using gigg when the instance admin creates the band and in
 ### Privacy
 
 17. As a visitor, I want a privacy page explaining which data is stored, where, that there's no tracking, and how to get it deleted, so that I can trust the instance.
-18. As a self-hoster, I want the privacy page to use my instance's contact address, so that I can reuse it without editing code.
+18. As a member, I want to request deletion through the feedback form, so that it reaches whoever runs the instance.
 19. As a Dutch-speaking visitor, I want the privacy page in Dutch, so that I understand it.
 
 ### Storage quota
@@ -111,7 +111,7 @@ A band can only start using gigg when the instance admin creates the band and in
 - **Band creation after verification:** the sign-up form requests a magic link whose callback carries the band name. Clicking it signs in (creating the user if new) and the callback route creates the band and the membership by reusing the existing band creation (slug picking, reserved slugs, numbered on collision), then redirects to the band's welcome page. Magic links are single-use, so a double click can't create two bands.
 - **Existing account:** the same path; the band is added to that account.
 - **New user defaults:** empty display name, locale from the browser (as for admins today).
-- **Privacy page:** static, translated (en/nl) like the manual; contact address from an env var. One line under the sign-up button links to it, no checkbox. Covers: data stored (email, band data, files), where (Vercel/Neon, Frankfurt), no tracking, deletion on request by email (anonymisation is still on the backlog).
+- **Privacy page:** static, translated (en/nl) like the manual. One line under the sign-up button links to it, no checkbox. Covers: data stored (email, band data, files), where (Vercel/Neon, Frankfurt), no tracking, deletion on request through the feedback form (anonymisation is still on the backlog).
 
 ### Storage quota
 
@@ -161,7 +161,7 @@ Seams (all existing):
 - Sample/demo data, product tours, tooltips, welcome emails.
 - Excel (.xlsx) import/export: CSV only.
 - Detecting whether the calendar feed is actually subscribed or the app installed elsewhere: personal items tick on tap.
-- Self-service account deletion / anonymisation (stays on the backlog; the privacy page says "email us").
+- Self-service account deletion / anonymisation (stays on the backlog; the privacy page says "ask through Feedback").
 - "Band invites by members": members can already invite; creating bands is what sign-up adds.
 
 ## Further Notes

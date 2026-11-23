@@ -166,6 +166,17 @@ export const en = {
     or: 'or',
     withPasskey: 'Sign in with a passkey',
     passkeyFailed: 'Passkey sign-in failed',
+    startBand: 'New here? Start a band',
+  },
+
+  signup: {
+    title: 'Start a band',
+    intro: "Your email and your band's name. We'll email you a link that creates the band and signs you in.",
+    band: 'Band name',
+    submit: 'Email me a link',
+    checkEmail: 'Check your email: the link creates your band and signs you in.',
+    privacy: 'What happens with your data',
+    haveAccount: 'Already in a band? Sign in',
   },
 
   me: { title: 'My bands', noBand: "You're not in a band yet." },

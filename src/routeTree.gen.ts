@@ -15,11 +15,14 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ManualRouteImport } from './routes/manual'
 import { Route as MeRouteImport } from './routes/me'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as BandIndexRouteImport } from './routes/$band.index'
 import { Route as BandFeedbackRouteImport } from './routes/$band.feedback'
 import { Route as BandHistoryRouteImport } from './routes/$band.history'
 import { Route as BandSearchRouteImport } from './routes/$band.search'
 import { Route as ApiFilesRouteImport } from './routes/api/files'
+import { Route as ApiSignupRouteImport } from './routes/api/signup'
 import { Route as AvailabilityTokenRouteImport } from './routes/availability.$token'
 import { Route as BandEventsIndexRouteImport } from './routes/$band.events.index'
 import { Route as BandEventsNewRouteImport } from './routes/$band.events.new'
@@ -78,6 +81,16 @@ const MeRoute = MeRouteImport.update({
   path: '/me',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BandIndexRoute = BandIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -101,6 +114,11 @@ const BandSearchRoute = BandSearchRouteImport.update({
 const ApiFilesRoute = ApiFilesRouteImport.update({
   id: '/api/files',
   path: '/api/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSignupRoute = ApiSignupRouteImport.update({
+  id: '/api/signup',
+  path: '/api/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AvailabilityTokenRoute = AvailabilityTokenRouteImport.update({
@@ -249,10 +267,13 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/manual': typeof ManualRoute
   '/me': typeof MeRoute
+  '/privacy': typeof PrivacyRoute
+  '/signup': typeof SignupRoute
   '/$band/feedback': typeof BandFeedbackRoute
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
   '/api/files': typeof ApiFilesRouteWithChildren
+  '/api/signup': typeof ApiSignupRoute
   '/availability/$token': typeof AvailabilityTokenRoute
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
@@ -288,10 +309,13 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/manual': typeof ManualRoute
   '/me': typeof MeRoute
+  '/privacy': typeof PrivacyRoute
+  '/signup': typeof SignupRoute
   '/$band/feedback': typeof BandFeedbackRoute
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
   '/api/files': typeof ApiFilesRouteWithChildren
+  '/api/signup': typeof ApiSignupRoute
   '/availability/$token': typeof AvailabilityTokenRoute
   '/$band': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
@@ -329,10 +353,13 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/manual': typeof ManualRoute
   '/me': typeof MeRoute
+  '/privacy': typeof PrivacyRoute
+  '/signup': typeof SignupRoute
   '/$band/feedback': typeof BandFeedbackRoute
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
   '/api/files': typeof ApiFilesRouteWithChildren
+  '/api/signup': typeof ApiSignupRoute
   '/availability/$token': typeof AvailabilityTokenRoute
   '/$band/': typeof BandIndexRoute
   '/$band/events/new': typeof BandEventsNewRoute
@@ -371,10 +398,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/manual'
     | '/me'
+    | '/privacy'
+    | '/signup'
     | '/$band/feedback'
     | '/$band/history'
     | '/$band/search'
     | '/api/files'
+    | '/api/signup'
     | '/availability/$token'
     | '/$band/'
     | '/$band/events/new'
@@ -410,10 +440,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/manual'
     | '/me'
+    | '/privacy'
+    | '/signup'
     | '/$band/feedback'
     | '/$band/history'
     | '/$band/search'
     | '/api/files'
+    | '/api/signup'
     | '/availability/$token'
     | '/$band'
     | '/$band/events/new'
@@ -450,10 +483,13 @@ export interface FileRouteTypes {
     | '/login'
     | '/manual'
     | '/me'
+    | '/privacy'
+    | '/signup'
     | '/$band/feedback'
     | '/$band/history'
     | '/$band/search'
     | '/api/files'
+    | '/api/signup'
     | '/availability/$token'
     | '/$band/'
     | '/$band/events/new'
@@ -491,7 +527,10 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ManualRoute: typeof ManualRoute
   MeRoute: typeof MeRoute
+  PrivacyRoute: typeof PrivacyRoute
+  SignupRoute: typeof SignupRoute
   ApiFilesRoute: typeof ApiFilesRouteWithChildren
+  ApiSignupRoute: typeof ApiSignupRoute
   AvailabilityTokenRoute: typeof AvailabilityTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiCalendarTokenRoute: typeof ApiCalendarTokenRoute
@@ -541,6 +580,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$band/': {
       id: '/$band/'
       path: '/'
@@ -574,6 +627,13 @@ declare module '@tanstack/react-router' {
       path: '/api/files'
       fullPath: '/api/files'
       preLoaderRoute: typeof ApiFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/signup': {
+      id: '/api/signup'
+      path: '/api/signup'
+      fullPath: '/api/signup'
+      preLoaderRoute: typeof ApiSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/availability/$token': {
@@ -849,7 +909,10 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ManualRoute: ManualRoute,
   MeRoute: MeRoute,
+  PrivacyRoute: PrivacyRoute,
+  SignupRoute: SignupRoute,
   ApiFilesRoute: ApiFilesRouteWithChildren,
+  ApiSignupRoute: ApiSignupRoute,
   AvailabilityTokenRoute: AvailabilityTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiCalendarTokenRoute: ApiCalendarTokenRoute,

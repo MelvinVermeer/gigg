@@ -167,6 +167,17 @@ export const nl: Dict = {
     or: 'of',
     withPasskey: 'Inloggen met een passkey',
     passkeyFailed: 'Inloggen met passkey mislukt',
+    startBand: 'Nieuw hier? Begin een band',
+  },
+
+  signup: {
+    title: 'Begin een band',
+    intro: 'Je e-mailadres en de naam van je band. We mailen je een link die de band aanmaakt en je inlogt.',
+    band: 'Bandnaam',
+    submit: 'Mail me een link',
+    checkEmail: 'Check je mail: de link maakt je band aan en logt je in.',
+    privacy: 'Wat er met je gegevens gebeurt',
+    haveAccount: 'Al in een band? Log in',
   },
 
   me: { title: 'Mijn bands', noBand: 'Je zit nog niet in een band.' },

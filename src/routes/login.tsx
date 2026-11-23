@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, getRouteApi } from '@tanstack/react-router'
 import { useState } from 'react'
 import { KeyRound, Mail } from 'lucide-react'
 import { Field, FormError } from '#/components/Field'
@@ -10,9 +10,11 @@ import { authClient } from '#/lib/auth-client'
 import { useT } from '#/lib/i18n'
 
 export const Route = createFileRoute('/login')({ component: Login })
+const rootRoute = getRouteApi('__root__')
 
 function Login() {
   const t = useT()
+  const { signupOpen } = rootRoute.useLoaderData()
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
 
@@ -62,6 +64,11 @@ function Login() {
             <KeyRound aria-hidden /> {t.login.withPasskey}
           </Button>
           <FormError>{error}</FormError>
+          {signupOpen && (
+            <Link to="/signup" className="text-sm underline">
+              {t.login.startBand}
+            </Link>
+          )}
         </CardContent>
       </Card>
     </main>

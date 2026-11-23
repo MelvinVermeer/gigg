@@ -2009,7 +2009,7 @@ export function myBands(db: Db, userId: string) {
 // Not band-scoped: fns.ts checks ADMIN_EMAILS before calling these.
 
 /** Band slugs live at the top level, next to these routes. */
-const reservedBandSlugs = ['admin', 'api', 'login', 'me', 'new']
+const reservedBandSlugs = ['admin', 'api', 'availability', 'login', 'manual', 'me', 'new', 'privacy', 'signup'] // top-level routes
 
 export function listAllBands(db: Db) {
   return db
@@ -2068,6 +2068,20 @@ export async function createBand(db: Db, rawInput: z.input<typeof newBand>) {
     await tx.insert(memberships).values({ bandId: band.id, userId: user.id, role: 'member' })
     return { slug: band.slug, name: band.name, email, locale: localeOf(user.locale) }
   })
+}
+
+/**
+ * Self-service sign-up (OPEN_SIGNUP): the mailed link lands here signed in. Idempotent: if this
+ * user already joined a band with this name since the sign-up was requested, that band is returned.
+ */
+export async function createSignupBand(db: Db, input: { email: string; name: string; since: Date }) {
+  const [already] = await db
+    .select({ slug: bands.slug, name: bands.name })
+    .from(memberships)
+    .innerJoin(bands, eq(bands.id, memberships.bandId))
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(and(eq(users.email, input.email.trim().toLowerCase()), eq(bands.name, input.name.trim()), gte(memberships.createdAt, input.since)))
+  return already ?? createBand(db, { name: input.name, email: input.email })
 }
 
 /** Soft delete: the band disappears for everyone; its data stays in the DB. */
