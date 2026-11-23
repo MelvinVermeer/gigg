@@ -609,13 +609,25 @@ export const en = {
 
   mail: {
     signInSubject: 'Sign in to Gigg',
-    signInText: (url: string) => `Sign in: ${url}`,
-    addedSubject: (band: string) => `You've been added to ${band} on Gigg`,
-    addedText: (band: string, role: string, email: string, url: string) =>
-      `You're now ${role === 'reader' ? 'a reader' : 'a member'} of ${band} on Gigg: gigs, setlists and riders for bands.\n\nSign in with ${email}: ${url}`,
+    signInKicker: 'Sign in',
+    signInTitle: 'Your way in',
+    signInText: 'Tap the button and you’re signed in. No password needed.',
+    signInButton: 'Sign in',
+    signUpSubject: (band: string) => `Start ${band} on Gigg`,
+    signUpKicker: 'New band',
+    signUpText: 'One tap and your band is ready: plan gigs and rehearsals, and see who can play.',
+    signUpButton: 'Create the band',
+    notYou: 'Didn’t ask for this? Then you can ignore this mail.',
+    addedSubject: (band: string) => `You’re in ${band} on Gigg`,
+    addedKicker: 'Band invite',
+    addedText: (inviter: string | null, role: string) =>
+      `${inviter || 'Someone'} added you as ${role === 'reader' ? 'a reader: follow along with gigs, setlists and rehearsals' : 'a member: plan gigs and rehearsals together and say when you can play'}.`,
+    addedButton: 'Open the band',
+    addedNote: 'Didn’t expect this? Then you can ignore this mail.',
     askSubject: (event: string, when: string) => `Can you make ${event} on ${when}?`,
-    askIntro: (band: string, event: string, venue: string | null, when: string) =>
-      `${band} is checking who can make ${event}${venue ? ` at ${venue}` : ''} on ${when}.`,
+    askKicker: 'Can you play?',
+    askWhen: (when: string, venue: string | null) => (venue ? `${when} · ${venue}` : when),
+    askText: (band: string) => `${band} wants to know who can make it.`,
     askOutro: 'You confirm on the next page, and can change your answer later with the same link.',
   },
 

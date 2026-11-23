@@ -26,6 +26,22 @@ export function pickLocale(acceptLanguage: string | null | undefined): Locale {
   return tags.find((t) => isLocale(t.lang))?.lang as Locale | undefined ?? 'en'
 }
 
+/** The site's language for a signed-out request: the one picked in the header (a cookie), else the browser's. */
+export function requestLocale(headers: Headers | null | undefined): Locale {
+  const picked = /(?:^|;\s*)locale=(\w+)/.exec(headers?.get('cookie') ?? '')?.[1]
+  return isLocale(picked) ? picked : pickLocale(headers?.get('accept-language'))
+}
+
+/**
+ * The language a mail goes out in: the recipient's, else the inviter's (whoever caused the mail),
+ * else the site's when it was triggered from a request, else English.
+ */
+export function emailLocale(from: { recipient?: unknown; inviter?: unknown; headers?: Headers | null }): Locale {
+  if (isLocale(from.recipient)) return from.recipient
+  if (isLocale(from.inviter)) return from.inviter
+  return from.headers ? requestLocale(from.headers) : 'en'
+}
+
 /** Signed out: remember the language picked in the header (a cookie the server reads), then reload into it. */
 export function setGuestLocale(locale: Locale) {
   document.cookie = `locale=${locale}; path=/; max-age=31536000; samesite=lax`

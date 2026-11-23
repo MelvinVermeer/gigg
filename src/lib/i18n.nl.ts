@@ -607,12 +607,25 @@ export const nl: Dict = {
 
   mail: {
     signInSubject: 'Inloggen bij Gigg',
-    signInText: (url) => `Inloggen: ${url}`,
-    addedSubject: (band) => `Je bent toegevoegd aan ${band} op Gigg`,
-    addedText: (band, role, email, url) =>
-      `Je bent nu ${role === 'reader' ? 'lezer' : 'lid'} van ${band} op Gigg: optredens, setlists en riders voor bands.\n\nLog in met ${email}: ${url}`,
+    signInKicker: 'Inloggen',
+    signInTitle: 'Je bent er bijna',
+    signInText: 'Tik op de knop en je bent ingelogd. Geen wachtwoord nodig.',
+    signInButton: 'Inloggen',
+    signUpSubject: (band) => `Begin ${band} op Gigg`,
+    signUpKicker: 'Nieuwe band',
+    signUpText: 'Eén tik en je band staat klaar: plan optredens en repetities, en zie wie er kan.',
+    signUpButton: 'Band aanmaken',
+    notYou: 'Niet aangevraagd? Dan kun je deze mail negeren.',
+    addedSubject: (band) => `Je zit in ${band} op Gigg`,
+    addedKicker: 'Uitnodiging',
+    addedText: (inviter, role) =>
+      `${inviter || 'Iemand'} heeft je toegevoegd als ${role === 'reader' ? 'lezer: kijk mee met optredens, setlists en repetities' : 'lid: plan samen optredens en repetities en geef door wanneer je kunt'}.`,
+    addedButton: 'Open de band',
+    addedNote: 'Had je dit niet verwacht? Dan kun je deze mail negeren.',
     askSubject: (event, when) => `Kun je bij ${event} op ${when}?`,
-    askIntro: (band, event, venue, when) => `${band} wil weten wie er kan bij ${event}${venue ? ` in ${venue}` : ''} op ${when}.`,
+    askKicker: 'Kun je spelen?',
+    askWhen: (when, venue) => (venue ? `${when} · ${venue}` : when),
+    askText: (band) => `${band} wil weten wie er kan.`,
     askOutro: 'Je bevestigt op de volgende pagina, en kunt je antwoord later wijzigen via dezelfde link.',
   },
 

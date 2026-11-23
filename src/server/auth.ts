@@ -5,9 +5,9 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { magicLink } from 'better-auth/plugins/magic-link'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { eq } from 'drizzle-orm'
-import { dicts, localeOf, pickLocale } from '#/lib/i18n'
+import { dicts, emailLocale, requestLocale } from '#/lib/i18n'
 import { db, isLocal, schema } from './db'
-import { sendMail } from './mail'
+import { letter, sendMail } from './mail'
 
 // Local mode (dev/test): admin@example.com is the admin unless ADMIN_EMAILS says otherwise.
 const adminEmails = (process.env.ADMIN_EMAILS ?? (isLocal ? 'admin@example.com' : ''))
@@ -52,7 +52,7 @@ export const auth = betterAuth({
       // Someone signing themselves up (an admin, or anyone with open sign-up) gets their browser's language.
       create: {
         before: async (user, ctx) =>
-          signupOpen || isAdminEmail(user.email) ? { data: { ...user, locale: pickLocale(ctx?.headers?.get('accept-language')) } } : false,
+          signupOpen || isAdminEmail(user.email) ? { data: { ...user, locale: requestLocale(ctx?.headers) } } : false,
       },
     },
   },
@@ -62,8 +62,23 @@ export const auth = betterAuth({
         const user = await account(email)
         // Same response either way, so this doesn't reveal who has an account.
         if (!user && !signupOpen && !isAdminEmail(email)) return
-        const t = dicts[user ? localeOf(user.locale) : pickLocale(ctx?.headers?.get('accept-language'))]
-        await sendMail({ to: email, subject: t.mail.signInSubject, text: t.mail.signInText(url) })
+        const locale = emailLocale({ recipient: user?.locale, headers: ctx?.headers })
+        const t = dicts[locale].mail
+        // Self sign-up (fns.ts signUp) puts the band name in the callback: then the link creates the band.
+        const callback = new URL(url).searchParams.get('callbackURL') ?? ''
+        const band = callback.startsWith('/api/signup?') ? new URLSearchParams(callback.split('?')[1]).get('band') : null
+        await sendMail({
+          to: email,
+          locale,
+          subject: band ? t.signUpSubject(band) : t.signInSubject,
+          ...letter({
+            kicker: band ? t.signUpKicker : t.signInKicker,
+            title: band ?? t.signInTitle,
+            lines: [band ? t.signUpText : t.signInText],
+            buttons: [{ label: band ? t.signUpButton : t.signInButton, url }],
+            note: t.notYou,
+          }),
+        })
       },
     }),
     passkey({ rpName: 'Gigg' }),

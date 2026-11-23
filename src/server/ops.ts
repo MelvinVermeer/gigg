@@ -286,7 +286,7 @@ const memberOps = {
     z.object({ email: z.string().trim().toLowerCase().email().max(200), role: z.enum(role.enumValues) }),
     async ({ tx, bandId, userId }, { email, role }) => {
       // A new account gets the inviter's language.
-      const [inviter] = await tx.select({ locale: users.locale }).from(users).where(eq(users.id, userId))
+      const [inviter] = await tx.select({ name: users.name, locale: users.locale }).from(users).where(eq(users.id, userId))
       await tx.insert(users).values({ name: '', email, locale: inviter.locale }).onConflictDoNothing()
       const [user] = await tx.select({ id: users.id, locale: users.locale }).from(users).where(eq(users.email, email))
       await tx
@@ -294,7 +294,7 @@ const memberOps = {
         .values({ bandId, userId: user.id, role })
         .onConflictDoUpdate({ target: [memberships.bandId, memberships.userId], set: { role, archivedAt: null } })
       const [band] = await tx.select({ name: bands.name }).from(bands).where(eq(bands.id, bandId))
-      return { email, role, bandName: band.name, locale: user.locale }
+      return { email, role, bandName: band.name, locale: user.locale, inviterName: inviter.name || null }
     },
   ),
 

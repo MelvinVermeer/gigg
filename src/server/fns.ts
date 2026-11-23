@@ -5,12 +5,12 @@ import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders, getRequestUrl } from '@tanstack/react-start/server'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { dicts, isLocale, localeOf, pickLocale } from '#/lib/i18n'
+import { dicts, emailLocale, isLocale, localeOf, requestLocale, type Locale } from '#/lib/i18n'
 import { formatLongDate } from '#/lib/date'
 import { currentBand } from '#/lib/current-band'
 import { auth, isAdminEmail, signSignup, signupOpen } from './auth'
 import { db, schema } from './db'
-import { sendMail } from './mail'
+import { letter, sendMail } from './mail'
 import { vapidPublicKey } from './push'
 import { answerByToken, archiveBand, availabilityByToken, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, listFeedback, myBands, NotFound, setFeedbackDone } from './ops'
 import type { BandOpName, BandOps } from './ops'
@@ -30,8 +30,7 @@ export const getMe = createServerFn({ method: 'GET' }).handler(async () => {
   const headers = getRequestHeaders()
   const session = await auth.api.getSession({ headers })
   if (!session) {
-    const picked = /(?:^|;\s*)locale=(\w+)/.exec(headers.get('cookie') ?? '')?.[1]
-    return { signupOpen, locale: isLocale(picked) ? picked : pickLocale(headers.get('accept-language')), user: null }
+    return { signupOpen, locale: requestLocale(headers), user: null }
   }
   const { user } = session
   return {
@@ -113,18 +112,29 @@ export const markFeedback = createServerFn({ method: 'POST' })
   .validator((data: { id: string; done: boolean }) => data)
   .handler(({ data }) => setFeedbackDone(db, data.id, data.done))
 
+/** "You're in the band" mail, for an admin-created band and for invites. */
+function addedMail(locale: Locale, band: string, role: string, inviter: string | null) {
+  const t = dicts[locale].mail
+  return {
+    subject: t.addedSubject(band),
+    ...letter({
+      kicker: t.addedKicker,
+      title: band,
+      lines: [t.addedText(inviter, role)],
+      buttons: [{ label: t.addedButton, url: String(new URL('/login', getRequestUrl())) }],
+      note: t.addedNote,
+    }),
+  }
+}
+
 export const addBand = createServerFn({ method: 'POST' })
   .middleware([admin])
   .validator((data: { name: string; email: string }) => data)
   .handler(async ({ context, data }) => {
     // A new first member gets the admin's language, like any invite.
     const band = await createBand(db, { ...data, locale: context.locale })
-    const t = dicts[band.locale]
-    await sendMail({
-      to: band.email,
-      subject: t.mail.addedSubject(band.name),
-      text: t.mail.addedText(band.name, 'member', band.email, String(new URL('/login', getRequestUrl()))),
-    })
+    const locale = emailLocale({ recipient: band.locale, inviter: context.locale })
+    await sendMail({ to: band.email, locale, ...addedMail(locale, band.name, 'member', null) })
     return { slug: band.slug, name: band.name }
   })
 
@@ -212,12 +222,9 @@ export const inviteMember = createServerFn({ method: 'POST' })
   .validator((data: { band: string; email: string; role: string }) => data)
   .handler(async ({ context, data }) => {
     const invited = await run(context.userId, { band: data.band, op: 'inviteMember', input: { email: data.email, role: data.role } }, false)
-    const t = dicts[localeOf(invited.locale)]
-    await sendMail({
-      to: invited.email,
-      subject: t.mail.addedSubject(invited.bandName),
-      text: t.mail.addedText(invited.bandName, invited.role, invited.email, String(new URL('/login', getRequestUrl()))),
-    })
+    // A new account already got the inviter's language (inviteMember in ops.ts).
+    const locale = emailLocale({ recipient: invited.locale })
+    await sendMail({ to: invited.email, locale, ...addedMail(locale, invited.bandName, invited.role, invited.inviterName) })
     return invited
   })
 
@@ -229,21 +236,21 @@ export const askAvailability = createServerFn({ method: 'POST' })
     const asked = await run(context.userId, { band: data.band, op: 'askAvailability', input: { event: data.event, user: data.user } }, false)
     const { band, event } = asked
     for (const r of asked.recipients) {
-      const t = dicts[localeOf(r.locale)]
+      const locale = emailLocale({ recipient: r.locale })
+      const t = dicts[locale]
       const when = formatLongDate(event.date, t.intl)
       const link = (answer: string) => new URL(`/availability/${r.token}?answer=${answer}`, getRequestUrl())
       await sendMail({
         to: r.email,
+        locale,
         subject: t.mail.askSubject(event.title, when),
-        text: [
-          t.mail.askIntro(band.name, event.title, event.venue, when),
-          '',
-          `${t.answer.yes}: ${link('yes')}`,
-          `${t.answer.maybe}: ${link('maybe')}`,
-          `${t.answer.no}: ${link('no')}`,
-          '',
-          t.mail.askOutro,
-        ].join('\n'),
+        ...letter({
+          kicker: t.mail.askKicker,
+          title: event.title,
+          lines: [t.mail.askWhen(when, event.venue), t.mail.askText(band.name)],
+          buttons: (['yes', 'maybe', 'no'] as const).map((a) => ({ label: t.answer[a], url: String(link(a)) })),
+          note: t.mail.askOutro,
+        }),
       })
     }
     return { sent: asked.recipients.length }

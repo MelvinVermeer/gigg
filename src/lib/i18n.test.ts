@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { pickLocale } from './i18n'
+import { emailLocale, pickLocale, requestLocale } from './i18n'
 
 describe('pickLocale', () => {
   it('takes the first supported language by preference', () => {
@@ -10,6 +10,17 @@ describe('pickLocale', () => {
     expect(pickLocale('en-GB')).toBe('en')
     expect(pickLocale('fr')).toBe('en')
     expect(pickLocale(undefined)).toBe('en')
+  })
+})
+
+describe('emailLocale', () => {
+  const nlBrowser = new Headers({ 'accept-language': 'nl-NL' })
+  it('prefers the recipient, then the inviter, then the site (cookie over browser), then English', () => {
+    expect(emailLocale({ recipient: 'nl', inviter: 'en', headers: new Headers() })).toBe('nl')
+    expect(emailLocale({ recipient: undefined, inviter: 'nl' })).toBe('nl')
+    expect(emailLocale({ recipient: 'xx', headers: nlBrowser })).toBe('nl')
+    expect(requestLocale(new Headers({ cookie: 'a=1; locale=en', 'accept-language': 'nl' }))).toBe('en')
+    expect(emailLocale({})).toBe('en')
   })
 })
 
