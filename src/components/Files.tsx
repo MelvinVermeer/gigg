@@ -1,4 +1,4 @@
-import { useRouter } from '@tanstack/react-router'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
 import { upload as uploadToBlob } from '@vercel/blob/client'
 import { FileText, Trash2, Upload } from 'lucide-react'
 import { useState } from 'react'
@@ -6,8 +6,8 @@ import { FormError } from '#/components/Field'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { bandOp } from '#/server/fns'
-import { cn } from '#/lib/utils'
-import { useT } from '#/lib/i18n'
+import { cn, formatBytes } from '#/lib/utils'
+import { label, useT } from '#/lib/i18n'
 import { confirmDialog } from '#/components/ConfirmDialog'
 import { AudioPlayer, isAudio } from '#/components/AudioPlayer'
 
@@ -18,12 +18,13 @@ type Mode = { direct: boolean; maxBytes: number }
 let mode: Promise<Mode> | undefined
 const uploadMode = () => (mode ??= fetch('/api/files').then((r) => r.json()))
 
-const size = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`)
+const bandRoute = getRouteApi('/$band')
 
 /** Files attached to a song or event: links to download, and (members) upload, by button or drop, and remove. */
 export function Files({ band, owner, files, canEdit }: Props) {
   const router = useRouter()
   const t = useT()
+  const { storage } = bandRoute.useLoaderData()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
 
@@ -32,12 +33,19 @@ export function Files({ band, owner, files, canEdit }: Props) {
   async function upload(picked: File[]) {
     setError('')
     const { direct, maxBytes } = await uploadMode()
+    // The band's quota, checked before any upload starts; the server checks again.
+    let left = storage.limitBytes === null ? Infinity : storage.limitBytes - storage.usedBytes
     for (const file of picked) {
       setBusy(t.files.uploading(file.name))
       if (file.size > maxBytes) {
         setError(t.files.tooBig(file.name, maxBytes / 1024 / 1024))
         break
       }
+      if (file.size > left) {
+        setError(`${file.name}: ${t.errors.storageFull}`)
+        break
+      }
+      left -= file.size
       const owner_: Record<string, string> = owner
       let res: Response
       if (direct) {
@@ -47,7 +55,7 @@ export function Files({ band, owner, files, canEdit }: Props) {
           await uploadToBlob(key, file, {
             access: 'private',
             handleUploadUrl: '/api/files/upload',
-            clientPayload: JSON.stringify({ band }),
+            clientPayload: JSON.stringify({ band, size: file.size }),
             contentType: file.type || 'application/octet-stream',
             multipart: file.size > 8 * 1024 * 1024,
             onUploadProgress: (p) => setBusy(`${t.files.uploading(file.name)} ${Math.round(p.percentage)}%`),
@@ -69,7 +77,7 @@ export function Files({ band, owner, files, canEdit }: Props) {
         res = await fetch('/api/files', { method: 'POST', body: form })
       }
       if (!res.ok) {
-        setError(`${file.name}: ${(await res.text()) || t.files.failed}`)
+        setError(`${file.name}: ${label(t.errors, await res.text()) || t.files.failed}`)
         break
       }
     }
@@ -132,7 +140,7 @@ export function Files({ band, owner, files, canEdit }: Props) {
                 <a href={`/api/files/${f.id}`} className="min-w-0 flex-1 truncate font-medium underline-offset-4 hover:underline">
                   {f.name}
                 </a>
-                <span className="hidden shrink-0 text-muted-foreground sm:inline">({size(f.sizeBytes)})</span>
+                <span className="hidden shrink-0 text-muted-foreground sm:inline">({formatBytes(f.sizeBytes)})</span>
                 {canEdit && (
                   <Button
                     variant="ghost"

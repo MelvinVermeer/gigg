@@ -19,10 +19,14 @@ export const Route = createFileRoute('/api/files/upload')({
               request,
               body: (await request.json()) as HandleUploadBody,
               onBeforeGenerateToken: async (pathname, clientPayload) => {
-                const { band } = JSON.parse(clientPayload ?? '{}')
-                if ((await bandOps.getBand(db, session.user.id, String(band), {})).role !== 'member') throw new Forbidden()
+                const { band, size } = JSON.parse(clientPayload ?? '{}')
+                const { role, storage } = await bandOps.getBand(db, session.user.id, String(band), {})
+                if (role !== 'member') throw new Forbidden()
                 if (!isFileKey(pathname)) throw new Error('Bad key')
-                return { maximumSizeInBytes: maxUploadBytes, addRandomSuffix: false }
+                // The quota: refuse a declared size that doesn't fit, and let Blob hold the upload to what's left.
+                const left = storage.limitBytes === null ? maxUploadBytes : Math.min(maxUploadBytes, storage.limitBytes - storage.usedBytes)
+                if (left <= 0 || !(Number(size) <= left)) throw new Error('storageFull')
+                return { maximumSizeInBytes: left, addRandomSuffix: false }
               },
             }),
           )

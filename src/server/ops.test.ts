@@ -856,6 +856,24 @@ describe('files', () => {
     await bandOps.addFile(t.db, t.member, t.band, { ...upload, sizeBytes: 500, blobPath: '00000000-0000-4000-8000-000000000009', event: 'summer-party' })
     expect(await listAllBands(t.db)).toMatchObject([{ slug: t.band, fileBytes: 1500 }])
   })
+
+  it('has no storage limit unless BAND_STORAGE_LIMIT_MB is set', async () => {
+    const t = await testDb()
+    await bandOps.addFile(t.db, t.member, t.band, { ...upload, sizeBytes: 5 * 1024 * 1024, song: 'closer' })
+    expect((await bandOps.getBand(t.db, t.reader, t.band, {})).storage).toEqual({ usedBytes: 5 * 1024 * 1024, limitBytes: null })
+  })
+
+  it('refuses a file that would take the band over its storage limit, archived files counting', async () => {
+    vi.stubEnv('BAND_STORAGE_LIMIT_MB', '1')
+    onTestFinished(() => void vi.unstubAllEnvs())
+    const t = await testDb()
+    const a = await bandOps.addFile(t.db, t.member, t.band, { ...upload, sizeBytes: 600 * 1024, song: 'closer' })
+    await bandOps.archiveFile(t.db, t.member, t.band, { id: a.id })
+    const second = { ...upload, sizeBytes: 500 * 1024, blobPath: '00000000-0000-4000-8000-000000000002', song: 'closer' }
+    await expect(bandOps.addFile(t.db, t.member, t.band, second)).rejects.toThrow('storageFull')
+    await bandOps.addFile(t.db, t.member, t.band, { ...second, sizeBytes: 424 * 1024 })
+    expect((await bandOps.getBand(t.db, t.member, t.band, {})).storage).toEqual({ usedBytes: 1024 * 1024, limitBytes: 1024 * 1024 })
+  })
 })
 
 describe('feedback', () => {
