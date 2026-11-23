@@ -42,7 +42,7 @@ All UI text lives in `src/lib/i18n.en.ts` (the source) and `src/lib/i18n.nl.ts`;
    - `BETTER_AUTH_SECRET`: `openssl rand -base64 32`.
    - `ADMIN_EMAILS`: your email.
    - Email: `RESEND_API_KEY` (or `SMTP_URL`, which wins), and `MAIL_FROM` on a domain verified with that provider. Unset, it sends from `no-reply@` the host of `BETTER_AUTH_URL`.
-   - Optional: `OPEN_SIGNUP`; push with `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (`npx web-push generate-vapid-keys`) and `VAPID_SUBJECT`; feedback as GitHub issues with `GITHUB_REPO`/`GITHUB_TOKEN` (in a public repo the feedback text is public).
+   - Optional: `OPEN_SIGNUP`; `BAND_STORAGE_LIMIT_MB` (storage per band, no limit when unset); push with `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (`npx web-push generate-vapid-keys`) and `VAPID_SUBJECT`; feedback as GitHub issues with `GITHUB_REPO`/`GITHUB_TOKEN` (in a public repo the feedback text is public).
 5. Migrate the database before the first deploy, either way:
    - Locally: `DATABASE_URL=<Neon direct (unpooled) URL> pnpm db:migrate`.
    - In CI: add the repo secret `DATABASE_URL_UNPOOLED` and enable Actions on the fork; the `migrate` job then runs on every push to `main`. Without the secret that job fails.

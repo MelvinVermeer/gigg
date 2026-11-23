@@ -18,6 +18,7 @@ import { currentTheme, setTheme } from '#/lib/theme'
 import type { Theme } from '#/lib/theme'
 import { dicts, errorText, locales, useT } from '#/lib/i18n'
 import { useOnline } from '#/lib/online'
+import { formatBytes } from '#/lib/utils'
 import { confirmDialog } from '#/components/ConfirmDialog'
 import { ShownFieldsCard, SongFieldsCard } from '#/components/SongSettings'
 
@@ -336,6 +337,9 @@ function Settings() {
               </CardAction>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4">
+              {band.storage.limitBytes !== null && (
+                <p className="text-sm text-muted-foreground">{t.settings.storage(formatBytes(band.storage.usedBytes), formatBytes(band.storage.limitBytes))}</p>
+              )}
               <h3 className="mb-0 text-sm font-medium">{t.settings.members}</h3>
               <ul aria-label={t.settings.members} className="divide-y rounded-lg border">
                 {members.map((m) => (

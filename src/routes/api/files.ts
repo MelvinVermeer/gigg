@@ -40,7 +40,9 @@ export const Route = createFileRoute('/api/files')({
           if (!(file instanceof File) || !file.size) return new Response('No file', { status: 400 })
           if (file.size > maxUploadBytes) return new Response(`Files can be up to ${mb} MB`, { status: 413 })
           // Members only, and the owner must exist, before any bytes are stored.
-          if ((await bandOps.getBand(db, userId, band, {})).role !== 'member') throw new Forbidden()
+          const { role, storage } = await bandOps.getBand(db, userId, band, {})
+          if (role !== 'member') throw new Forbidden()
+          if (storage.limitBytes !== null && storage.usedBytes + file.size > storage.limitBytes) return new Response('storageFull', { status: 413 })
           const key = crypto.randomUUID()
           await putLocalFile(key, file)
           return Response.json(
@@ -55,6 +57,7 @@ export const Route = createFileRoute('/api/files')({
           )
         } catch (e) {
           if (e instanceof Forbidden || e instanceof NotFound) return new Response('Not found', { status: 404 })
+          if (e instanceof Error && e.message === 'storageFull') return new Response('storageFull', { status: 413 })
           throw e
         }
       },

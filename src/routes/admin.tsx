@@ -8,8 +8,7 @@ import { Input } from '#/components/ui/input'
 import { addBand, deleteBand, deleteBandPermanently, getAllBands, getFeedback, markFeedback } from '#/server/fns'
 import { errorText, useT } from '#/lib/i18n'
 import { confirmDialog } from '#/components/ConfirmDialog'
-
-const size = (b: number) => (b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : b < 1024 ** 3 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${(b / 1024 ** 3).toFixed(2)} GB`)
+import { formatBytes } from '#/lib/utils'
 
 export const Route = createFileRoute('/admin')({
   loader: async () => ({ bands: await getAllBands(), feedback: await getFeedback() }),
@@ -100,7 +99,7 @@ function Admin() {
                         {b.name}
                       </Link>
                       <span className="truncate text-muted-foreground" title={b.members.join(', ')}>
-                        {t.admin.members(b.members.length)} · {t.admin.files(size(b.fileBytes))} · {b.members.join(', ')}
+                        {t.admin.members(b.members.length)} · {t.admin.files(formatBytes(b.fileBytes))} · {b.members.join(', ')}
                       </span>
                     </span>
                     <Button variant="ghost" size="xs" className="text-destructive" onClick={() => remove(b.slug, b.name)}>
@@ -169,7 +168,7 @@ function Admin() {
                     <span className="min-w-0 flex-1 truncate" title={b.members.join(', ')}>
                       {b.name}{' '}
                       <span className="text-muted-foreground">
-                        ({b.members.join(', ') || t.admin.noMembers}), {t.admin.files(size(b.fileBytes))}
+                        ({b.members.join(', ') || t.admin.noMembers}), {t.admin.files(formatBytes(b.fileBytes))}
                       </span>
                     </span>
                     <Button variant="destructive" size="xs" onClick={() => removeForever(b.slug, b.name)}>

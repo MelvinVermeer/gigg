@@ -208,6 +208,20 @@ function filesOf(tx: Tx, owner: 'song' | 'event', ownerId: string) {
     .orderBy(asc(files.createdAt))
 }
 
+/** BAND_STORAGE_LIMIT_MB: the most a band may store, archived files included (they still occupy storage). Unset: no limit. */
+export function bandStorageLimit() {
+  const mb = Number(process.env.BAND_STORAGE_LIMIT_MB)
+  return mb > 0 ? mb * 1024 * 1024 : null
+}
+
+async function bandStorage(tx: Tx, bandId: string) {
+  const [{ usedBytes }] = await tx
+    .select({ usedBytes: sql<number>`coalesce(sum(${files.sizeBytes}), 0)::float8` })
+    .from(files)
+    .where(eq(files.bandId, bandId))
+  return { usedBytes, limitBytes: bandStorageLimit() }
+}
+
 const fileOps = {
   /** Record an uploaded file on a song or an event (exactly one of the two slugs). */
   addFile: bandOp(
@@ -223,6 +237,9 @@ const fileOps = {
       })
       .refine((v) => !!v.song !== !!v.event, 'A file belongs to a song or an event'),
     async ({ tx, bandId, userId }, { song, event, ...file }) => {
+      // Upload routes check first; this catches two uploads racing for the last space.
+      const { usedBytes, limitBytes } = await bandStorage(tx, bandId)
+      if (limitBytes !== null && usedBytes + file.sizeBytes > limitBytes) throw new Error('storageFull')
       const owner = song
         ? { songId: (await rowBySlug(tx, songs, bandId, song)).id }
         : { eventId: (await rowBySlug(tx, events, bandId, event!)).id }
@@ -2030,6 +2047,7 @@ export const bandOps = {
       songFields: await activeSongFields(tx, bandId),
       shown: await shownFor(tx, bandId, userId),
       onboarding: await onboardingFor(tx, bandId, userId, role),
+      storage: await bandStorage(tx, bandId),
     }
   }),
   ...onboardingOps,
