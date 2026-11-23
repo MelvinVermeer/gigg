@@ -206,7 +206,7 @@ export const nl: Dict = {
     haveAccount: 'Al in een band? Log in',
   },
 
-  me: { title: 'Mijn bands', noBand: 'Je zit nog niet in een band.' },
+  me: { noBand: 'Je zit nog niet in een band.' },
 
   feedback: {
     title: 'Feedback',

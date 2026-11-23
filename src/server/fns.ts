@@ -7,6 +7,7 @@ import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { dicts, isLocale, localeOf, pickLocale } from '#/lib/i18n'
 import { formatLongDate } from '#/lib/date'
+import { currentBand } from '#/lib/current-band'
 import { auth, isAdminEmail, signSignup, signupOpen } from './auth'
 import { db, schema } from './db'
 import { sendMail } from './mail'
@@ -156,9 +157,13 @@ export const signUp = createServerFn({ method: 'POST' })
     if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? res.statusText)
   })
 
-export const getMyBands = createServerFn({ method: 'GET' })
+/** The band to open after sign-in: the one this device last had open (its cookie), else your first. */
+export const getMyCurrentBand = createServerFn({ method: 'GET' })
   .middleware([authed])
-  .handler(({ context }) => myBands(db, context.userId))
+  .handler(async ({ context }) => {
+    const band = currentBand(await myBands(db, context.userId), new Headers(getRequestHeaders()).get('cookie') ?? '')
+    return band?.slug ?? null
+  })
 
 type OpCall = { band: string; op: string; input: unknown }
 

@@ -205,7 +205,7 @@ export const en = {
     haveAccount: 'Already in a band? Sign in',
   },
 
-  me: { title: 'My bands', noBand: "You're not in a band yet." },
+  me: { noBand: "You're not in a band yet." },
 
   feedback: {
     title: 'Feedback',
