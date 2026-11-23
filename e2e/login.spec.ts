@@ -34,7 +34,7 @@ test('sign in with an email link, add a passkey, sign back in with it', async ({
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole('button', { name: /Account menu/ })).toHaveCount(0)
 
-  await page.getByRole('link', { name: 'Sign in' }).click()
+  await page.getByRole('banner').getByRole('link', { name: 'Sign in' }).click()
   await page.getByRole('button', { name: 'Sign in with a passkey' }).click()
   await expect(page).toHaveURL(/\/demo-band\/events$/)
   await expect(page.getByRole('button', { name: 'Account menu for Dev Member' })).toHaveText('D')

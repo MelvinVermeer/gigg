@@ -36,6 +36,6 @@ test.describe('user menu', () => {
 
 test('signed-out visitors see "Sign in" instead of the menu', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible()
+  await expect(page.getByRole('banner').getByRole('link', { name: 'Sign in' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Account menu/ })).toHaveCount(0)
 })

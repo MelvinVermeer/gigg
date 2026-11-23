@@ -15,12 +15,12 @@ Installable PWA. Everything must be readable on a mobile phone, also offline.
 ## Hosting
 
 - gigg.band is **invitation only** at the start, to keep costs down.
-- **Not in search engines.** Every page has `<meta name="robots" content="noindex, nofollow">` (`src/routes/__root.tsx`) and Vercel sends `X-Robots-Tag: noindex, nofollow` on every response (`vercel.json`). The marketing page (`marketing/`) has the same meta tag. Remove all three at launch.
+- **Not in search engines.** Every page has `<meta name="robots" content="noindex, nofollow">` (`src/routes/__root.tsx`) and Vercel sends `X-Robots-Tag: noindex, nofollow` on every response (`vercel.json`). Remove both at launch.
 - Anyone can self-host: deploy to Vercel, link a database, set env vars, done.
 
 ## Languages
 
-English and Dutch (informal *je*). Each user has a language, changeable in Settings; someone invited gets the inviter's. Signed out, the browser's language decides. Emails, the emailed availability page and the calendar feed use the recipient's language; history is written in the viewer's. URLs, user content and stored values stay as they are. A third language is one more dictionary file.
+English and Dutch (informal *je*). Each user has a language, changeable in Settings; someone invited gets the inviter's. Signed out, the EN/NL switch in the header decides (a `locale` cookie), else the browser's language. Emails, the emailed availability page and the calendar feed use the recipient's language; history is written in the viewer's. URLs, user content and stored values stay as they are. A third language is one more dictionary file.
 
 ## UX
 

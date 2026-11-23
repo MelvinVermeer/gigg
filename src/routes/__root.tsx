@@ -1,4 +1,4 @@
-import { HeadContent, Link, Outlet, Scripts, createRootRoute, useParams } from '@tanstack/react-router'
+import { HeadContent, Link, Outlet, Scripts, createRootRoute, useLocation, useParams } from '@tanstack/react-router'
 
 import lockup from '../assets/gigg-lockup.svg'
 import lockupInk from '../assets/gigg-lockup-ink.svg'
@@ -7,6 +7,7 @@ import { InstallBanner } from '#/components/InstallApp'
 import { HeaderSearch } from '#/components/HeaderSearch'
 import { PasskeyPrompt } from '#/components/PasskeyPrompt'
 import { UserMenu } from '#/components/UserMenu'
+import { GuestControls } from '#/components/GuestControls'
 import { Button } from '#/components/ui/button'
 import { useT } from '#/lib/i18n'
 import { useOnline } from '#/lib/online'
@@ -76,6 +77,9 @@ function RootLayout() {
   }, [me])
   // Search is per band: the band you're in, otherwise your first band.
   const searchBand = useParams({ strict: false }).band ?? me?.bands[0]?.slug
+  // The homepage (`/` without a band) is wider than the app's pages; the header lines up with it.
+  const { pathname } = useLocation()
+  const wide = pathname === '/' && !me?.bands.length
   return (
     <>
       {!online && (
@@ -84,20 +88,24 @@ function RootLayout() {
         </p>
       )}
       <header className="site-header sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-3xl items-center gap-4 px-4">
+        <div className={`mx-auto flex h-14 w-full items-center gap-4 px-4 ${wide ? 'max-w-6xl' : 'max-w-3xl'}`}>
         <Link to="/" aria-label={t.header.home} className="shrink-0">
           {/* CSS shows the one matching the theme (handover: no yellow wordmark on light). */}
           <img className="logo-on-light" src={lockupInk} alt="Gigg" height={32} width={97} />
           <img className="logo-on-dark" src={lockup} alt="Gigg" height={32} width={97} />
         </Link>
         {searchBand && <HeaderSearch band={searchBand} />}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
           {me ? (
             <UserMenu name={me.name || me.email} bands={me.bands} isAdmin={me.isAdmin} />
           ) : (
-            <Button asChild variant="outline" size="sm">
-              <Link to="/login">{t.header.signIn}</Link>
-            </Button>
+            <>
+              {/* Not on the emailed availability page: it always speaks the recipient's language. */}
+              {!pathname.startsWith('/availability') && <GuestControls />}
+              <Button asChild variant="outline" size="sm">
+                <Link to="/login">{t.header.signIn}</Link>
+              </Button>
+            </>
           )}
         </div>
         </div>
