@@ -26,6 +26,8 @@ test('⌘K / Ctrl+K and / focus the header search; / typed in a field stays ther
   await page.keyboard.press('/')
   await expect(name).toBeFocused()
   await expect(name).toHaveValue(/\//)
+  // Put the name back before leaving the field: it saves on blur when changed, and this is the shared reader.
+  await name.fill('Dev Reader')
 
   // / elsewhere focuses search, without typing the slash.
   await page.getByRole('main').click({ position: { x: 1, y: 1 } })
