@@ -210,6 +210,7 @@ export const en = {
   feedback: {
     title: 'Feedback',
     intro: 'Something broken, confusing or missing? Tell us. It goes to whoever runs this Gigg.',
+    public: 'The text (without your name, email or band) also becomes a public issue on GitHub, so leave out anything private.',
     label: 'Your feedback',
     send: 'Send feedback',
     thanks: 'Thanks, we got it.',

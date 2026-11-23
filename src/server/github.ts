@@ -2,6 +2,9 @@
 // Only the text goes out: no name, email or band, since a public repo shows issues to everyone.
 const { GITHUB_REPO, GITHUB_TOKEN } = process.env
 
+/** The feedback page warns that the text ends up in public when this is on. */
+export const feedbackGoesPublic = !!(GITHUB_REPO && GITHUB_TOKEN)
+
 /** Best effort: a GitHub outage never loses the feedback, which is already saved. */
 export async function feedbackIssue(body: string) {
   if (!GITHUB_REPO || !GITHUB_TOKEN) return

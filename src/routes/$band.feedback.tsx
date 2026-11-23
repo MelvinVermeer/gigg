@@ -3,16 +3,17 @@ import { useState } from 'react'
 import { Field, FormError } from '#/components/Field'
 import { Button } from '#/components/ui/button'
 import { Textarea } from '#/components/ui/textarea'
-import { sendFeedback } from '#/server/fns'
+import { getFeedbackGoesPublic, sendFeedback } from '#/server/fns'
 import { useT } from '#/lib/i18n'
 import { useOnline } from '#/lib/online'
 
-export const Route = createFileRoute('/$band/feedback')({ component: Feedback })
+export const Route = createFileRoute('/$band/feedback')({ loader: () => getFeedbackGoesPublic(), component: Feedback })
 
 const bandRoute = getRouteApi('/$band')
 
 function Feedback() {
   const band = bandRoute.useLoaderData()
+  const goesPublic = Route.useLoaderData()
   const t = useT()
   const online = useOnline()
   const [sent, setSent] = useState(false)
@@ -34,7 +35,10 @@ function Feedback() {
   return (
     <>
       <h1>{t.feedback.title}</h1>
-      <p className="mb-6 text-muted-foreground">{t.feedback.intro}</p>
+      <p className="mb-6 text-muted-foreground">
+        {t.feedback.intro}
+        {goesPublic && <> {t.feedback.public}</>}
+      </p>
       {/* hidden, not removed: a half-written message survives a dropped connection. */}
       <form hidden={!online} onSubmit={send} onChange={() => setSent(false)} className="grid gap-4">
         <Field label={t.feedback.label}>

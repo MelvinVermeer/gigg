@@ -211,6 +211,7 @@ export const nl: Dict = {
   feedback: {
     title: 'Feedback',
     intro: 'Iets kapot, onduidelijk of mis je iets? Laat het weten. Het gaat naar wie deze Gigg beheert.',
+    public: 'De tekst (zonder je naam, e-mail of band) wordt ook een openbaar issue op GitHub, dus laat privézaken weg.',
     label: 'Je feedback',
     send: 'Feedback versturen',
     thanks: 'Bedankt, we hebben het ontvangen.',

@@ -10,6 +10,7 @@ import { formatLongDate } from '#/lib/date'
 import { currentBand } from '#/lib/current-band'
 import { adminEmails, auth, isAdminEmail, signSignup, signupOpen } from './auth'
 import { db, schema } from './db'
+import { feedbackGoesPublic } from './github'
 import { letter, sendMail } from './mail'
 import { vapidPublicKey } from './push'
 import { answerByToken, archiveBand, availabilityByToken, bandOps, createBand, deleteBandForever, Forbidden, listAllBands, listFeedback, myBands, NotFound, setFeedbackDone } from './ops'
@@ -229,6 +230,8 @@ export const inviteMember = createServerFn({ method: 'POST' })
   })
 
 /** Send feedback (ops.ts saves it); from someone who isn't an admin, it's mailed to every admin too. */
+export const getFeedbackGoesPublic = createServerFn().handler(() => feedbackGoesPublic)
+
 export const sendFeedback = createServerFn({ method: 'POST' })
   .middleware([authed])
   .validator((data: { band: string; body: string }) => data)
