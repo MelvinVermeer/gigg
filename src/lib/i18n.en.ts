@@ -55,6 +55,10 @@ export const en = {
 
   /** Messages for errors the server throws by key. */
   errors: {
+    importNoTitle: 'Pick a column for the title',
+    importDuplicateTarget: 'Two columns go to the same field: pick another one for one of them',
+    importFieldName: 'A new field’s name can be up to 40 characters: rename the column, or pick another target',
+    importBadTarget: 'This field doesn’t exist any more: reload and try again',
     songFieldExists: 'A song field with this name already exists',
     songFieldReserved: 'That name is already a standard song field',
     availabilityClosed: 'The availability check is closed',
@@ -347,6 +351,36 @@ export const en = {
     isArchived: 'This song is archived.',
     durationFormat: 'Duration must look like 3:45',
     tuningLong: 'Tuning / instrument changes',
+    export: 'Export CSV',
+  },
+
+  songImport: {
+    button: 'Import',
+    title: 'Import songs',
+    intro: 'Upload a CSV file, or paste rows from a spreadsheet (first row: column names) or a plain list of titles.',
+    file: 'Choose a CSV file',
+    paste: 'Or paste here',
+    next: 'Next',
+    back: 'Back',
+    noRows: 'No songs found: the first row holds the column names, the songs go below it.',
+    mapIntro: (n: number) => `${plural(n, 'row', 'rows')} found. Check where each column goes.`,
+    column: 'Column',
+    example: 'Example',
+    goesTo: 'Goes to',
+    goesToFor: (h: string) => `Where “${h}” goes`,
+    newField: (h: string) => `New field “${h}”`,
+    toNotes: 'Add to notes',
+    skip: 'Skip',
+    notUnderstood: (n: number, ex: string) => `${n} not understood, e.g. “${ex}” (left empty)`,
+    existing: 'Songs that already exist',
+    existingChoice: { skip: 'Skip them', fill: 'Fill in empty fields', overwrite: 'Overwrite with the file' },
+    go: (n: number) => `Import ${plural(n, 'row', 'rows')}`,
+    done: (c: number, u: number, s: number) => `${c} created, ${u} updated, ${s} skipped.`,
+    problems: 'Not understood (left empty):',
+    more: 'Want to import more? Drop a CSV file on the song list, or go to',
+    toSettings: 'Settings',
+    drop: 'Or drop a CSV file here.',
+    settingsIntro: 'Bring in songs from a spreadsheet, or take them all to one. Export → edit → import with “Overwrite” works as a bulk edit.',
   },
 
   files: {

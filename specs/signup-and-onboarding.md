@@ -1,6 +1,6 @@
 # Spec: sign-up, song CSV import/export, "Get to know gigg"
 
-Status: agreed in a grilling session (2026-11-23), not built yet. When built, the behaviour moves into `docs/` and this file goes.
+Status: agreed in a grilling session (2026-11-23). Song CSV import/export is built (see `docs/songs.md`); the rest is not built yet. When built, the behaviour moves into `docs/` and this file goes.
 
 ## Problem Statement
 

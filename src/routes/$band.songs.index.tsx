@@ -1,6 +1,9 @@
 import { Link, createFileRoute, getRouteApi } from '@tanstack/react-router'
 import { formatDuration } from '#/lib/duration'
-import { Plus } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
+import { useState } from 'react'
+import { SongImport, isCsvFile } from '#/components/SongImport'
+import { cn } from '#/lib/utils'
 import { Button } from '#/components/ui/button'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '#/components/ui/table'
 import { bandOp } from '#/server/fns'
@@ -24,22 +27,41 @@ function Songs() {
   const canEdit = useCanEdit()
   const t = useT()
   const total = songs.reduce((sum, s) => sum + (s.durationSec ?? 0), 0)
+  // The import dialog: undefined = closed, '' = empty, else a dropped file's text.
+  const [importing, setImporting] = useState<string>()
+  const [dragging, setDragging] = useState(false)
+
+  // Members can drop a CSV file on the song list (or the empty state) to import it.
+  const dropProps =
+    canEdit && !archived
+      ? {
+          onDragOver: (e: React.DragEvent) => {
+            if (!e.dataTransfer.types.includes('Files')) return
+            e.preventDefault()
+            setDragging(true)
+          },
+          onDragLeave: (e: React.DragEvent) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false)
+          },
+          onDrop: async (e: React.DragEvent) => {
+            e.preventDefault()
+            setDragging(false)
+            const file = [...e.dataTransfer.files].find(isCsvFile)
+            if (file) setImporting(await file.text())
+          },
+        }
+      : {}
+  const dropClass = dragging && 'outline-2 outline-offset-2 outline-primary outline-dashed'
 
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="mb-0">{archived ? t.songs.archivedList : t.common.songs}</h1>
         <div className="flex gap-2">
-          {archived ? (
+          {archived && (
             <Button asChild variant="ghost" size="sm">
               <Link to="/$band/songs" params={{ band: band.slug }}>
                 {t.songs.back}
-              </Link>
-            </Button>
-          ) : (
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/$band/setlists" params={{ band: band.slug }} hash="blocks">
-                {t.common.blocks}
               </Link>
             </Button>
           )}
@@ -53,7 +75,7 @@ function Songs() {
         </div>
       </div>
       {songs.length ? (
-        <div className="rounded-xl border bg-card">
+        <div className={cn('rounded-xl border bg-card', dropClass)} {...dropProps}>
           <Table className="songs">
             <TableHeader>
               <TableRow>
@@ -87,10 +109,19 @@ function Songs() {
           </Table>
         </div>
       ) : (
-        <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
-          {archived ? t.songs.noArchived : t.common.noSongsYet}
-        </p>
+        <div className={cn('rounded-xl border border-dashed p-8 text-center text-muted-foreground', dropClass)} {...dropProps}>
+          <p className="mb-0">{archived ? t.songs.noArchived : t.common.noSongsYet}</p>
+          {!archived && canEdit && (
+            <>
+              <Button size="sm" className="mt-4" onClick={() => setImporting('')}>
+                <Upload aria-hidden /> {t.songImport.button}
+              </Button>
+              <p className="mt-2 mb-0 text-sm">{t.songImport.drop}</p>
+            </>
+          )}
+        </div>
       )}
+      {importing !== undefined && <SongImport band={band.slug} custom={band.songFields} initial={importing} hint onClose={() => setImporting(undefined)} />}
     </>
   )
 }

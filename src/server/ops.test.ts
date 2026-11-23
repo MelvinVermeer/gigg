@@ -107,6 +107,72 @@ describe('songs', () => {
   })
 })
 
+describe('song import', () => {
+  const headers = ['Title', 'BPM', 'Key', 'Singer']
+  const targets = ['field:title', 'field:bpm', 'field:key', 'notes']
+  const run = (t: Awaited<ReturnType<typeof testDb>>, rows: string[][], rest: object = {}) =>
+    bandOps.importSongs(t.db, t.member, t.band, { headers, targets, rows, ...rest })
+  const song = async (t: Awaited<ReturnType<typeof testDb>>, title: string) => (await t.db.select().from(songs).where(eq(songs.title, title)))[0]
+
+  it('creates new songs; in-file duplicates count once; values not understood are left empty and reported', async () => {
+    const t = await testDb()
+    const res = await run(t, [['New One', 'fast', 'C', 'Anna'], ['new  ONE', '100', '', ''], ['', '90', '', '']])
+    expect(res).toEqual({ created: 1, updated: 0, skipped: 1, problems: [{ title: 'New One', column: 'BPM', value: 'fast' }] })
+    expect(await song(t, 'New One')).toMatchObject({ slug: 'new-one', bpm: null, key: 'C', notes: 'Singer: Anna' })
+  })
+
+  it('existing songs: skip by default, fill only empty fields, overwrite non-empty cells; archived ones stay untouched', async () => {
+    const t = await testDb()
+    await bandOps.archiveSong(t.db, t.member, t.band, { slug: 'slow-one' })
+    const rows = [['closer', '99', 'D', 'Bob'], ['Slow one', '99', '', '']]
+    expect(await run(t, rows)).toMatchObject({ created: 0, updated: 0, skipped: 2 })
+    expect(await run(t, rows, { existing: 'fill' })).toMatchObject({ updated: 1, skipped: 1 })
+    expect(await song(t, 'Closer')).toMatchObject({ bpm: 140, key: 'G', notes: 'Singer: Bob' })
+    // Overwrite keeps the notes and adds the new line; the same file again changes nothing.
+    expect(await run(t, [['Closer', '99', '', 'Kim']], { existing: 'overwrite' })).toMatchObject({ updated: 1 })
+    expect(await song(t, 'Closer')).toMatchObject({ bpm: 99, key: 'G', notes: 'Singer: Bob\nSinger: Kim' })
+    expect(await run(t, [['Closer', '99', '', 'Kim']], { existing: 'overwrite' })).toMatchObject({ updated: 0, skipped: 1 })
+    expect(await song(t, 'Slow One')).toMatchObject({ bpm: 72, archivedAt: expect.any(Date) })
+  })
+
+  it('creates new custom fields named after the header', async () => {
+    const t = await testDb()
+    await bandOps.importSongs(t.db, t.member, t.band, { headers: ['Song', 'Capo'], targets: ['field:title', 'new-custom'], rows: [['Capo Song', '2']] })
+    const [field] = (await bandOps.getBand(t.db, t.member, t.band, {})).songFields
+    expect(field.name).toBe('Capo')
+    expect((await song(t, 'Capo Song')).custom).toEqual({ [field.id]: '2' })
+  })
+
+  it('needs one title column, one column per field, and new field names that fit', async () => {
+    const t = await testDb()
+    await expect(bandOps.importSongs(t.db, t.member, t.band, { headers: ['A'], targets: ['notes'], rows: [['x']] })).rejects.toThrow('importNoTitle')
+    await expect(bandOps.importSongs(t.db, t.member, t.band, { headers: ['A', 'B'], targets: ['field:title', 'field:title'], rows: [['x', 'y']] })).rejects.toThrow('importDuplicateTarget')
+    await expect(bandOps.importSongs(t.db, t.member, t.band, { headers: ['A', 'x'.repeat(41)], targets: ['field:title', 'new-custom'], rows: [['x', 'y']] })).rejects.toThrow('importFieldName')
+  })
+
+  it('reports values not understood only for songs it writes; a title that is too long skips the row', async () => {
+    const t = await testDb()
+    const res = await run(t, [['Closer', 'fast', '', ''], ['x'.repeat(201), '', '', '']])
+    expect(res.skipped).toBe(2)
+    expect(res.problems).toEqual([{ title: 'x'.repeat(60) + '…', column: 'Title', value: 'x'.repeat(201) }])
+  })
+
+  it('is one transaction in the history, by the importing user', async () => {
+    const t = await testDb()
+    await run(t, [['A', '', '', ''], ['B', '', '', '']])
+    const rows = (await t.db.select().from(changes).where(eq(changes.tableName, 'songs'))).filter((r) => ['A', 'B'].includes((r.after as { title: string }).title))
+    expect(rows).toHaveLength(2)
+    expect(new Set(rows.map((r) => r.txId)).size).toBe(1)
+    expect(rows.every((r) => r.userId === t.member)).toBe(true)
+  })
+
+  it('exports every field of the active songs', async () => {
+    const t = await testDb()
+    const list = await bandOps.listSongsForExport(t.db, t.reader, t.band, {})
+    expect(list.map((s) => s.title)).toEqual(['Closer', 'Opening Song', 'Slow One'])
+  })
+})
+
 const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10)
 
 describe('song fields', () => {

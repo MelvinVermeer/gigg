@@ -9,6 +9,8 @@ import { dicts, label, locales, localeOf } from '#/lib/i18n'
 import type { Dict } from '#/lib/i18n'
 import { slugify } from '#/lib/slug'
 import { defaultShown, outputs } from '#/lib/song-fields'
+import { duplicateTarget, existingChoices, importFields, mergeSong, rowValues, withNoteLines } from '#/lib/song-csv'
+import type { Target } from '#/lib/song-csv'
 import type { Shown } from '#/lib/song-fields'
 import type { Db } from './db'
 import { sendPush } from './push'
@@ -422,6 +424,94 @@ const songOps = {
     const { id } = await rowBySlug(tx, songs, bandId, slug)
     await tx.update(songs).set({ archivedAt: null }).where(eq(songs.id, id))
   }),
+
+  /** Every field of the active songs, for the CSV export (lib/song-csv.ts builds it). */
+  listSongsForExport: bandOp('reader', z.object({}), ({ tx, bandId }) =>
+    tx
+      .select({ title: songs.title, durationSec: songs.durationSec, key: songs.key, bpm: songs.bpm, tuning: songs.tuning, tags: songs.tags, notes: songs.notes, lyrics: songs.lyrics, custom: songs.custom })
+      .from(songs)
+      .where(and(eq(songs.bandId, bandId), isNull(songs.archivedAt)))
+      .orderBy(asc(songs.title)),
+  ),
+
+  /**
+   * A CSV import after the mapping step (lib/song-csv.ts), as one transaction (one change in the history).
+   * Existing songs match on title ignoring case and spacing, archived ones too (those stay as they are);
+   * the first of duplicate titles in the file wins; empty cells never clear a field.
+   */
+  importSongs: bandOp(
+    'member',
+    z.object({
+      headers: z.array(z.string().max(200)).min(1).max(100),
+      targets: z.array(z.string().max(60)).max(100),
+      rows: z.array(z.array(z.string().max(20_000)).max(100)).max(2000),
+      existing: z.enum(existingChoices).default('skip'),
+    }),
+    async ({ tx, bandId }, { headers, rows, existing, ...input }) => {
+      const valid = new Set<string>(['new-custom', 'notes', 'skip', ...importFields.map((f) => `field:${f}`), ...(await activeSongFields(tx, bandId)).map((f) => `custom:${f.id}`)])
+      const targets = headers.map((_, i) => (input.targets[i] ?? 'skip') as Target)
+      if (targets.some((t) => !valid.has(t))) throw new Error('importBadTarget')
+      if (!targets.includes('field:title')) throw new Error('importNoTitle')
+      if (duplicateTarget(targets)) throw new Error('importDuplicateTarget')
+
+      const customIds: Record<number, string> = {}
+      for (const [i, t] of targets.entries()) {
+        if (t !== 'new-custom') continue
+        const name = fieldName.safeParse(headers[i])
+        if (!name.success) throw new Error('importFieldName')
+        await assertFreeName(tx, bandId, name.data)
+        customIds[i] = (await tx.insert(songFieldsTable).values({ bandId, name: name.data }).returning({ id: songFieldsTable.id }))[0].id
+      }
+
+      const matchKey = (title: string) => title.trim().replace(/\s+/g, ' ').toLowerCase()
+      // Several songs with the same title: an active one wins over an archived one, else the oldest.
+      const existingSongs = new Map<string, typeof songs.$inferSelect>()
+      for (const song of await tx.select().from(songs).where(eq(songs.bandId, bandId)).orderBy(sql`${songs.archivedAt} is not null`, asc(songs.createdAt))) {
+        const k = matchKey(song.title)
+        if (!existingSongs.has(k)) existingSongs.set(k, song)
+      }
+      const seen = new Set<string>()
+      const summary = { created: 0, updated: 0, skipped: 0, problems: [] as { title: string; column: string; value: string }[] }
+      // Only songs that get written report their values not understood; a skipped song keeps everything.
+      const report = (title: string, cells: { column: string; value: string }[]) => summary.problems.push(...cells.map((c) => ({ title, ...c })))
+      for (const row of rows) {
+        const parsed = rowValues(headers, targets, row, customIds)
+        const { values, problems } = parsed
+        if (!values.title) {
+          // A title that isn't understood (too long): the row is skipped and says why.
+          const bad = problems.find((p) => p.column === headers[targets.indexOf('field:title')])
+          if (bad) summary.skipped++, report(bad.value.slice(0, 60) + '…', [bad])
+          continue
+        }
+        const k = matchKey(values.title)
+        const old = existingSongs.get(k)
+        if (seen.has(k) || old?.archivedAt || (old && existing === 'skip')) {
+          seen.add(k)
+          summary.skipped++
+          continue
+        }
+        seen.add(k)
+        if (!old) {
+          const notes = withNoteLines(values.notes, parsed.noteLines)
+          const fields = songFields.parse({ ...values, title: values.title, notes: notes.notes })
+          const slug = await freeSlug(tx, songs, bandId, numbered(slugify(fields.title)))
+          await tx.insert(songs).values({ bandId, slug, ...fields })
+          summary.created++
+          report(values.title, [...problems, ...notes.dropped])
+          continue
+        }
+        const { set, dropped } = mergeSong(old, parsed, existing as 'fill' | 'overwrite')
+        if (!set) {
+          summary.skipped++
+          continue
+        }
+        await tx.update(songs).set(set).where(eq(songs.id, old.id))
+        summary.updated++
+        report(values.title, [...problems, ...dropped])
+      }
+      return summary
+    },
+  ),
 }
 
 // Custom song fields and which fields each person shows -----------------------

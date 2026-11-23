@@ -4,6 +4,36 @@ import { asMember, asReader } from './helpers'
 test.describe('member', () => {
   test.use(asMember)
 
+  test('imports songs from Settings, and a CSV dropped on the song list', async ({ page }) => {
+    const title = `Imported ${Date.now()}`
+    await page.goto('/demo-band/settings')
+    await page.getByRole('button', { name: 'Import' }).click()
+    await page.getByLabel('Or paste here').fill(`Song;Tempo;Singer\n${title};fast;Anna`)
+    await page.getByRole('button', { name: 'Next' }).click()
+    await expect(page.getByLabel('Where “Song” goes')).toHaveValue('field:title')
+    await expect(page.getByText('1 not understood, e.g. “fast”')).toBeVisible()
+    await page.getByRole('button', { name: 'Import 1 row' }).click()
+    await expect(page.getByText('1 created, 0 updated, 0 skipped.')).toBeVisible()
+    await page.getByRole('button', { name: 'Done' }).click()
+    await page.goto('/demo-band/songs')
+    await page.getByRole('link', { name: title }).click()
+    await expect(page.locator('.notes')).toContainText('Singer: Anna')
+
+    // A plain list of titles dropped on the list: straight to the mapping step, no header row.
+    await page.goto('/demo-band/songs')
+    const drop = await page.evaluateHandle((text) => {
+      const dt = new DataTransfer()
+      dt.items.add(new File([text], 'list.csv', { type: 'text/csv' }))
+      return dt
+    }, `${title} two\n${title} three`)
+    await page.locator('table.songs').dispatchEvent('drop', { dataTransfer: drop })
+    await page.getByRole('button', { name: 'Import 2 rows' }).click()
+    await expect(page.getByText('2 created, 0 updated, 0 skipped.')).toBeVisible()
+    await expect(page.getByText('Want to import more?')).toBeVisible()
+    await page.getByRole('button', { name: 'Done' }).click()
+    await expect(page.getByRole('link', { name: `${title} three` })).toBeVisible()
+  })
+
   test('adds, renames and archives a song', async ({ page }) => {
     const title = `Test Song ${Date.now()}`
     await page.goto('/demo-band/songs')
@@ -77,5 +107,13 @@ test.describe('reader', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Closer')
     await expect(page.getByRole('link', { name: 'Edit' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
+  })
+
+  test('can export songs from Settings, not import', async ({ page }) => {
+    await page.goto('/demo-band/settings')
+    await expect(page.getByRole('button', { name: 'Import' })).toHaveCount(0)
+    const download = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Export CSV' }).click()
+    expect((await download).suggestedFilename()).toBe('demo-band-songs.csv')
   })
 })

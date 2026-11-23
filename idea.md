@@ -4,7 +4,7 @@ Backlog only. What's built is described in [docs/](docs/).
 
 ## Next
 
-- **Excel export (first up)**, then Numbers / CSV (setlist, repertoire, event overview)
+- **Excel export**: event overview (setlist and repertoire CSV exist)
 - **Download everything upcoming**: one tap to save all upcoming events, setlists and their songs (and later files) to the device, for offline use without visiting each page
 
 ## Backlog

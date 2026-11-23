@@ -1,10 +1,12 @@
 import { useRouter } from '@tanstack/react-router'
-import { Archive, Plus } from 'lucide-react'
+import { Archive, FileSpreadsheet, Plus, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
 import { Checkbox } from '#/components/ui/checkbox'
 import { Input } from '#/components/ui/input'
+import { Separator } from '#/components/ui/separator'
+import { SongImport, downloadSongsCsv } from '#/components/SongImport'
 import { bandOp } from '#/server/fns'
 import { errorText, useT } from '#/lib/i18n'
 import { columns, fieldName, fixedFields, outputs, playOutputs } from '#/lib/song-fields'
@@ -18,7 +20,9 @@ export function SongFieldsCard({ band, fields, canEdit }: { band: { slug: string
   const s = t.settings
   const router = useRouter()
   const [error, setError] = useState('')
+  const [importing, setImporting] = useState(false)
   const active = fields.filter((f) => !f.archivedAt)
+  const custom = active.map(({ id, name }) => ({ id, name }))
   const archived = fields.filter((f) => f.archivedAt)
 
   async function run(op: () => Promise<unknown>) {
@@ -113,6 +117,19 @@ export function SongFieldsCard({ band, fields, canEdit }: { band: { slug: string
             </ul>
           </details>
         )}
+        <Separator className="my-2" />
+        <p className="text-sm text-muted-foreground">{t.songImport.settingsIntro}</p>
+        <div className="flex flex-wrap gap-2">
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={() => setImporting(true)}>
+              <Upload aria-hidden /> {t.songImport.button}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => downloadSongsCsv(band.slug, custom, t).then(() => setError(''), () => setError(t.common.somethingWrong))}>
+            <FileSpreadsheet aria-hidden /> {t.songs.export}
+          </Button>
+        </div>
+        {importing && <SongImport band={band.slug} custom={custom} onClose={() => setImporting(false)} />}
       </CardContent>
     </Card>
   )
