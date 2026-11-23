@@ -253,7 +253,7 @@ test.describe('standalone setlists', () => {
     await page.getByRole('button', { name: /Add song/ }).click()
     await page.getByRole('link', { name: 'Edit', exact: true }).click()
     await page.getByLabel('Key').fill('E')
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save' }).first().click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)
 
     await page.getByRole('link', { name: 'Edit', exact: true }).click()

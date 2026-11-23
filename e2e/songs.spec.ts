@@ -65,7 +65,7 @@ test.describe('member', () => {
     // Rename: new URL, and the old one still leads to the song.
     await page.getByRole('link', { name: 'Edit' }).click()
     await page.getByLabel('Title').fill(`${title} (live)`)
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save' }).first().click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${title} (live)`)
     expect(page.url()).not.toBe(oldUrl)
     await page.goto(oldUrl)

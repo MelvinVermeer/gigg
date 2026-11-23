@@ -12,13 +12,15 @@ type Props = {
   initial?: Partial<SongFields>
   /** The band's active custom fields, one single-line input each. */
   customFields: CustomField[]
+  /** Lets a submit button outside the form (form={id}) save it too */
+  id?: string
   submitLabel: string
   onSubmit: (fields: SongFields) => Promise<void>
 }
 
 const num = (v: FormDataEntryValue | null) => (String(v ?? '').trim() ? Number(v) : null)
 
-export function SongForm({ initial = {}, customFields, submitLabel, onSubmit }: Props) {
+export function SongForm({ initial = {}, customFields, submitLabel, id, onSubmit }: Props) {
   const t = useT()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -52,7 +54,7 @@ export function SongForm({ initial = {}, customFields, submitLabel, onSubmit }: 
   }
 
   return (
-    <form className="grid gap-5" onSubmit={submit}>
+    <form id={id} className="grid gap-5" onSubmit={submit}>
       <Field label={t.common.title}>
         <Input name="title" required maxLength={200} defaultValue={initial.title ?? ''} />
       </Field>

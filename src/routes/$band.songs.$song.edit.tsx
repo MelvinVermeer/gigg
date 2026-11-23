@@ -35,7 +35,9 @@ function EditSong() {
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="mb-0">{t.songs.editTitle(song.title)}</h1>
-        <HistoryLink item={song.id} />
+        <Button type="submit" form="song-form">
+          {t.common.save}
+        </Button>
       </div>
       {song.archivedAt && (
         <p role="status" className="mb-4 rounded-md bg-muted px-3 py-2 text-sm">
@@ -43,6 +45,7 @@ function EditSong() {
         </p>
       )}
       <SongForm
+        id="song-form"
         initial={song}
         customFields={songFields}
         submitLabel={t.common.save}
@@ -52,9 +55,12 @@ function EditSong() {
         }}
       />
       <Separator className="my-8" />
-      <Button variant="outline" onClick={() => setArchived(!song.archivedAt)}>
-        {song.archivedAt ? t.common.restore : t.common.archive}
-      </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button variant="outline" onClick={() => setArchived(!song.archivedAt)}>
+          {song.archivedAt ? t.common.restore : t.common.archive}
+        </Button>
+        <HistoryLink item={song.id} />
+      </div>
     </>
   )
 }
