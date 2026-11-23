@@ -10,7 +10,7 @@ import { db, isLocal, schema } from './db'
 import { letter, sendMail } from './mail'
 
 // Local mode (dev/test): admin@example.com is the admin unless ADMIN_EMAILS says otherwise.
-const adminEmails = (process.env.ADMIN_EMAILS ?? (isLocal ? 'admin@example.com' : ''))
+export const adminEmails = (process.env.ADMIN_EMAILS ?? (isLocal ? 'admin@example.com' : ''))
   .split(',')
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean)

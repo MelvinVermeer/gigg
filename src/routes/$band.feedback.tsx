@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Field, FormError } from '#/components/Field'
 import { Button } from '#/components/ui/button'
 import { Textarea } from '#/components/ui/textarea'
-import { bandOp } from '#/server/fns'
+import { sendFeedback } from '#/server/fns'
 import { useT } from '#/lib/i18n'
 import { useOnline } from '#/lib/online'
 
@@ -23,7 +23,7 @@ function Feedback() {
     const form = e.currentTarget
     setError('')
     try {
-      await bandOp('sendFeedback', band.slug, { body: String(new FormData(form).get('body')) })
+      await sendFeedback({ data: { band: band.slug, body: String(new FormData(form).get('body')) } })
       form.reset()
       setSent(true)
     } catch {

@@ -262,6 +262,9 @@ const feedbackOps = {
   sendFeedback: bandOp('reader', z.object({ body: z.string().trim().min(1).max(5000) }), async ({ tx, bandId, userId }, { body }) => {
     await tx.insert(feedback).values({ bandId, userId, body })
     await feedbackIssue(body)
+    const [from] = await tx.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, userId))
+    const [band] = await tx.select({ name: bands.name }).from(bands).where(eq(bands.id, bandId))
+    return { body, ...from, band: band.name }
   }),
 }
 

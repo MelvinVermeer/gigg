@@ -627,6 +627,11 @@ export const nl: Dict = {
     askWhen: (when, venue) => (venue ? `${when} · ${venue}` : when),
     askText: (band) => `${band} wil weten wie er kan.`,
     askOutro: 'Je bevestigt op de volgende pagina, en kunt je antwoord later wijzigen via dezelfde link.',
+    feedbackSubject: (band) => `Feedback van ${band}`,
+    feedbackKicker: 'Feedback',
+    feedbackFrom: (name, email) => `Van ${name ? `${name} (${email})` : email}:`,
+    feedbackButton: 'Naar admin',
+    feedbackNote: 'Je krijgt dit omdat je admin bent van deze Gigg.',
   },
 
   calendar: { option: '(optie)' },

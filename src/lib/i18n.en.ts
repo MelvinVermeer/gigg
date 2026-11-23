@@ -629,6 +629,11 @@ export const en = {
     askWhen: (when: string, venue: string | null) => (venue ? `${when} · ${venue}` : when),
     askText: (band: string) => `${band} wants to know who can make it.`,
     askOutro: 'You confirm on the next page, and can change your answer later with the same link.',
+    feedbackSubject: (band: string) => `Feedback from ${band}`,
+    feedbackKicker: 'Feedback',
+    feedbackFrom: (name: string, email: string) => `From ${name ? `${name} (${email})` : email}:`,
+    feedbackButton: 'Open admin',
+    feedbackNote: 'You get this because you’re an admin of this Gigg.',
   },
 
   calendar: { option: '(option)' },

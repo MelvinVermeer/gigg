@@ -3,12 +3,12 @@
 import { notFound, redirect } from '@tanstack/react-router'
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders, getRequestUrl } from '@tanstack/react-start/server'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import { dicts, emailLocale, isLocale, localeOf, requestLocale, type Locale } from '#/lib/i18n'
 import { formatLongDate } from '#/lib/date'
 import { currentBand } from '#/lib/current-band'
-import { auth, isAdminEmail, signSignup, signupOpen } from './auth'
+import { adminEmails, auth, isAdminEmail, signSignup, signupOpen } from './auth'
 import { db, schema } from './db'
 import { letter, sendMail } from './mail'
 import { vapidPublicKey } from './push'
@@ -226,6 +226,32 @@ export const inviteMember = createServerFn({ method: 'POST' })
     const locale = emailLocale({ recipient: invited.locale })
     await sendMail({ to: invited.email, locale, ...addedMail(locale, invited.bandName, invited.role, invited.inviterName) })
     return invited
+  })
+
+/** Send feedback (ops.ts saves it); from someone who isn't an admin, it's mailed to every admin too. */
+export const sendFeedback = createServerFn({ method: 'POST' })
+  .middleware([authed])
+  .validator((data: { band: string; body: string }) => data)
+  .handler(async ({ context, data }) => {
+    const sent = await run(context.userId, { band: data.band, op: 'sendFeedback', input: { body: data.body } }, false)
+    if (isAdminEmail(sent.email) || !adminEmails.length) return
+    const known = await db.select({ email: schema.users.email, locale: schema.users.locale }).from(schema.users).where(inArray(schema.users.email, adminEmails))
+    for (const to of adminEmails) {
+      const locale = emailLocale({ recipient: known.find((u) => u.email === to)?.locale })
+      const t = dicts[locale].mail
+      await sendMail({
+        to,
+        locale,
+        subject: t.feedbackSubject(sent.band),
+        ...letter({
+          kicker: t.feedbackKicker,
+          title: sent.band,
+          lines: [t.feedbackFrom(sent.name, sent.email), ...sent.body.split('\n')],
+          buttons: [{ label: t.feedbackButton, url: String(new URL('/admin', getRequestUrl())) }],
+          note: t.feedbackNote,
+        }),
+      })
+    }
   })
 
 /** Ask whether people can make an event (everyone not asked yet, or one `user`): record it (ops.ts), then mail each their one-tap links. */
