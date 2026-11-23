@@ -1,13 +1,16 @@
 import { Link, getRouteApi } from '@tanstack/react-router'
 import { MicVocal, Printer, WifiOff } from 'lucide-react'
+import { preload } from 'react-dom'
 import { useT } from '#/lib/i18n'
-import '@fontsource-variable/archivo/wdth.css'
+import archivo from '@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2?url'
 
 const rootRoute = getRouteApi('__root__')
 const source = 'https://github.com/MelvinVermeer/gigg'
 
 /** Front page for signed-out visitors (and anyone without a band). Styles: `.home` in styles.css. */
 export function Homepage() {
+  // Fetch the display font alongside the CSS; its @font-face (styles.css) never swaps late, so nothing shifts.
+  preload(archivo, { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' })
   const t = useT()
   const { locale, signupOpen } = rootRoute.useLoaderData()
   const h = t.home
@@ -15,8 +18,8 @@ export function Homepage() {
   const src = (name: string, theme = 'dark') => `/home/${name.replace('{t}', theme)}${locale === 'nl' ? '-nl' : ''}.webp`
   const Shot = ({ name, alt, lazy }: { name: string; alt: string; lazy?: boolean }) => (
     <>
-      <img className="logo-on-light" src={src(name, 'light')} alt={alt} loading={lazy ? 'lazy' : undefined} />
-      <img className="logo-on-dark" src={src(name, 'dark')} alt={alt} loading={lazy ? 'lazy' : undefined} />
+      <img className="logo-on-light" src={src(name, 'light')} alt={alt} width={780} height={1688} loading={lazy ? 'lazy' : undefined} />
+      <img className="logo-on-dark" src={src(name, 'dark')} alt={alt} width={780} height={1688} loading={lazy ? 'lazy' : undefined} />
     </>
   )
   const factIcons = [MicVocal, WifiOff, Printer]
@@ -46,7 +49,7 @@ export function Homepage() {
               <Shot name="phone-{t}-setlist" alt="" />
             </div>
             <div className="home-phone home-p1">
-              <img src={src('phone-dark-show')} alt="" />
+              <img src={src('phone-dark-show')} alt="" width={780} height={1688} />
             </div>
           </div>
         </div>
@@ -90,7 +93,7 @@ export function Homepage() {
       <section className="home-showcase">
         <div className="home-wrap home-show-grid">
           <div className="home-big">
-            <img src={src('desk-dark-show')} alt={h.showAlt} loading="lazy" />
+            <img src={src('desk-dark-show')} alt={h.showAlt} width={2560} height={1640} loading="lazy" />
           </div>
           <div>
             <p className="home-eyebrow">{h.showEyebrow}</p>
