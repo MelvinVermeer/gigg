@@ -9,7 +9,7 @@ pnpm install
 pnpm dev          # http://localhost:3000, no accounts or database needed
 ```
 
-Without `DATABASE_URL` the app runs in **local mode**: Postgres in WASM (PGlite) in `.pglite/`, migrated and seeded on start. Sign in as `member@example.com`, `reader@example.com` or `admin@example.com` (admin: `/admin` in the user menu); the sign-in link is printed in the console. Delete `.pglite/` to start fresh.
+Without `DATABASE_URL` the app runs in **local mode**: Postgres in WASM (PGlite) in `.pglite/`, migrated and seeded on start. Sign in as `member@example.com`, `reader@example.com` or `admin@example.com` (admin: `/admin` in the user menu); the sign-in link is printed in the console. Delete `.pglite/` to start fresh. A production build (`pnpm build && pnpm start`) refuses local mode unless `LOCAL_MODE=1` is set.
 
 ## Test
 
