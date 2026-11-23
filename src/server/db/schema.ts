@@ -49,6 +49,8 @@ export const memberships = pgTable(
     role: role('role').notNull(),
     createdAt: createdAt(),
     archivedAt: archivedAt(),
+    // "Get to know gigg" hidden (Hide, or the "All set" end). Personal view state: the audit trigger skips it.
+    onboardingHiddenAt: timestamp('onboarding_hidden_at', { withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.bandId, t.userId] })],
 )

@@ -87,7 +87,33 @@ export const en = {
     feedback: 'Feedback',
     manual: 'Manual',
     admin: 'Admin',
+    welcome: 'Get to know gigg',
     logOut: 'Log out',
+  },
+
+  welcome: {
+    title: 'Get to know gigg',
+    intro: 'A few things gigg can do. Nothing here is required: tick off what you know, hide it when you’re done.',
+    bar: (done: number, total: number) => `Get to know gigg · ${done}/${total}`,
+    barDone: 'Get to know gigg · All set',
+    bandTitle: 'For the band',
+    youTitle: 'For you',
+    gotIt: 'Got it',
+    done: 'Done',
+    hide: 'Hide',
+    hidden: 'Hidden from the events page. You can always open it again from the user menu.',
+    allSet: 'All set! You know your way around gigg.',
+    items: {
+      event: { title: 'Plan an event', text: 'Add your next gig or rehearsal, with its venue, times and who’s coming.', link: 'Add an event' },
+      songs: { title: 'Add your songs', text: 'Type them in one by one, or import your whole repertoire from a spreadsheet.', link: 'Go to songs' },
+      setlist: { title: 'Build a setlist for your event', text: 'Open an event and drag songs into sets. Print it or show it on stage.', link: 'Go to events' },
+      invite: { title: 'Invite a bandmate', text: 'Members can do everything, readers only look. They get an email with a link.', link: 'Invite in settings' },
+      availability: { title: 'Ask for availability', text: 'On an event, ask who can make it. Everyone answers from an email link, no account needed.', link: 'Go to events' },
+      passkey: { title: 'Sign in faster with a passkey', text: 'Use Face ID, Touch ID or your device PIN instead of an email link.', link: 'Add a passkey' },
+      calendar: { title: 'Your gigs in your own calendar', text: 'Subscribe once in Google, Apple or Outlook calendar and your gigs show up there, kept up to date.', link: 'Set up the calendar' },
+      notifications: { title: 'Get a notification when you’re asked', text: 'A push message on your phone or computer when someone asks if you can make it.', link: 'Turn on notifications' },
+      install: { title: 'Install gigg on this device', text: 'In Safari, tap Share, then “Add to Home Screen”. gigg then opens like an app, also offline.', link: '' },
+    },
   },
 
   passkey: {

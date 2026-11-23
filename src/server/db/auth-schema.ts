@@ -21,6 +21,8 @@ export const users = pgTable("users", {
   locale: text("locale").default("en").notNull(),
   notifyAsked: boolean("notify_asked").default(false).notNull(),
   notifyAdded: boolean("notify_added").default(false).notNull(),
+  // Not from Better Auth: personal "Get to know gigg" items ticked (keep when regenerating).
+  onboardingSeen: text("onboarding_seen").array().default(sql`'{}'::text[]`).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

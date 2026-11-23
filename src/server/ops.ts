@@ -12,6 +12,8 @@ import { defaultShown, outputs } from '#/lib/song-fields'
 import { duplicateTarget, existingChoices, importFields, mergeSong, rowValues, withNoteLines } from '#/lib/song-csv'
 import type { Target } from '#/lib/song-csv'
 import type { Shown } from '#/lib/song-fields'
+import { personalItems } from '#/lib/onboarding'
+import type { Onboarding } from '#/lib/onboarding'
 import type { Db } from './db'
 import { sendPush } from './push'
 import {
@@ -594,6 +596,47 @@ const songFieldOps = {
         .onConflictDoUpdate({ target: [shownFields.bandId, shownFields.userId], set: { fields } })
     },
   ),
+}
+
+// Get to know gigg ---------------------------------------------------------
+
+/** Band items (members only) are counted from the band's data, so they also work from the cached read offline. */
+async function onboardingFor(tx: Tx, bandId: string, userId: string, role: Role): Promise<Onboarding> {
+  const any = (table: typeof events | typeof songs | typeof setlists | typeof eventPeople, extra?: SQL) =>
+    sql<boolean>`exists (select 1 from ${table} where ${table.bandId} = ${bandId} ${extra ? sql`and ${extra}` : sql``})`
+  const [row] = await tx
+    .select({
+      hiddenAt: memberships.onboardingHiddenAt,
+      seen: users.onboardingSeen,
+      event: any(events),
+      songs: any(songs),
+      setlist: any(setlists),
+      invite: sql<boolean>`(select count(*) from ${memberships} m where m.band_id = ${bandId} and m.archived_at is null) > 1`,
+      availability: any(eventPeople, isNotNull(eventPeople.askedFor)),
+    })
+    .from(memberships)
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(and(eq(memberships.bandId, bandId), eq(memberships.userId, userId)))
+  const { hiddenAt, seen, ...band } = row
+  return { hidden: !!hiddenAt, seen, band: role === 'member' ? band : null }
+}
+
+const onboardingOps = {
+  /** A personal item tapped ("Got it" or its link): ticked in every band you're in. */
+  tickOnboarding: bandOp('reader', z.object({ key: z.enum(personalItems) }), async ({ tx, userId }, { key }) => {
+    await tx
+      .update(users)
+      .set({ onboardingSeen: sql`array_append(${users.onboardingSeen}, ${key})` })
+      .where(and(eq(users.id, userId), sql`not (${key} = any(${users.onboardingSeen}))`))
+  }),
+
+  /** Hide, or the "All set" end: the bar on the events page goes; the page stays in the user menu. */
+  hideOnboarding: bandOp('reader', z.object({}), async ({ tx, bandId, userId }) => {
+    await tx
+      .update(memberships)
+      .set({ onboardingHiddenAt: new Date() })
+      .where(and(eq(memberships.bandId, bandId), eq(memberships.userId, userId), isNull(memberships.onboardingHiddenAt)))
+  }),
 }
 
 // Events -------------------------------------------------------------------
@@ -1976,8 +2019,15 @@ export const bandOps = {
       .from(bands)
       .where(eq(bands.id, bandId))
     // Every band page can show songs, so the custom fields and your shown fields come along.
-    return { ...band, role, songFields: await activeSongFields(tx, bandId), shown: await shownFor(tx, bandId, userId) }
+    return {
+      ...band,
+      role,
+      songFields: await activeSongFields(tx, bandId),
+      shown: await shownFor(tx, bandId, userId),
+      onboarding: await onboardingFor(tx, bandId, userId, role),
+    }
   }),
+  ...onboardingOps,
   ...songOps,
   ...songFieldOps,
   ...fileOps,

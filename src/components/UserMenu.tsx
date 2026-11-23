@@ -1,5 +1,5 @@
 import { Link, useParams } from '@tanstack/react-router'
-import { BookOpen, Check, LogOut, MessageSquare, Settings, Shield } from 'lucide-react'
+import { BookOpen, Check, LogOut, MessageSquare, Settings, Shield, Sparkles } from 'lucide-react'
 import { Avatar, AvatarFallback } from '#/components/ui/avatar'
 import { Button } from '#/components/ui/button'
 import {
@@ -61,6 +61,11 @@ export function UserMenu({ name, bands, isAdmin }: Props) {
             <DropdownMenuItem asChild>
               <Link to="/$band/settings" params={{ band: settingsBand }}>
                 <Settings aria-hidden /> {t.menu.settings}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/$band/welcome" params={{ band: settingsBand }}>
+                <Sparkles aria-hidden /> {t.menu.welcome}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

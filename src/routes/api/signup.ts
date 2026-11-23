@@ -18,8 +18,7 @@ export const Route = createFileRoute('/api/signup')({
         const valid = signupOpen && session && Buffer.byteLength(sig) === expected.length && timingSafeEqual(Buffer.from(sig), expected)
         if (!valid || !(Date.now() - Number(t) < maxAge)) return new Response('Not found', { status: 404 })
         const created = await createSignupBand(db, { email: session.user.email, name: band, since: new Date(Number(t)) })
-        // ponytail: lands on the band's start page until the "Get to know gigg" page (/<band>/welcome) exists.
-        return Response.redirect(new URL(`/${created.slug}?passkey=suggest`, url), 302)
+        return Response.redirect(new URL(`/${created.slug}/welcome?passkey=suggest`, url), 302)
       },
     },
   },

@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '#/components/ui/dropdown-menu'
+import { OnboardingBar } from '#/components/Onboarding'
 import { bandOp } from '#/server/fns'
 import { useT } from '#/lib/i18n'
 import { useCanEdit } from '#/lib/online'
@@ -90,6 +91,7 @@ function Events() {
 
   return (
     <>
+      {when === 'upcoming' && <OnboardingBar />}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="mb-0">{when === 'archived' ? t.events.archivedList : t.events.title}</h1>
         <div className="flex gap-2">

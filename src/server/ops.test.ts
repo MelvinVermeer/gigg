@@ -625,6 +625,40 @@ describe('search', () => {
   })
 })
 
+describe('get to know gigg', () => {
+  const onboarding = async (db: Awaited<ReturnType<typeof testDb>>['db'], user: string, band: string) =>
+    (await bandOps.getBand(db, user, band, {})).onboarding
+
+  it('ticks band items from the band data, for members only', async () => {
+    const t = await testDb()
+    const { slug } = await createBand(t.db, { name: 'Fresh Band', email: 'member@example.com' })
+    expect(await onboarding(t.db, t.member, slug)).toEqual({
+      hidden: false,
+      seen: [],
+      band: { event: false, songs: false, setlist: false, invite: false, availability: false },
+    })
+    await bandOps.createEvent(t.db, t.member, slug, { title: 'Saturday', date: '2027-06-05' })
+    await bandOps.createSong(t.db, t.member, slug, { title: 'Opener' })
+    expect((await onboarding(t.db, t.member, slug)).band).toMatchObject({ event: true, songs: true, setlist: false })
+    // The demo band has done it all but asking; a reader sees no band items.
+    expect((await onboarding(t.db, t.member, t.band)).band).toMatchObject({ event: true, songs: true, invite: true })
+    expect((await onboarding(t.db, t.reader, t.band)).band).toBeNull()
+  })
+
+  it('keeps personal ticks across bands, hides per band, and leaves no history', async () => {
+    const t = await testDb()
+    const { slug } = await createBand(t.db, { name: 'Fresh Band', email: 'member@example.com' })
+    const before = (await t.db.select().from(changes)).length
+    await bandOps.tickOnboarding(t.db, t.member, t.band, { key: 'calendar' })
+    await bandOps.tickOnboarding(t.db, t.member, t.band, { key: 'calendar' })
+    await bandOps.hideOnboarding(t.db, t.member, t.band, {})
+    expect(await onboarding(t.db, t.member, t.band)).toMatchObject({ hidden: true, seen: ['calendar'] })
+    expect(await onboarding(t.db, t.member, slug)).toMatchObject({ hidden: false, seen: ['calendar'] })
+    await expect(bandOps.tickOnboarding(t.db, t.member, t.band, { key: 'nope' })).rejects.toThrow()
+    expect((await t.db.select().from(changes)).length).toBe(before)
+  })
+})
+
 describe('audit trail', () => {
   it('logs a write with the acting user and band', async () => {
     const t = await testDb()

@@ -21,6 +21,7 @@ import { Route as BandIndexRouteImport } from './routes/$band.index'
 import { Route as BandFeedbackRouteImport } from './routes/$band.feedback'
 import { Route as BandHistoryRouteImport } from './routes/$band.history'
 import { Route as BandSearchRouteImport } from './routes/$band.search'
+import { Route as BandWelcomeRouteImport } from './routes/$band.welcome'
 import { Route as ApiFilesRouteImport } from './routes/api/files'
 import { Route as ApiSignupRouteImport } from './routes/api/signup'
 import { Route as AvailabilityTokenRouteImport } from './routes/availability.$token'
@@ -109,6 +110,11 @@ const BandHistoryRoute = BandHistoryRouteImport.update({
 const BandSearchRoute = BandSearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => BandRoute,
+} as any)
+const BandWelcomeRoute = BandWelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
   getParentRoute: () => BandRoute,
 } as any)
 const ApiFilesRoute = ApiFilesRouteImport.update({
@@ -272,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/$band/feedback': typeof BandFeedbackRoute
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
+  '/$band/welcome': typeof BandWelcomeRoute
   '/api/files': typeof ApiFilesRouteWithChildren
   '/api/signup': typeof ApiSignupRoute
   '/availability/$token': typeof AvailabilityTokenRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByTo {
   '/$band/feedback': typeof BandFeedbackRoute
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
+  '/$band/welcome': typeof BandWelcomeRoute
   '/api/files': typeof ApiFilesRouteWithChildren
   '/api/signup': typeof ApiSignupRoute
   '/availability/$token': typeof AvailabilityTokenRoute
@@ -358,6 +366,7 @@ export interface FileRoutesById {
   '/$band/feedback': typeof BandFeedbackRoute
   '/$band/history': typeof BandHistoryRoute
   '/$band/search': typeof BandSearchRoute
+  '/$band/welcome': typeof BandWelcomeRoute
   '/api/files': typeof ApiFilesRouteWithChildren
   '/api/signup': typeof ApiSignupRoute
   '/availability/$token': typeof AvailabilityTokenRoute
@@ -403,6 +412,7 @@ export interface FileRouteTypes {
     | '/$band/feedback'
     | '/$band/history'
     | '/$band/search'
+    | '/$band/welcome'
     | '/api/files'
     | '/api/signup'
     | '/availability/$token'
@@ -445,6 +455,7 @@ export interface FileRouteTypes {
     | '/$band/feedback'
     | '/$band/history'
     | '/$band/search'
+    | '/$band/welcome'
     | '/api/files'
     | '/api/signup'
     | '/availability/$token'
@@ -488,6 +499,7 @@ export interface FileRouteTypes {
     | '/$band/feedback'
     | '/$band/history'
     | '/$band/search'
+    | '/$band/welcome'
     | '/api/files'
     | '/api/signup'
     | '/availability/$token'
@@ -620,6 +632,13 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/$band/search'
       preLoaderRoute: typeof BandSearchRouteImport
+      parentRoute: typeof BandRoute
+    }
+    '/$band/welcome': {
+      id: '/$band/welcome'
+      path: '/welcome'
+      fullPath: '/$band/welcome'
+      preLoaderRoute: typeof BandWelcomeRouteImport
       parentRoute: typeof BandRoute
     }
     '/api/files': {
@@ -832,6 +851,7 @@ interface BandRouteChildren {
   BandFeedbackRoute: typeof BandFeedbackRoute
   BandHistoryRoute: typeof BandHistoryRoute
   BandSearchRoute: typeof BandSearchRoute
+  BandWelcomeRoute: typeof BandWelcomeRoute
   BandIndexRoute: typeof BandIndexRoute
   BandEventsNewRoute: typeof BandEventsNewRoute
   BandSettingsContactsRoute: typeof BandSettingsContactsRoute
@@ -861,6 +881,7 @@ const BandRouteChildren: BandRouteChildren = {
   BandFeedbackRoute: BandFeedbackRoute,
   BandHistoryRoute: BandHistoryRoute,
   BandSearchRoute: BandSearchRoute,
+  BandWelcomeRoute: BandWelcomeRoute,
   BandIndexRoute: BandIndexRoute,
   BandEventsNewRoute: BandEventsNewRoute,
   BandSettingsContactsRoute: BandSettingsContactsRoute,

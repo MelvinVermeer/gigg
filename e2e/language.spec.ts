@@ -14,7 +14,7 @@ test('a user switches to Dutch in Settings, and back', async ({ browser }) => {
   const email = `taal-${Date.now()}@example.com`
   await member.goto('/demo-band/settings')
   await member.getByLabel('Invite by email').fill(email)
-  await member.getByRole('button', { name: 'Invite' }).click()
+  await member.getByRole('button', { name: 'Invite', exact: true }).click()
   await expect(member.getByRole('button', { name: 'Invited' })).toBeVisible()
 
   const page = await (await browser.newContext()).newPage()

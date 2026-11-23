@@ -88,7 +88,33 @@ export const nl: Dict = {
     feedback: 'Feedback',
     manual: 'Handleiding',
     admin: 'Beheer',
+    welcome: 'Maak kennis met gigg',
     logOut: 'Uitloggen',
+  },
+
+  welcome: {
+    title: 'Maak kennis met gigg',
+    intro: 'Een paar dingen die gigg kan. Niets hiervan is verplicht: vink af wat je kent, verberg het als je klaar bent.',
+    bar: (done, total) => `Maak kennis met gigg · ${done}/${total}`,
+    barDone: 'Maak kennis met gigg · Helemaal klaar',
+    bandTitle: 'Voor de band',
+    youTitle: 'Voor jou',
+    gotIt: 'Begrepen',
+    done: 'Gedaan',
+    hide: 'Verbergen',
+    hidden: 'Verborgen op de optredenspagina. Je opent dit altijd weer via het gebruikersmenu.',
+    allSet: 'Helemaal klaar! Je weet de weg in gigg.',
+    items: {
+      event: { title: 'Plan een optreden', text: 'Zet je volgende optreden of repetitie erin, met locatie, tijden en wie er meedoet.', link: 'Optreden toevoegen' },
+      songs: { title: 'Voeg je nummers toe', text: 'Typ ze één voor één in, of importeer je hele repertoire uit een spreadsheet.', link: 'Naar nummers' },
+      setlist: { title: 'Maak een setlist voor je optreden', text: 'Open een optreden en sleep nummers in sets. Print hem of toon hem op het podium.', link: 'Naar optredens' },
+      invite: { title: 'Nodig een bandlid uit', text: 'Leden kunnen alles, lezers kijken alleen mee. Ze krijgen een mail met een link.', link: 'Uitnodigen in instellingen' },
+      availability: { title: 'Vraag beschikbaarheid', text: 'Vraag bij een optreden wie er kan. Iedereen antwoordt via een link in de mail, zonder account.', link: 'Naar optredens' },
+      passkey: { title: 'Sneller inloggen met een passkey', text: 'Gebruik Face ID, Touch ID of de pincode van je apparaat in plaats van een maillink.', link: 'Passkey toevoegen' },
+      calendar: { title: 'Je optredens in je eigen agenda', text: 'Abonneer je één keer in Google, Apple of Outlook en je optredens staan daar, altijd bijgewerkt.', link: 'Agenda instellen' },
+      notifications: { title: 'Een melding als je gevraagd wordt', text: 'Een pushbericht op je telefoon of computer als iemand vraagt of je kunt.', link: 'Meldingen aanzetten' },
+      install: { title: 'Installeer gigg op dit apparaat', text: 'Tik in Safari op Deel en dan op “Zet op beginscherm”. gigg opent dan als een app, ook offline.', link: '' },
+    },
   },
 
   passkey: {
