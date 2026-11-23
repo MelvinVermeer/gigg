@@ -20,14 +20,19 @@ test('a user switches to Dutch in Settings, and back', async ({ browser }) => {
   const page = await (await browser.newContext()).newPage()
   await signIn(page, email)
   await page.goto('/demo-band/settings')
-  await page.getByLabel('Language', { exact: true }).selectOption('nl')
-  await expect(page.getByRole('heading', { name: 'Instellingen', level: 1 })).toBeVisible()
+  // A pick made before the page has hydrated is lost (the select snaps back), so retry until it takes.
+  await expect(async () => {
+    await page.getByLabel('Language', { exact: true }).selectOption('nl')
+    await expect(page.getByRole('heading', { name: 'Instellingen', level: 1 })).toBeVisible({ timeout: 2000 })
+  }).toPass()
   await expect(page.locator('html')).toHaveAttribute('lang', 'nl')
 
   await page.goto('/demo-band/events')
   await expect(page.getByRole('heading', { name: 'Optredens', level: 1 })).toBeVisible()
 
   await page.goto('/demo-band/settings')
-  await page.getByLabel('Taal', { exact: true }).selectOption('en')
-  await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible()
+  await expect(async () => {
+    await page.getByLabel('Taal', { exact: true }).selectOption('en')
+    await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible({ timeout: 2000 })
+  }).toPass()
 })

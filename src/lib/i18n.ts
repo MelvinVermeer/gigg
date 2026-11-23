@@ -26,6 +26,12 @@ export function pickLocale(acceptLanguage: string | null | undefined): Locale {
   return tags.find((t) => isLocale(t.lang))?.lang as Locale | undefined ?? 'en'
 }
 
+/** Signed out: remember the language picked in the header (a cookie the server reads), then reload into it. */
+export function setGuestLocale(locale: Locale) {
+  document.cookie = `locale=${locale}; path=/; max-age=31536000; samesite=lax`
+  window.location.reload()
+}
+
 /** For pages that speak someone else's language (an emailed availability link speaks the recipient's). */
 export const LocaleOverride = createContext<Locale | null>(null)
 

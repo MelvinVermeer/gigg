@@ -22,12 +22,16 @@ const authed = createMiddleware({ type: 'function' }).server(async ({ next }) =>
 
 /**
  * The page language and the signed-in user (null when signed out) for the header. Public pages
- * call this too, so no redirect. Signed out, the browser's language decides.
+ * call this too, so no redirect. Signed out, the language picked in the header (a cookie) decides,
+ * else the browser's.
  */
 export const getMe = createServerFn({ method: 'GET' }).handler(async () => {
   const headers = getRequestHeaders()
   const session = await auth.api.getSession({ headers })
-  if (!session) return { locale: pickLocale(headers.get('accept-language')), user: null }
+  if (!session) {
+    const picked = /(?:^|;\s*)locale=(\w+)/.exec(headers.get('cookie') ?? '')?.[1]
+    return { locale: isLocale(picked) ? picked : pickLocale(headers.get('accept-language')), user: null }
+  }
   const { user } = session
   return {
     locale: localeOf(user.locale),
