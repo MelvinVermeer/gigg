@@ -140,6 +140,16 @@
   summary {
     @apply cursor-pointer list-none;
   }
+  /* Tailwind 4 dropped the pointer on buttons: everything clickable gets it back. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='radio']:not(:disabled),
+  [role='checkbox']:not(:disabled),
+  select:not(:disabled),
+  label:has([type='checkbox'], [type='radio'], [role='checkbox'], [role='radio']),
+  input[type='file']:not(:disabled) {
+    cursor: pointer;
+  }
   summary::-webkit-details-marker {
     display: none;
   }
