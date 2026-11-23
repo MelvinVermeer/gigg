@@ -85,7 +85,8 @@ test('the dialog lists participants first, in the order taken when it opened', a
   await page.goto('/demo-band/events/new')
   await page.getByRole('button', { name: 'Select' }).click()
   const dialog = page.getByRole('dialog', { name: 'Participants' })
-  const rows = dialog.locator('label')
+  // Other test files may add members to the demo band meanwhile: only look at the seeded ones.
+  const rows = dialog.locator('label').filter({ hasText: /^(Select all|Dev )/ })
   await expect(rows).toHaveText(['Select all', 'Dev Member', 'Dev Reader'])
   await dialog.getByRole('checkbox', { name: /Dev Reader/ }).check()
   await dialog.getByRole('button', { name: 'Done' }).click()
@@ -111,7 +112,10 @@ test('ask from the new-event form; someone added later is offered a check, someo
   const dialog = page.getByRole('dialog', { name: 'Participants' })
   await dialog.getByRole('checkbox', { name: 'Select all' }).check()
   await expect(dialog.getByRole('checkbox', { name: /Dev Reader/ })).toBeChecked()
-  await dialog.getByRole('checkbox', { name: /Dev Reader/ }).uncheck()
+  // Only Dev Member: other test files may add members to the demo band meanwhile.
+  await dialog.getByRole('checkbox', { name: 'Select all' }).uncheck()
+  await expect(dialog.getByRole('checkbox', { name: /Dev Reader/ })).not.toBeChecked()
+  await dialog.getByRole('checkbox', { name: /Dev Member/ }).check()
   // Saves the event, then asks.
   await dialog.getByRole('button', { name: 'Ask availability' }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(title)

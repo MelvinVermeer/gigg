@@ -35,4 +35,10 @@ test('a user switches to Dutch in Settings, and back', async ({ browser }) => {
     await page.getByLabel('Taal', { exact: true }).selectOption('en')
     await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible({ timeout: 2000 })
   }).toPass()
+
+  // Leave the demo band as it was: other tests count its members.
+  const row = member.getByRole('listitem').filter({ hasText: email })
+  await row.getByRole('button', { name: `Remove ${email}` }).click()
+  await member.getByRole('dialog').getByRole('button', { name: 'Remove' }).click()
+  await expect(row).toHaveCount(0)
 })
